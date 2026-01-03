@@ -1,0 +1,17 @@
+{
+  "name": "Bedeschi Fidelidade",
+  "short_name": "Bedeschi",
+  "description": "Programa de fidelidade do Instituto Bedeschi Beauty Clinic",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#3D4555",
+  "theme_color": "#C9A962",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
