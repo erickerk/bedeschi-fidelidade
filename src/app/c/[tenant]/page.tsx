@@ -1,45 +1,52 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { PhoneInput } from "@/components/ui/input";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { getClientByPhone, validateClientPin } from "@/lib/mock-data";
-import { isValidPhone, cleanPhone } from "@/lib/utils";
-import ClientDashboard from "./client-dashboard";
 
-type Step = "phone" | "pin" | "dashboard";
+const ClientDashboard = lazy(() => import("./client-dashboard"));
+
+type Step = "login" | "pin" | "dashboard";
+type Theme = "light" | "dark";
 
 export default function ClientAccessPage() {
-  const [step, setStep] = useState<Step>("phone");
+  const [step, setStep] = useState<Step>("login");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const isDark = theme === "dark";
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    const cleanedPhone = cleanPhone(phone);
-    if (!isValidPhone(cleanedPhone)) {
+    const cleanedPhone = phone.replace(/\D/g, "");
+    if (cleanedPhone.length < 10 || cleanedPhone.length > 11) {
       setError("Digite um celular válido");
       return;
     }
 
     setLoading(true);
-
-    // Simula delay de rede
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 500));
 
     const client = getClientByPhone(cleanedPhone);
     if (!client) {
-      setError("Celular não cadastrado. Fale com nossa atendente.");
+      setError("Celular não cadastrado");
       setLoading(false);
       return;
     }
 
-    // Vai para tela de PIN
     setStep("pin");
     setLoading(false);
   };
@@ -49,18 +56,18 @@ export default function ClientAccessPage() {
     setError("");
 
     if (otp.length !== 4) {
-      setError("Digite seu código de 4 dígitos");
+      setError("Digite os 4 dígitos");
       return;
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 300));
 
-    const cleanedPhone = cleanPhone(phone);
+    const cleanedPhone = phone.replace(/\D/g, "");
     const client = validateClientPin(cleanedPhone, otp);
     
     if (!client) {
-      setError("Código incorreto. Tente novamente.");
+      setError("PIN incorreto");
       setLoading(false);
       return;
     }
@@ -71,88 +78,145 @@ export default function ClientAccessPage() {
   };
 
   if (step === "dashboard" && clientId) {
-    return <ClientDashboard clientId={clientId} />;
+    return (
+      <Suspense fallback={<LoadingScreen isDark={isDark} />}>
+        <ClientDashboard clientId={clientId} />
+      </Suspense>
+    );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-cinematic-gold p-6 particles-bg">
-      <div className="w-full max-w-md animate-fade-up">
-        {/* Logo */}
-        <div className="mb-10 text-center stagger-children">
-          <div className="mx-auto mb-5 h-24 w-24 rounded-full bg-gradient-to-br from-gold-400/20 to-gold-600/30 p-4 animate-glow">
-            <img
-              src="/logo.svg"
-              alt="Instituto Bedeschi"
-              className="h-full w-full object-contain drop-shadow-lg"
-            />
-          </div>
-          <h1 className="font-display text-3xl font-bold text-white tracking-tight">
-            Instituto Bedeschi
-          </h1>
-          <p className="text-gold-400 text-lg font-light tracking-wide mt-1">Beauty Clinic</p>
-          <div className="divider-gold w-32 mx-auto mt-4 opacity-50"></div>
-          <span className="badge-premium mt-3">✨ Programa Exclusivo</span>
-        </div>
+    <main 
+      suppressHydrationWarning
+      className={`relative h-screen overflow-hidden transition-colors duration-300 ${
+        isDark 
+          ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" 
+          : "bg-gradient-to-br from-amber-50 via-white to-amber-50"
+      }`}
+    >
+      {/* Background */}
+      <div className={`absolute inset-0 ${isDark ? "bg-gradient-to-t from-amber-900/10 via-transparent to-transparent" : ""}`} />
 
-        {/* Card */}
-        <div className="card-luxury glass-premium p-8 animate-fade-scale">
-          {step === "phone" && (
-            <form onSubmit={handlePhoneSubmit} className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-slate-800">
-                  Bem-vinda! 👋
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Digite seu celular para acessar seus pontos
-                </p>
+      {/* Toggle Tema */}
+      <button
+        suppressHydrationWarning
+        onClick={toggleTheme}
+        className={`absolute top-4 right-4 z-20 p-2 rounded-full transition-all ${
+          isDark 
+            ? "bg-slate-800 text-amber-400 hover:bg-slate-700" 
+            : "bg-amber-100 text-amber-600 hover:bg-amber-200"
+        }`}
+        aria-label="Alternar tema"
+      >
+        {isDark ? (
+          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+          </svg>
+        ) : (
+          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Conteúdo */}
+      <div className="relative z-10 flex h-full flex-col items-center justify-center px-4">
+        
+        {/* Tela de Login Premium */}
+        {step === "login" && (
+          <div className="w-full max-w-xs text-center">
+            {/* Logo */}
+            <div className={`mx-auto mb-4 h-16 w-16 rounded-full p-0.5 ring-1 ${
+              isDark 
+                ? "bg-gradient-to-br from-amber-400/20 to-amber-600/30 ring-amber-500/40" 
+                : "bg-gradient-to-br from-amber-200 to-amber-300 ring-amber-400"
+            }`}>
+              <div className={`flex h-full w-full items-center justify-center rounded-full ${isDark ? "bg-slate-900" : "bg-white"}`}>
+                <img src="/logo.svg" alt="Logo" className="h-10 w-10 object-contain" />
               </div>
+            </div>
+            
+            {/* Título */}
+            <h1 className={`text-xl font-light ${isDark ? "text-white" : "text-slate-800"}`}>
+              Instituto <span className="font-semibold text-amber-500">Bedeschi</span>
+            </h1>
+            <p className={`text-[10px] uppercase tracking-[0.2em] mt-1 ${isDark ? "text-amber-500/60" : "text-amber-600/80"}`}>
+              Programa de Fidelidade
+            </p>
 
-              <PhoneInput
+            {/* QR Code */}
+            <div className="my-5 flex justify-center">
+              <div className={`rounded-xl p-2 shadow-lg ${isDark ? "bg-white shadow-amber-500/10" : "bg-white shadow-amber-200"}`}>
+                <svg viewBox="0 0 100 100" className="h-20 w-20">
+                  <rect fill="#1e293b" x="10" y="10" width="25" height="25"/>
+                  <rect fill="#1e293b" x="65" y="10" width="25" height="25"/>
+                  <rect fill="#1e293b" x="10" y="65" width="25" height="25"/>
+                  <rect fill="#1e293b" x="40" y="40" width="20" height="20"/>
+                  <rect fill="#d97706" x="20" y="20" width="5" height="5"/>
+                  <rect fill="#d97706" x="75" y="20" width="5" height="5"/>
+                  <rect fill="#d97706" x="20" y="75" width="5" height="5"/>
+                  <rect fill="#1e293b" x="40" y="10" width="5" height="5"/>
+                  <rect fill="#1e293b" x="50" y="15" width="5" height="5"/>
+                  <rect fill="#1e293b" x="10" y="45" width="5" height="10"/>
+                  <rect fill="#1e293b" x="85" y="45" width="5" height="10"/>
+                  <rect fill="#1e293b" x="65" y="70" width="10" height="5"/>
+                  <rect fill="#1e293b" x="80" y="80" width="10" height="10"/>
+                  <rect fill="#1e293b" x="45" y="75" width="5" height="15"/>
+                </svg>
+              </div>
+            </div>
+            <p className={`text-[10px] mb-4 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
+              Escaneie ou digite seu celular
+            </p>
+
+            {/* Form Login */}
+            <form onSubmit={handlePhoneSubmit} className="space-y-3">
+              <input
+                type="tel"
                 value={phone}
-                onChange={setPhone}
-                error={error}
+                onChange={(e) => setPhone(formatPhone(e.target.value))}
+                placeholder="(11) 99999-9999"
                 autoFocus
+                className={`w-full rounded-xl border px-4 py-3 text-center focus:outline-none transition-colors ${
+                  isDark 
+                    ? "border-slate-700 bg-slate-800/80 text-white placeholder:text-slate-500 focus:border-amber-500" 
+                    : "border-amber-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-amber-500 shadow-sm"
+                }`}
               />
+              
+              {error && <p className="text-xs text-red-500">{error}</p>}
 
               <button 
                 type="submit" 
                 disabled={loading}
-                className="btn-premium w-full text-center disabled:opacity-50"
+                className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-semibold text-white shadow-lg shadow-amber-500/30 disabled:opacity-50 hover:from-amber-600 hover:to-amber-700 transition-all"
               >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                    </svg>
-                    Verificando...
-                  </span>
-                ) : "Acessar Meus Pontos"}
+                {loading ? "..." : "Acessar Meus Pontos"}
               </button>
-
-              <p className="text-center text-sm text-slate-500 mt-6">
-                Primeira vez?{" "}
-                <span className="text-gold-600 font-medium cursor-pointer hover:underline">
-                  Fale com nossa atendente
-                </span>
-              </p>
             </form>
-          )}
 
-          {step === "pin" && (
-            <form onSubmit={handlePinSubmit} className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold text-slate-800">
-                  Digite seu Código PIN 🔐
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Seu código de 4 dígitos para acessar
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  (Padrão: últimos 4 dígitos do celular)
-                </p>
-              </div>
+            {/* Footer */}
+            <p className={`mt-4 text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>
+              © 2026 Instituto Bedeschi
+            </p>
+          </div>
+        )}
 
+        {/* Tela de PIN */}
+        {step === "pin" && (
+          <div className="w-full max-w-xs text-center">
+            <div className={`mx-auto mb-4 h-12 w-12 rounded-full flex items-center justify-center ${
+              isDark ? "bg-amber-500/20" : "bg-amber-100"
+            }`}>
+              <svg className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            
+            <h2 className={`text-xl font-light mb-1 ${isDark ? "text-white" : "text-slate-800"}`}>Digite seu PIN</h2>
+            <p className={`text-xs mb-5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Código de 4 dígitos</p>
+
+            <form onSubmit={handlePinSubmit} className="space-y-4">
               <div className="flex justify-center gap-2">
                 {[0, 1, 2, 3].map((i) => (
                   <input
@@ -161,70 +225,59 @@ export default function ClientAccessPage() {
                     inputMode="numeric"
                     maxLength={1}
                     autoFocus={i === 0}
-                    aria-label={`Dígito ${i + 1} do PIN`}
-                    placeholder="•"
-                    className="h-14 w-14 rounded-xl border-2 border-slate-200 text-center text-2xl font-bold focus:border-gold-500 focus:outline-none focus:ring-4 focus:ring-gold-500/20 placeholder:text-slate-300"
+                    aria-label={`PIN ${i + 1}`}
+                    className={`h-12 w-12 rounded-lg border text-center text-xl focus:outline-none transition-colors ${
+                      isDark 
+                        ? "border-slate-700 bg-slate-800 text-white focus:border-amber-500" 
+                        : "border-amber-200 bg-white text-slate-800 focus:border-amber-500 shadow-sm"
+                    }`}
                     value={otp[i] || ""}
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, "");
                       const newOtp = otp.split("");
                       newOtp[i] = val;
                       setOtp(newOtp.join("").slice(0, 4));
-
                       if (val && i < 3) {
-                        const next = e.target.nextElementSibling as HTMLInputElement;
-                        next?.focus();
+                        (e.target.nextElementSibling as HTMLInputElement)?.focus();
                       }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Backspace" && !otp[i] && i > 0) {
-                        const prev = (e.target as HTMLElement).previousElementSibling as HTMLInputElement;
-                        prev?.focus();
+                        ((e.target as HTMLElement).previousElementSibling as HTMLInputElement)?.focus();
                       }
                     }}
                   />
                 ))}
               </div>
 
-              {error && (
-                <p className="text-center text-sm text-red-500">{error}</p>
-              )}
+              {error && <p className="text-xs text-red-500">{error}</p>}
 
               <button 
                 type="submit" 
                 disabled={loading || otp.length !== 4}
-                className="btn-premium w-full text-center disabled:opacity-50"
+                className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-semibold text-white disabled:opacity-50 hover:from-amber-600 hover:to-amber-700 transition-all"
               >
-                {loading ? "Verificando..." : "Entrar"}
+                {loading ? "..." : "Entrar"}
               </button>
-
-              <div className="flex justify-center gap-4 text-sm">
-                <button
-                  type="button"
-                  className="text-gold-600 hover:underline"
-                  onClick={() => {
-                    alert("Fale com a recepção para redefinir seu PIN");
-                  }}
-                >
-                  Esqueci meu PIN
-                </button>
-                <button
-                  type="button"
-                  className="text-slate-500 hover:underline"
-                  onClick={() => { setStep("phone"); setOtp(""); setError(""); }}
-                >
-                  Voltar
-                </button>
-              </div>
             </form>
-          )}
-        </div>
 
-        {/* Footer */}
-        <p className="mt-8 text-center text-xs text-slate-400">
-          © 2026 Instituto Bedeschi. Seus dados estão protegidos.
-        </p>
+            <button
+              onClick={() => { setStep("login"); setOtp(""); setError(""); }}
+              className={`mt-4 text-xs hover:underline ${isDark ? "text-slate-500 hover:text-white" : "text-slate-500 hover:text-slate-800"}`}
+            >
+              ← Voltar
+            </button>
+          </div>
+        )}
       </div>
     </main>
+  );
+}
+
+function LoadingScreen({ isDark = true }: { isDark?: boolean }) {
+  return (
+    <div className={`flex h-screen items-center justify-center ${isDark ? "bg-slate-950" : "bg-amber-50"}`}>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+    </div>
   );
 }

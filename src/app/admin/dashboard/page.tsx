@@ -5,7 +5,19 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { mockClients, mockFidelityRules, mockReviews, mockAppointments, mockProfessionals as dataProfessionals, type FidelityRule, type Professional } from "@/lib/mock-data";
+import { Sun, Moon } from "lucide-react";
+import {
+  mockClients,
+  mockFidelityRules,
+  mockReviews,
+  mockAppointments,
+  mockProfessionals as dataProfessionals,
+  mockCategories,
+  mockServices,
+  mockRewards,
+  type FidelityRule,
+  type Professional,
+} from "@/lib/mock-data";
 import { importedServices, importedCategories } from "@/lib/services-data";
 import { formatCurrency } from "@/lib/utils";
 import { 
@@ -51,6 +63,9 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const isDark = theme === "dark";
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
   
   // Estados para serviços
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
@@ -123,38 +138,215 @@ export default function AdminDashboard() {
   // Filtrar serviços
   const filteredServices = useMemo(() => {
     return importedServices.filter((s) => {
-      const matchesSearch = !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase());
+      const matchesSearch =
+        !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase());
       const matchesCategory = !selectedCategory || s.categoryId === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [serviceSearch, selectedCategory]);
 
-  // Dados para gráficos
-  const ratingsByCategory = useMemo(() => {
-    return importedCategories.slice(0, 5).map((cat) => ({
-      name: cat.name.length > 12 ? cat.name.slice(0, 12) + "..." : cat.name,
-      rating: (4 + Math.random() * 0.9).toFixed(1),
-      count: Math.floor(Math.random() * 50) + 10,
-    }));
-  }, []);
+  // Atendimentos filtrados para Analytics
+  const filteredAppointments = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
 
+    if (periodFilter === "week") {
+      start.setDate(start.getDate() - 7);
+    } else if (periodFilter === "month") {
+      start.setMonth(start.getMonth() - 1);
+    } else if (periodFilter === "quarter") {
+      start.setMonth(start.getMonth() - 3);
+    } else if (periodFilter === "year") {
+      start.setFullYear(start.getFullYear() - 1);
+    }
+
+    return mockAppointments.filter((apt) => {
+      const aptDate = new Date(apt.date);
+      if (aptDate < start) return false;
+
+      if (professionalFilter && apt.professionalId !== professionalFilter) {
+        return false;
+      }
+
+      if (procedureFilter) {
+        const matchesCategory = apt.services.some((s) => {
+          const service = mockServices.find((ms) => ms.name === s.name);
+          return service?.categoryId === procedureFilter;
+        });
+        if (!matchesCategory) return false;
+      }
+
+      return true;
+    });
+  }, [periodFilter, professionalFilter, procedureFilter]);
+
+  // Dados para gráficos - derivados dos atendimentos filtrados
   const revenueByMonth = useMemo(() => {
-    return [
-      { month: "Set", value: 12500 },
-      { month: "Out", value: 15800 },
-      { month: "Nov", value: 18200 },
-      { month: "Dez", value: 22400 },
-      { month: "Jan", value: 19800 },
-    ];
-  }, []);
+    const map = new Map<
+      string,
+      { month: string; value: number; sortDate: Date }
+    >();
+
+    filteredAppointments.forEach((apt) => {
+      const d = new Date(apt.date);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const monthLabel = d.toLocaleDateString("pt-BR", { month: "short" });
+      const existing = map.get(key) ?? {
+        month: monthLabel,
+        value: 0,
+        sortDate: new Date(d.getFullYear(), d.getMonth(), 1),
+      };
+      existing.value += apt.total;
+      map.set(key, existing);
+    });
+
+    return Array.from(map.values())
+      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
+      .map(({ month, value }) => ({ month, value }));
+  }, [filteredAppointments]);
+
+  const ratingsByCategory = useMemo(() => {
+    if (filteredAppointments.length === 0) return [] as { name: string; rating: number; count: number }[];
+
+    const appointmentIds = new Set(filteredAppointments.map((a) => a.id));
+    const acc: Record<
+      string,
+      { name: string; totalRating: number; count: number }
+    > = {};
+
+    mockReviews
+      .filter((r) => appointmentIds.has(r.appointmentId))
+      .forEach((review) => {
+        const apt = mockAppointments.find((a) => a.id === review.appointmentId);
+        if (!apt) return;
+
+        apt.services.forEach((s) => {
+          const service = mockServices.find((ms) => ms.name === s.name);
+          if (!service) return;
+
+          const catId = service.categoryId;
+          const catName =
+            mockCategories.find((c) => c.id === catId)?.name || service.categoryName;
+          if (!catName) return;
+
+          const entry = acc[catId] ?? { name: catName, totalRating: 0, count: 0 };
+          entry.totalRating += review.rating;
+          entry.count += 1;
+          acc[catId] = entry;
+        });
+      });
+
+    return Object.values(acc)
+      .map((c) => ({
+        name: c.name.length > 12 ? c.name.slice(0, 12) + "..." : c.name,
+        rating: Number((c.totalRating / c.count).toFixed(1)),
+        count: c.count,
+      }))
+      .sort((a, b) => b.rating - a.rating);
+  }, [filteredAppointments]);
+
+  const revenueByCategory = useMemo(() => {
+    const acc: Record<string, { name: string; value: number }> = {};
+
+    filteredAppointments.forEach((apt) => {
+      apt.services.forEach((s) => {
+        const service = mockServices.find((ms) => ms.name === s.name);
+        if (!service) return;
+
+        const catId = service.categoryId;
+        const catName =
+          mockCategories.find((c) => c.id === catId)?.name || service.categoryName;
+        if (!catName) return;
+
+        const entry = acc[catId] ?? { name: catName, value: 0 };
+        entry.value += s.price;
+        acc[catId] = entry;
+      });
+    });
+
+    return Object.values(acc).sort((a, b) => b.value - a.value);
+  }, [filteredAppointments]);
+
+  const appointmentsByProfessional = useMemo(() => {
+    const acc: Record<
+      string,
+      { id: string; name: string; total: number; specialty?: string }
+    > = {};
+
+    filteredAppointments.forEach((apt) => {
+      if (!apt.professionalId) return;
+      const prof = localProfessionals.find((p) => p.id === apt.professionalId);
+      if (!prof) return;
+
+      const entry =
+        acc[prof.id] ?? {
+          id: prof.id,
+          name: prof.name,
+          specialty: prof.specialty,
+          total: 0,
+        };
+      entry.total += 1;
+      acc[prof.id] = entry;
+    });
+
+    return Object.values(acc).sort((a, b) => b.total - a.total);
+  }, [filteredAppointments]);
 
   const topClients = useMemo(() => {
-    return [...mockClients].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
-  }, []);
+    if (filteredAppointments.length === 0) return [] as { id: string; name: string; totalSpent: number; totalAppointments: number }[];
+
+    const acc: Record<
+      string,
+      { id: string; name: string; totalSpent: number; totalAppointments: number }
+    > = {};
+
+    filteredAppointments.forEach((apt) => {
+      const entry =
+        acc[apt.clientId] ?? {
+          id: apt.clientId,
+          name: apt.clientName,
+          totalSpent: 0,
+          totalAppointments: 0,
+        };
+      entry.totalSpent += apt.total;
+      entry.totalAppointments += 1;
+      acc[apt.clientId] = entry;
+    });
+
+    return Object.values(acc)
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 5);
+  }, [filteredAppointments]);
 
   const topProfessionals = useMemo(() => {
-    return [...localProfessionals].sort((a, b) => b.rating - a.rating);
-  }, []);
+    if (filteredAppointments.length === 0) return [] as Professional[];
+
+    const acc: Record<
+      string,
+      { id: string; name: string; specialty?: string; rating: number; totalAppointments: number }
+    > = {};
+
+    filteredAppointments.forEach((apt) => {
+      if (!apt.professionalId) return;
+      const prof = localProfessionals.find((p) => p.id === apt.professionalId);
+      if (!prof) return;
+
+      const entry =
+        acc[prof.id] ?? {
+          id: prof.id,
+          name: prof.name,
+          specialty: prof.specialty,
+          rating: prof.rating,
+          totalAppointments: 0,
+        };
+      entry.totalAppointments += 1;
+      acc[prof.id] = entry;
+    });
+
+    return Object.values(acc)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 5) as unknown as Professional[];
+  }, [filteredAppointments]);
 
   // Handlers
   const handleSelectService = (serviceId: string) => {
@@ -256,17 +448,24 @@ export default function AdminDashboard() {
   const avgRating = (mockReviews.reduce((sum, r) => sum + r.rating, 0) / mockReviews.length).toFixed(1);
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className={`min-h-screen transition-colors ${isDark ? "bg-slate-900" : "bg-slate-100"}`}>
       {/* Header */}
-      <header className="bg-slate-800 px-6 py-4 text-white">
+      <header className={`px-6 py-4 ${isDark ? "bg-slate-800" : "bg-white border-b border-slate-200"}`}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-xl font-semibold">Painel Administrativo</h1>
-            <p className="text-sm text-slate-400">Instituto Bedeschi</p>
+            <h1 className={`font-display text-xl font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Painel Administrativo</h1>
+            <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Instituto Bedeschi</p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-300">{user.name}</span>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-slate-700">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg transition-colors ${isDark ? "bg-slate-700 text-amber-400 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              aria-label="Alternar tema"
+            >
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            <span className={`text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}>{user.name}</span>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className={isDark ? "text-white hover:bg-slate-700" : "text-slate-600 hover:bg-slate-100"}>
               Sair
             </Button>
           </div>
@@ -274,7 +473,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* Tabs */}
-      <nav className="border-b border-slate-200 bg-white px-6">
+      <nav className={`border-b px-6 ${isDark ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"}`}>
         <div className="flex gap-4 overflow-x-auto">
           {[
             { id: "dashboard", label: "Dashboard", icon: "📊" },
@@ -289,8 +488,8 @@ export default function AdminDashboard() {
               onClick={() => setTab(t.id as Tab)}
               className={`flex items-center gap-2 border-b-2 px-3 py-4 text-sm font-medium transition-colors whitespace-nowrap ${
                 tab === t.id
-                  ? "border-gold-500 text-gold-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  ? "border-amber-500 text-amber-600"
+                  : isDark ? "border-transparent text-slate-400 hover:text-slate-200" : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
               <span>{t.icon}</span>
@@ -427,7 +626,7 @@ export default function AdminDashboard() {
                     className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-gold-500 focus:outline-none"
                   >
                     <option value="">Todos</option>
-                    {importedCategories.map((c) => (
+                    {mockCategories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
@@ -438,7 +637,7 @@ export default function AdminDashboard() {
               </div>
             </Card>
 
-            {/* Gráficos */}
+            {/* Gráficos principais */}
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Faturamento por Mês */}
               <Card className="p-6">
@@ -469,6 +668,74 @@ export default function AdminDashboard() {
                       <Bar dataKey="rating" fill="#D4AF37" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+              </Card>
+            </div>
+
+            {/* Gráficos complementares */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Receita por Categoria */}
+              <Card className="p-6">
+                <h3 className="mb-4 font-semibold text-slate-800">💆 Receita por Categoria</h3>
+                <div className="h-64">
+                  {revenueByCategory.length === 0 ? (
+                    <p className="text-sm text-slate-500">Sem dados suficientes para este período.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={revenueByCategory}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={3}
+                        >
+                          {revenueByCategory.map((entry, index) => (
+                            <Cell
+                              key={entry.name}
+                              fill={CHART_COLORS[index % CHART_COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </Card>
+
+              {/* Atendimentos por Profissional */}
+              <Card className="p-6">
+                <h3 className="mb-4 font-semibold text-slate-800">👩‍⚕️ Atendimentos por Profissional</h3>
+                <div className="h-64">
+                  {appointmentsByProfessional.length === 0 ? (
+                    <p className="text-sm text-slate-500">Sem atendimentos no período selecionado.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={appointmentsByProfessional}
+                        layout="vertical"
+                        margin={{ left: 50 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis type="number" tick={{ fontSize: 12 }} />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          tick={{ fontSize: 11 }}
+                          width={120}
+                        />
+                        <Tooltip />
+                        <Bar
+                          dataKey="total"
+                          name="Atendimentos"
+                          fill="#D4AF37"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </Card>
             </div>
@@ -679,29 +946,46 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Tipos de Regras - Explicação */}
-            <Card className="p-6 bg-gradient-to-r from-slate-50 to-gold-50 border-gold-200">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">📖 Tipos de Regras Disponíveis</h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-gold-500">
-                  <h4 className="font-semibold text-slate-700">💰 Combo por Valor</h4>
-                  <p className="text-xs text-slate-500 mt-1">Cliente gastou X reais no total = ganha procedimento</p>
-                  <p className="text-xs text-gold-600 mt-2">Ex: R$ 1.000 = Massagem grátis</p>
+            {/* Destaque Principal - Regra por Valor */}
+            <Card className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300">
+              <div className="flex items-start gap-4">
+                <div className="text-4xl">🎁</div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-slate-800">Como funciona o programa de fidelidade</h3>
+                  <p className="text-sm text-slate-600 mt-2">
+                    O cliente acumula gastos e, ao atingir um valor definido por você, <strong>ganha um brinde</strong> (procedimento grátis).
+                  </p>
+                  <div className="mt-4 p-3 bg-white rounded-lg border border-amber-200">
+                    <p className="text-sm font-medium text-slate-700">� Passo a passo para criar uma regra:</p>
+                    <ol className="mt-2 text-sm text-slate-600 space-y-1 list-decimal list-inside">
+                      <li>Clique em <strong>+ Nova Regra</strong></li>
+                      <li>Defina o <strong>valor mínimo de gasto</strong> (ex: R$ 1.000)</li>
+                      <li>Escolha o <strong>brinde</strong> que o cliente ganhará (ex: Massagem Relaxante)</li>
+                      <li>Defina a <strong>validade</strong> do brinde (ex: 60 dias)</li>
+                    </ol>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-3">
+                    💡 Exemplo: "Gastou R$ 1.000 = Massagem Relaxante grátis" ou "Gastou R$ 2.000 = Drenagem Linfática grátis"
+                  </p>
                 </div>
-                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-blue-500">
-                  <h4 className="font-semibold text-slate-700">🔢 Por Quantidade</h4>
-                  <p className="text-xs text-slate-500 mt-1">A cada X procedimentos de uma categoria</p>
-                  <p className="text-xs text-blue-600 mt-2">Ex: 10 depilações = 1 grátis</p>
+              </div>
+            </Card>
+
+            {/* Outros Tipos de Regras */}
+            <Card className="p-4 border-slate-200">
+              <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-3">Outros tipos de regras disponíveis</h3>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <h4 className="font-medium text-slate-700 text-sm">🔢 Por Quantidade</h4>
+                  <p className="text-xs text-slate-500 mt-1">Ex: 10 depilações = 1 grátis</p>
                 </div>
-                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-green-500">
-                  <h4 className="font-semibold text-slate-700">🎯 Serviço Específico</h4>
-                  <p className="text-xs text-slate-500 mt-1">Regra para um procedimento específico</p>
-                  <p className="text-xs text-green-600 mt-2">Ex: 5 limpezas = 1 hidratação</p>
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <h4 className="font-medium text-slate-700 text-sm">🎯 Serviço Específico</h4>
+                  <p className="text-xs text-slate-500 mt-1">Ex: 5 limpezas = 1 hidratação</p>
                 </div>
-                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-purple-500">
-                  <h4 className="font-semibold text-slate-700">⭐ Pontos</h4>
-                  <p className="text-xs text-slate-500 mt-1">Converte pontos acumulados em crédito</p>
-                  <p className="text-xs text-purple-600 mt-2">Ex: 500 pts = R$ 50 de desconto</p>
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <h4 className="font-medium text-slate-700 text-sm">⭐ Conversão de Pontos</h4>
+                  <p className="text-xs text-slate-500 mt-1">Ex: 500 pts = R$ 50 desconto</p>
                 </div>
               </div>
             </Card>
@@ -801,6 +1085,20 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Aviso sobre integração */}
+            <Card className="p-4 bg-blue-50 border-blue-200">
+              <div className="flex items-start gap-3">
+                <span className="text-xl">ℹ️</span>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">Integração com avaliações</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Os profissionais cadastrados aqui aparecem para o cliente selecionar durante a avaliação do atendimento.
+                    Apenas profissionais <strong>ativos</strong> serão exibidos.
+                  </p>
+                </div>
+              </div>
+            </Card>
+
             {/* Filtros */}
             <div className="flex flex-wrap gap-2">
               {[
@@ -877,6 +1175,18 @@ export default function AdminDashboard() {
                         ))}
                       >
                         {prof.isActive ? "Desativar" : "Ativar"}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => {
+                          if (confirm(`Remover ${prof.name} da equipe?`)) {
+                            setProfessionals(professionals.filter(p => p.id !== prof.id));
+                          }
+                        }}
+                      >
+                        Remover
                       </Button>
                     </div>
                   </Card>
@@ -959,36 +1269,60 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Resumo de dados */}
+            {/* Resumo de dados - usando dados reais */}
             <div className="grid gap-4 md:grid-cols-2">
               <Card className="p-6">
-                <h3 className="mb-4 font-semibold text-slate-800">📊 Faturamento por Categoria</h3>
+                <h3 className="mb-4 font-semibold text-slate-800">📊 Resumo de Atendimentos</h3>
                 <div className="space-y-3">
-                  {importedCategories.slice(0, 5).map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">{cat.name}</span>
-                      <span className="font-medium text-slate-800">
-                        {formatCurrency(Math.random() * 10000)}
-                      </span>
-                    </div>
-                  ))}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total de atendimentos</span>
+                    <span className="font-medium text-slate-800">{mockAppointments.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Faturamento total</span>
+                    <span className="font-medium text-slate-800">
+                      {formatCurrency(mockAppointments.reduce((sum, apt) => sum + apt.total, 0))}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Ticket médio</span>
+                    <span className="font-medium text-slate-800">
+                      {formatCurrency(mockAppointments.length > 0 ? mockAppointments.reduce((sum, apt) => sum + apt.total, 0) / mockAppointments.length : 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Com avaliação</span>
+                    <span className="font-medium text-green-600">
+                      {mockAppointments.filter(a => a.hasReview).length} ({Math.round(mockAppointments.filter(a => a.hasReview).length / mockAppointments.length * 100)}%)
+                    </span>
+                  </div>
                 </div>
               </Card>
 
               <Card className="p-6">
-                <h3 className="mb-4 font-semibold text-slate-800">🎁 Recompensas</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Emitidas (mês)</span>
-                    <span className="font-medium">12</span>
+                <h3 className="mb-4 font-semibold text-slate-800">👥 Resumo de Clientes</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total de clientes</span>
+                    <span className="font-medium text-slate-800">{totalClients}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Resgatadas (mês)</span>
-                    <span className="font-medium">8</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total gasto (todos)</span>
+                    <span className="font-medium text-slate-800">
+                      {formatCurrency(mockClients.reduce((sum, c) => sum + c.totalSpent, 0))}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Expiradas (mês)</span>
-                    <span className="font-medium text-red-500">2</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Média de pontos</span>
+                    <span className="font-medium text-gold-600">
+                      {Math.round(mockClients.reduce((sum, c) => sum + c.pointsBalance, 0) / totalClients)} pts
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Recompensas disponíveis</span>
+                    <span className="font-medium text-amber-600">
+                      {mockRewards.filter(r => r.status === "available").length}
+                    </span>
                   </div>
                 </div>
               </Card>

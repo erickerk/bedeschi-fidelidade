@@ -1,255 +1,389 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardPremium } from "@/components/ui/card";
 import { StarRating } from "@/components/ui/star-rating";
-import { Progress } from "@/components/ui/progress";
-import {
-  getClientById,
-  getClientAppointments,
-  getClientRewards,
-  getClientPendingReview,
-  mockCategoryProgress,
-  type Appointment,
-  type Reward,
-} from "@/lib/mock-data";
+import { useApp } from "@/lib/app-context";
+import { mockCategoryProgress } from "@/lib/mock-data";
 import { formatCurrency, formatDate, daysUntil } from "@/lib/utils";
 
 interface ClientDashboardProps {
   clientId: string;
 }
 
-type Tab = "pontos" | "historico";
+type Tab = "inicio" | "historico" | "beneficios";
 
 export default function ClientDashboard({ clientId }: ClientDashboardProps) {
+  const { 
+    getClientById, 
+    getClientAppointments, 
+    getClientRewards, 
+    getClientPendingReview,
+    getProfessionals,
+    addReview,
+    redeemReward,
+    updateAppointment,
+  } = useApp();
+
   const client = getClientById(clientId);
   const appointments = getClientAppointments(clientId);
-  const rewards = getClientRewards(clientId).filter((r) => r.status === "available");
+  const rewards = getClientRewards(clientId);
   const pendingReview = getClientPendingReview(clientId);
   const categoryProgress = mockCategoryProgress[clientId] || [];
+  const professionals = getProfessionals().filter(p => p.role !== "recepcionista");
 
-  const [tab, setTab] = useState<Tab>("pontos");
+  const [tab, setTab] = useState<Tab>("inicio");
   const [showReview, setShowReview] = useState(!!pendingReview);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [selectedProfessional, setSelectedProfessional] = useState("");
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   if (!client) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Cliente não encontrado</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <p className="text-slate-400">Cliente não encontrado</p>
       </div>
     );
   }
 
   const handleSubmitReview = () => {
-    if (rating === 0) return;
-    // Em produção, salvaria no banco
-    console.log("Review:", { rating, comment, appointmentId: pendingReview?.id });
+    if (rating === 0 || !pendingReview) return;
+    
+    // Salva review no contexto global
+    addReview({
+      id: `rev-${Date.now()}`,
+      clientId,
+      appointmentId: pendingReview.id,
+      rating,
+      comment: comment || undefined,
+      createdAt: new Date().toISOString().split("T")[0],
+    });
+
+    // Atualiza o atendimento para marcar como avaliado
+    updateAppointment({
+      ...pendingReview,
+      hasReview: true,
+      review: { rating, comment, professionalRating: rating },
+    });
+
     setReviewSubmitted(true);
-    setTimeout(() => setShowReview(false), 1500);
+    setTimeout(() => setShowReview(false), 2000);
   };
 
   const handleSkipReview = () => {
     setShowReview(false);
   };
 
-  // Modal de avaliação pendente
+  // Modal de avaliação pendente - Premium
   if (showReview && pendingReview && !reviewSubmitted) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-slate-800">
-                Como foi seu último atendimento?
-              </h2>
-              <p className="mt-2 text-slate-500">
-                {pendingReview.services.map((s) => s.name).join(", ")}
-              </p>
-              <p className="text-sm text-slate-400">
-                {formatDate(pendingReview.date)}
-              </p>
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/30 flex items-center justify-center">
+              <svg className="h-7 w-7 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-light text-white">Avalie seu atendimento</h2>
+          </div>
+
+          {/* Procedimento sendo avaliado - Destaque */}
+          <div className="mb-6 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 text-center">
+            <p className="text-xs text-amber-400/70 uppercase tracking-wider mb-1">Procedimento realizado</p>
+            <p className="text-white font-medium">{pendingReview.services.map((s) => s.name).join(", ")}</p>
+            <p className="text-sm text-slate-400 mt-1">{formatDate(pendingReview.date)}</p>
+          </div>
+
+          {/* Card de avaliação */}
+          <div className="rounded-3xl bg-white/[0.03] p-8 backdrop-blur-xl ring-1 ring-white/10">
+            {/* Seleção de profissional */}
+            <div className="mb-6">
+              <label className="block text-sm text-slate-400 mb-2">Quem te atendeu?</label>
+              <select
+                aria-label="Selecionar profissional"
+                value={selectedProfessional}
+                onChange={(e) => setSelectedProfessional(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-white focus:border-amber-500 focus:outline-none"
+              >
+                <option value="">Selecione o profissional</option>
+                {professionals.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
 
-            <div className="my-8 flex justify-center">
-              <StarRating value={rating} onChange={setRating} size="lg" />
+            {/* Estrelas */}
+            <div className="mb-6 text-center">
+              <p className="text-sm text-slate-400 mb-3">Como foi a experiência?</p>
+              <div className="flex justify-center">
+                <StarRating value={rating} onChange={setRating} size="lg" />
+              </div>
             </div>
 
+            {/* Comentário */}
             <textarea
               placeholder="Deixe um comentário (opcional)"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="mb-6 h-24 w-full resize-none rounded-xl border-2 border-slate-200 p-3 focus:border-gold-500 focus:outline-none focus:ring-4 focus:ring-gold-500/20"
+              className="w-full h-24 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none resize-none mb-6"
             />
 
-            <div className="space-y-3">
-              <Button
-                onClick={handleSubmitReview}
-                className="w-full"
-                disabled={rating === 0}
-              >
-                Enviar Avaliação
-              </Button>
-              <button
-                onClick={handleSkipReview}
-                className="w-full py-2 text-sm text-slate-500 hover:text-slate-700"
-              >
-                Avaliar depois
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Botões */}
+            <button
+              onClick={handleSubmitReview}
+              disabled={rating === 0}
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 font-medium text-slate-900 disabled:opacity-50 mb-3"
+            >
+              Enviar Avaliação
+            </button>
+            <button
+              onClick={handleSkipReview}
+              className="w-full py-3 text-sm text-slate-500 hover:text-white transition-colors"
+            >
+              Avaliar depois
+            </button>
+          </div>
+        </div>
       </main>
     );
   }
 
-  // Feedback de avaliação enviada - redireciona automaticamente para dashboard
+  // Feedback de avaliação enviada
   if (reviewSubmitted && showReview) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-cinematic-gold p-6">
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
         <div className="text-center animate-fade-up">
-          <div className="mb-4 text-6xl">✨</div>
-          <h2 className="text-2xl font-semibold text-white">Obrigada!</h2>
-          <p className="text-gold-300">Sua avaliação foi enviada</p>
-          <p className="text-sm text-slate-400 mt-4">Redirecionando...</p>
+          <div className="mx-auto mb-6 h-20 w-20 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/30 flex items-center justify-center">
+            <svg className="h-10 w-10 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-light text-white">Obrigada!</h2>
+          <p className="mt-2 text-amber-400">Sua avaliação foi enviada</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-24 safe-bottom">
-      {/* Header */}
-      <header className="bg-cinematic-gold px-4 sm:px-6 pb-20 sm:pb-24 pt-6 sm:pt-8 text-white safe-top">
-        <p className="text-gold-300 text-sm">Olá,</p>
-        <h1 className="font-display text-xl sm:text-2xl font-bold">{client.name} 👋</h1>
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-24">
+      {/* Header Premium */}
+      <header className="relative px-6 pt-8 pb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-slate-500 text-sm">Olá,</p>
+            <h1 className="text-2xl font-light text-white">{client.name.split(" ")[0]}</h1>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/30 flex items-center justify-center ring-1 ring-amber-500/30">
+            <span className="text-amber-400 font-semibold">
+              {client.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+            </span>
+          </div>
+        </div>
       </header>
 
-      {/* Card de Pontos */}
-      <div className="px-4 sm:px-6 -mt-14 sm:-mt-16">
-        <CardPremium className="relative animate-fade-up">
-          <div className="absolute right-3 sm:right-4 top-3 sm:top-4 text-gold-300/30 text-4xl sm:text-6xl">✨</div>
-          <div className="relative z-10">
-            <p className="text-xs sm:text-sm text-gold-300">Seus Pontos</p>
-            <p className="points-display text-4xl sm:text-5xl">
-              {client.pointsBalance.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs sm:text-sm text-slate-300">
-              Total gasto: {formatCurrency(client.totalSpent)}
-            </p>
-          </div>
-        </CardPremium>
-      </div>
-
-      {/* Progresso por categoria */}
-      {categoryProgress.length > 0 && (
-        <section className="mt-6 px-6">
-          <h2 className="mb-3 font-semibold text-slate-800">Seu Progresso</h2>
-          <div className="space-y-4">
-            {categoryProgress.map((cp) => (
-              <Card key={cp.categoryId} className="p-4">
-                <div className="mb-2 flex justify-between text-sm">
-                  <span className="font-medium text-slate-700">{cp.categoryName}</span>
-                  <span className="text-gold-600">
-                    {formatCurrency(cp.totalSpent)} / {formatCurrency(cp.threshold)}
-                  </span>
+      {/* Card de Pontos Premium */}
+      <div className="px-6 mb-6">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/10 to-amber-600/5 p-6 ring-1 ring-amber-500/20">
+          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-500/10 blur-2xl" />
+          <div className="relative">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-amber-400/70 text-sm uppercase tracking-wider">Seus Pontos</p>
+                <p className="text-5xl font-light text-white mt-2">
+                  {client.pointsBalance.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-slate-500 text-xs">Total investido</p>
+                <p className="text-xl font-light text-white">{formatCurrency(client.totalSpent)}</p>
+              </div>
+            </div>
+            
+            {/* Barra de progresso para próximo brinde */}
+            {categoryProgress.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <div className="flex justify-between text-xs mb-2">
+                  <span className="text-slate-400">Próximo brinde</span>
+                  <span className="text-amber-400">{categoryProgress[0].progress}%</span>
                 </div>
-                <Progress value={cp.progress} />
-                {cp.remaining > 0 && (
-                  <p className="mt-2 text-xs text-slate-500">
-                    Faltam {formatCurrency(cp.remaining)} para ganhar 1 {cp.categoryName.toLowerCase()} grátis
-                  </p>
-                )}
-              </Card>
-            ))}
+                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <ProgressBar value={categoryProgress[0].progress} />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Faltam {formatCurrency(categoryProgress[0].remaining)} para {categoryProgress[0].categoryName}
+                </p>
+              </div>
+            )}
           </div>
-        </section>
-      )}
-
-      {/* Recompensas */}
-      {rewards.length > 0 && (
-        <section className="mt-6 px-6">
-          <h2 className="mb-3 font-semibold text-slate-800">🎁 Recompensas Disponíveis</h2>
-          <div className="space-y-3">
-            {rewards.map((reward) => (
-              <RewardCard key={reward.id} reward={reward} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Tabs */}
-      <div className="mt-6 border-b border-slate-200">
-        <div className="flex px-6">
-          <button
-            onClick={() => setTab("pontos")}
-            className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-              tab === "pontos"
-                ? "border-gold-500 text-gold-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Pontos
-          </button>
-          <button
-            onClick={() => setTab("historico")}
-            className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-              tab === "historico"
-                ? "border-gold-500 text-gold-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Histórico
-          </button>
         </div>
       </div>
 
-      {/* Conteúdo da tab */}
-      <div className="px-6 py-4">
+      {/* Recompensas Disponíveis */}
+      {rewards.length > 0 && (
+        <div className="px-6 mb-6">
+          <div className="rounded-2xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 p-5 ring-1 ring-emerald-500/20">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <svg className="h-5 w-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clipRule="evenodd" />
+                  <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-emerald-400 font-medium">{rewards.length} brinde{rewards.length > 1 ? 's' : ''} disponível</p>
+                <p className="text-xs text-slate-500">Resgate na sua próxima visita</p>
+              </div>
+            </div>
+            {rewards.slice(0, 1).map((reward) => (
+              <div key={reward.id} className="bg-slate-900/50 rounded-xl p-4 mt-3">
+                <p className="text-white font-medium">{reward.title}</p>
+                <p className="text-xs text-slate-400 mt-1">Válido até {formatDate(reward.expiresAt)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Navegação por Tabs */}
+      <div className="px-6 mb-4">
+        <div className="flex gap-2">
+          {[
+            { id: "inicio", label: "Início", icon: "🏠" },
+            { id: "historico", label: "Histórico", icon: "📋" },
+            { id: "beneficios", label: "Benefícios", icon: "✨" },
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id as Tab)}
+              className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${
+                tab === t.id
+                  ? "bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30"
+                  : "bg-slate-800/50 text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Conteúdo das Tabs */}
+      <div className="px-6">
+        {tab === "inicio" && (
+          <div className="space-y-4">
+            {/* Progresso por categoria */}
+            {categoryProgress.map((cp) => (
+              <div key={cp.categoryId} className="rounded-2xl bg-slate-800/30 p-5 ring-1 ring-slate-700/50">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-white font-medium">{cp.categoryName}</span>
+                  <span className="text-amber-400 text-sm">{cp.progress}%</span>
+                </div>
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <ProgressBar value={cp.progress} />
+                </div>
+                <div className="flex justify-between mt-2 text-xs text-slate-500">
+                  <span>{formatCurrency(cp.totalSpent)}</span>
+                  <span>{formatCurrency(cp.threshold)}</span>
+                </div>
+              </div>
+            ))}
+
+            {categoryProgress.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-slate-500">Continue usando nossos serviços para acumular pontos!</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === "historico" && (
           <div className="space-y-3">
             {appointments.length === 0 ? (
-              <p className="py-8 text-center text-slate-500">
-                Nenhum atendimento registrado
-              </p>
+              <div className="text-center py-12">
+                <p className="text-slate-500">Nenhum atendimento registrado</p>
+              </div>
             ) : (
-              appointments.map((apt) => (
-                <AppointmentCard key={apt.id} appointment={apt} />
+              appointments.slice(0, 10).map((apt) => (
+                <div key={apt.id} className="rounded-2xl bg-slate-800/30 p-4 ring-1 ring-slate-700/50">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">
+                        {apt.services.map((s) => s.name).join(", ")}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">{formatDate(apt.date)}</p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="text-white font-medium">{formatCurrency(apt.total)}</p>
+                      <p className="text-xs text-amber-400">+{apt.pointsEarned} pts</p>
+                    </div>
+                  </div>
+                  {apt.hasReview && apt.review && (
+                    <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center gap-2">
+                      <StarRating value={apt.review.rating} readonly size="sm" />
+                      <span className="text-xs text-slate-500">Avaliado</span>
+                    </div>
+                  )}
+                </div>
               ))
             )}
           </div>
         )}
 
-        {tab === "pontos" && (
+        {tab === "beneficios" && (
           <div className="space-y-4">
-            <Card className="p-4">
-              <h3 className="mb-2 font-medium text-slate-800">Como funciona</h3>
-              <ul className="space-y-2 text-sm text-slate-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-gold-500">✓</span>
-                  A cada R$ 1 gasto, você ganha 1 ponto
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-gold-500">✓</span>
-                  500 pontos = R$ 50 de desconto
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-gold-500">✓</span>
-                  Acúmulo por categoria gera serviços grátis
-                </li>
-              </ul>
-            </Card>
+            <div className="rounded-2xl bg-slate-800/30 p-5 ring-1 ring-slate-700/50">
+              <h3 className="text-white font-medium mb-4">Como funciona</h3>
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-400 font-bold">1</span>
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">Acumule pontos</p>
+                    <p className="text-slate-500 text-xs mt-1">A cada R$ 1 gasto, você ganha 1 ponto</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-400 font-bold">2</span>
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">Troque por descontos</p>
+                    <p className="text-slate-500 text-xs mt-1">500 pontos = R$ 50 de desconto</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-400 font-bold">3</span>
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">Ganhe brindes exclusivos</p>
+                    <p className="text-slate-500 text-xs mt-1">Ao atingir metas de valor, ganhe procedimentos grátis</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <Card className="p-4 text-center">
-              <p className="text-sm text-slate-500">
-                Dúvidas sobre seus pontos?
-              </p>
-              <p className="mt-1 font-medium text-gold-600">
-                Fale com nossa atendente
-              </p>
-            </Card>
+            {/* Recompensas disponíveis */}
+            {rewards.length > 0 && (
+              <div className="rounded-2xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 p-5 ring-1 ring-emerald-500/20">
+                <h3 className="text-emerald-400 font-medium mb-3">Seus brindes</h3>
+                {rewards.map((reward) => (
+                  <div key={reward.id} className="bg-slate-900/50 rounded-xl p-4 mb-2 last:mb-0">
+                    <p className="text-white font-medium">{reward.title}</p>
+                    <p className="text-xs text-slate-400 mt-1">{reward.description}</p>
+                    <p className="text-xs text-emerald-400 mt-2">Válido até {formatDate(reward.expiresAt)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="text-center py-4">
+              <p className="text-sm text-slate-500">Dúvidas? Fale com nossa equipe</p>
+            </div>
           </div>
         )}
       </div>
@@ -257,60 +391,32 @@ export default function ClientDashboard({ clientId }: ClientDashboardProps) {
   );
 }
 
-function RewardCard({ reward }: { reward: Reward }) {
-  const days = daysUntil(reward.expiresAt);
+function ProgressBar({ value }: { value: number }) {
+  const getWidthClass = (v: number) => {
+    if (v >= 100) return "w-full";
+    if (v >= 95) return "w-[95%]";
+    if (v >= 90) return "w-[90%]";
+    if (v >= 85) return "w-[85%]";
+    if (v >= 80) return "w-4/5";
+    if (v >= 75) return "w-3/4";
+    if (v >= 70) return "w-[70%]";
+    if (v >= 65) return "w-[65%]";
+    if (v >= 60) return "w-3/5";
+    if (v >= 55) return "w-[55%]";
+    if (v >= 50) return "w-1/2";
+    if (v >= 45) return "w-[45%]";
+    if (v >= 40) return "w-2/5";
+    if (v >= 35) return "w-[35%]";
+    if (v >= 30) return "w-[30%]";
+    if (v >= 25) return "w-1/4";
+    if (v >= 20) return "w-1/5";
+    if (v >= 15) return "w-[15%]";
+    if (v >= 10) return "w-[10%]";
+    if (v >= 5) return "w-[5%]";
+    return "w-0";
+  };
 
   return (
-    <Card premium className="p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-semibold text-slate-800">{reward.title}</h3>
-          <p className="text-sm text-slate-500">{reward.description}</p>
-        </div>
-        <span className="text-2xl">✨</span>
-      </div>
-      <div className="mt-3 flex items-center justify-between">
-        <span
-          className={`text-xs ${
-            days <= 7 ? "text-red-500" : "text-slate-400"
-          }`}
-        >
-          Válido até {formatDate(reward.expiresAt)}
-          {days <= 7 && ` (${days} dias)`}
-        </span>
-        <span className="text-xs text-gold-600">Fale com atendente</span>
-      </div>
-    </Card>
-  );
-}
-
-function AppointmentCard({ appointment }: { appointment: Appointment }) {
-  return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="font-medium text-slate-800">
-            {appointment.services.map((s) => s.name).join(", ")}
-          </p>
-          <p className="text-sm text-slate-500">{formatDate(appointment.date)}</p>
-        </div>
-        <div className="text-right">
-          <p className="font-semibold text-slate-800">
-            {formatCurrency(appointment.total)}
-          </p>
-          <p className="text-xs text-gold-600">+{appointment.pointsEarned} pts</p>
-        </div>
-      </div>
-      {appointment.hasReview && appointment.review && (
-        <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
-          <StarRating value={appointment.review.rating} readonly size="sm" />
-          {appointment.review.comment && (
-            <span className="text-xs text-slate-500">
-              "{appointment.review.comment}"
-            </span>
-          )}
-        </div>
-      )}
-    </Card>
+    <div className={`h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all ${getWidthClass(value)}`} />
   );
 }

@@ -2,6 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Otimizações de performance
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+  experimental: {
+    optimizeCss: true,
+  },
+
   // Configuração de imagens
   images: {
     remotePatterns: [
@@ -11,6 +20,7 @@ const nextConfig = {
         pathname: "/storage/v1/object/public/**",
       },
     ],
+    formats: ["image/avif", "image/webp"],
   },
 
   // Headers de segurança

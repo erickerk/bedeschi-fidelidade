@@ -14,6 +14,9 @@ import {
   importedCategories,
   mockAppointments,
   mockReviews,
+  getProfessionalById,
+  getAllActiveProfessionals,
+  generateDefaultPin,
   type Client,
   type Appointment,
 } from "@/lib/mock-data";
@@ -22,14 +25,6 @@ import { formatCurrency, formatPhone } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 
 type View = "home" | "search" | "client" | "new-appointment" | "new-client" | "evaluate";
-
-// Mock profissionais
-const mockProfessionals = [
-  { id: "prof-1", name: "Dra. Amanda", specialty: "Estética Facial" },
-  { id: "prof-2", name: "Carla Santos", specialty: "Massagem" },
-  { id: "prof-3", name: "Juliana Lima", specialty: "Depilação" },
-  { id: "prof-4", name: "Patricia Alves", specialty: "Tratamento Corporal" },
-];
 
 // Gerar código OTP de 4 dígitos
 const generateOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
@@ -383,6 +378,8 @@ function NewAppointmentView({
   const [serviceResults, setServiceResults] = useState<typeof importedServices>([]);
   const [selectedProfessional, setSelectedProfessional] = useState("");
 
+  const professionals = getAllActiveProfessionals();
+
   const handleServiceSearch = (query: string) => {
     setServiceSearch(query);
     if (query.length >= 2) {
@@ -497,7 +494,7 @@ function NewAppointmentView({
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-gold-500 focus:outline-none"
         >
           <option value="">Selecione o profissional...</option>
-          {mockProfessionals.map((p) => (
+          {professionals.map((p) => (
             <option key={p.id} value={p.id}>{p.name} - {p.specialty}</option>
           ))}
         </select>
@@ -510,10 +507,17 @@ function NewAppointmentView({
             alert("Selecione um profissional");
             return;
           }
+          const prof = getProfessionalById(selectedProfessional);
+          if (!prof) {
+            alert("Profissional inválido");
+            return;
+          }
           const appointment: Appointment = {
             id: `apt-${Date.now()}`,
             clientId: client.id,
             clientName: client.name,
+            professionalId: prof.id,
+            professionalName: prof.name,
             date: new Date().toISOString().split("T")[0],
             time: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
             services: selectedServices.map((s) => ({ name: s.name, price: s.price })),
@@ -713,10 +717,13 @@ function NewClientView({
       return;
     }
 
+    const cleanPhone = phone.replace(/\D/g, "");
+
     const newClient: Client = {
       id: `cli-${Date.now()}`,
       name: name.trim(),
-      phone: phone.replace(/\D/g, ""),
+      phone: cleanPhone,
+      pin: generateDefaultPin(cleanPhone),
       email: email || undefined,
       pointsBalance: 0,
       totalSpent: 0,
