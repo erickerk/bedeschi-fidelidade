@@ -4,6 +4,7 @@
  */
 
 import { Appointment, Client, Professional, Review } from "./mock-data";
+import { importedServices } from "./services-data";
 
 // Gerar 90 dias de dados realistas de receita
 export function generateDailyRevenue() {
@@ -56,23 +57,7 @@ export function generateRealisticAppointments(): Appointment[] {
     { id: "prof-6", name: "Fernanda Oliveira" },
   ];
   
-  const services = [
-    { name: "Massagem Relaxante 60min", price: 180, category: "Massagem" },
-    { name: "Massagem Relaxante 90min", price: 250, category: "Massagem" },
-    { name: "Massagem Modeladora", price: 200, category: "Massagem" },
-    { name: "Limpeza de Pele Profunda", price: 150, category: "Limpeza de Pele" },
-    { name: "Limpeza de Pele Express", price: 90, category: "Limpeza de Pele" },
-    { name: "Depilação Perna Completa", price: 80, category: "Depilação" },
-    { name: "Depilação Meia Perna", price: 50, category: "Depilação" },
-    { name: "Depilação Axilas", price: 30, category: "Depilação" },
-    { name: "Hidratação Facial", price: 120, category: "Tratamento Facial" },
-    { name: "Peeling Químico", price: 180, category: "Tratamento Facial" },
-    { name: "Drenagem Linfática", price: 160, category: "Tratamento Corporal" },
-    { name: "Radiofrequência", price: 220, category: "Tratamento Corporal" },
-    { name: "Manicure Tradicional", price: 35, category: "Manicure e Pedicure" },
-    { name: "Pedicure Spa", price: 55, category: "Manicure e Pedicure" },
-    { name: "Design de Sobrancelhas", price: 45, category: "Tratamento Facial" },
-  ];
+  const servicesPool = importedServices.filter((s) => s.isActive);
   
   let aptId = 1;
   
@@ -90,20 +75,23 @@ export function generateRealisticAppointments(): Appointment[] {
       const client = clients[Math.floor(Math.random() * clients.length)];
       const prof = professionals[Math.floor(Math.random() * professionals.length)];
       
-      // 1-3 serviços por atendimento
+      // 1-3 serviços por atendimento usando a base oficial de serviços importados
       const numServices = Math.floor(Math.random() * 3) + 1;
       const selectedServices = [];
       const usedIndices = new Set<number>();
-      
-      for (let s = 0; s < numServices; s++) {
-        let idx = Math.floor(Math.random() * services.length);
+
+      const pool = servicesPool.length > 0 ? servicesPool : importedServices;
+
+      for (let s = 0; s < numServices && pool.length > 0; s++) {
+        let idx = Math.floor(Math.random() * pool.length);
         while (usedIndices.has(idx)) {
-          idx = Math.floor(Math.random() * services.length);
+          idx = Math.floor(Math.random() * pool.length);
         }
         usedIndices.add(idx);
+        const svc = pool[idx];
         selectedServices.push({
-          name: services[idx].name,
-          price: services[idx].price
+          name: svc.name,
+          price: svc.price,
         });
       }
       

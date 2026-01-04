@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { getClientByPhone, validateClientPin } from "@/lib/mock-data";
+import { useApp } from "@/lib/app-context";
 
 const ClientDashboard = lazy(() => import("./client-dashboard"));
 
@@ -10,6 +10,7 @@ type Step = "login" | "pin" | "dashboard";
 type Theme = "light" | "dark";
 
 export default function ClientAccessPage() {
+  const { getClientByPhone, clients } = useApp();
   const [step, setStep] = useState<Step>("login");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -65,9 +66,9 @@ export default function ClientAccessPage() {
     await new Promise((r) => setTimeout(r, 300));
 
     const cleanedPhone = phone.replace(/\D/g, "");
-    const client = validateClientPin(cleanedPhone, otp);
+    const client = getClientByPhone(cleanedPhone);
     
-    if (!client) {
+    if (!client || client.pin !== otp) {
       setError("PIN incorreto");
       setLoading(false);
       return;
@@ -135,14 +136,16 @@ export default function ClientAccessPage() {
         {step === "login" && (
           <div className="w-full max-w-xs text-center">
             {/* Logo */}
-            <div className={`mx-auto mb-4 h-20 w-20 rounded-full p-0.5 ring-1 ${
-              isDark 
-                ? "bg-gradient-to-br from-amber-400/20 to-amber-600/30 ring-amber-500/40" 
-                : "bg-gradient-to-br from-amber-200 to-amber-300 ring-amber-400"
-            }`}>
-              <div className={`flex h-full w-full items-center justify-center rounded-full ${isDark ? "bg-slate-900" : "bg-white"}`}>
-                <img src="/Logo.png" alt="Instituto Bedeschi" className="h-14 w-14 object-contain" />
-              </div>
+            <div className="mx-auto mb-4">
+              <img
+                src="/Logo.png"
+                alt="Instituto Bedeschi"
+                className={`h-16 w-auto mx-auto object-contain ${
+                  isDark
+                    ? "drop-shadow-[0_0_28px_rgba(251,191,36,0.5)]"
+                    : "drop-shadow-[0_0_22px_rgba(148,163,184,0.6)]"
+                }`}
+              />
             </div>
             
             {/* Título */}

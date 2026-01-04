@@ -5,7 +5,13 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/app-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { importedServices, importedCategories, type Service, type Professional, type FidelityRule, type Client } from "@/lib/mock-data";
+import { importedServices, importedCategories, type Service as DomainService, type Professional, type FidelityRule, type Client } from "@/lib/mock-data";
+import { 
+  getServices as getServicesFromSupabase,
+  createService as createSupabaseService,
+  updateService as updateSupabaseService,
+  type Service as SupabaseService,
+} from "@/lib/services-api";
 import { 
   Sun, Moon, LogOut, Users, Calendar, Gift, Star, TrendingUp, Settings,
   Download, Plus, Edit2, Trash2, Search, Filter, ChevronDown, Check, X,
@@ -42,14 +48,14 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [services, setServices] = useState<Service[]>(importedServices);
+  const [services, setServices] = useState<DomainService[]>(importedServices);
   const [searchTerm, setSearchTerm] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [showAddProfessional, setShowAddProfessional] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
   const [showAddRule, setShowAddRule] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
-  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editingService, setEditingService] = useState<DomainService | null>(null);
   const [editingRule, setEditingRule] = useState<FidelityRule | null>(null);
   const [showRulesHelp, setShowRulesHelp] = useState(false);
   
@@ -106,11 +112,45 @@ export default function AdminDashboard() {
   const { 
     clients, appointments, rewards, reviews, professionals, rules,
     updateClient, addProfessional, updateProfessional, removeProfessional,
-    getRules, toggleRule, addRule, updateRule
+    getRules, toggleRule, addRule, updateRule, getClientRewards, redeemReward
   } = appData;
 
   const isDark = theme === "dark";
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+
+  // Carregar serviços do Supabase (fallback para mocks em caso de erro)
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadServices = async () => {
+      try {
+        const apiServices = await getServicesFromSupabase();
+        if (cancelled) return;
+
+        if (apiServices && apiServices.length > 0) {
+          const mapped: DomainService[] = apiServices.map((svc: SupabaseService) => ({
+            id: svc.id,
+            externalCode: svc.external_code,
+            name: svc.name,
+            categoryId: svc.category_id,
+            categoryName: svc.category_name,
+            price: svc.price,
+            durationMinutes: svc.duration_minutes,
+            isActive: svc.is_active,
+          }));
+          setServices(mapped);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar serviços do Supabase. Mantendo lista mock em memória.", error);
+      }
+    };
+
+    loadServices();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const session = localStorage.getItem("staffSession");
@@ -178,6 +218,30 @@ export default function AdminDashboard() {
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${phoneWithCountry}?text=${encodedMessage}`;
     window.open(url, "_blank");
+  };
+
+  // Estado para modal de usar bônus
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
+  const [selectedClientForRedeem, setSelectedClientForRedeem] = useState<Client | null>(null);
+  const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
+
+  const handleOpenRedeemModal = (client: Client) => {
+    setSelectedClientForRedeem(client);
+    setSelectedRewardId(null);
+    setShowRedeemModal(true);
+  };
+
+  const handleRedeemReward = () => {
+    if (!selectedClientForRedeem || !selectedRewardId) return;
+    
+    redeemReward(selectedRewardId);
+    setShowRedeemModal(false);
+    setSelectedClientForRedeem(null);
+    setSelectedRewardId(null);
+  };
+
+  const getClientAvailableRewards = (clientId: string) => {
+    return getClientRewards(clientId).filter(r => r.status === 'available');
   };
 
   // Filtrar atendimentos por período
@@ -474,29 +538,105 @@ export default function AdminDashboard() {
     setEditingProfessional(null);
   };
 
-  // Handlers para CRUD de Serviços (estado local)
-  const handleAddService = () => {
+  // Handlers para CRUD de Serviços (integrado ao Supabase com fallback local)
+  const handleAddService = async () => {
     if (!newService.name || !newService.categoryId) return;
+
     const category = importedCategories.find((c) => c.id === newService.categoryId);
-    const service: Service = {
-      id: `srv-custom-${Date.now()}`,
-      externalCode: "CUSTOM",
-      name: newService.name,
-      categoryId: newService.categoryId,
-      categoryName: category?.name ?? "Outros",
-      price: newService.price,
-      durationMinutes: newService.durationMinutes,
-      isActive: true,
-    };
-    setServices((prev) => [service, ...prev]);
+    const categoryName = category?.name ?? "Outros";
+
+    try {
+      const created = await createSupabaseService({
+        name: newService.name,
+        price: newService.price,
+        duration_minutes: newService.durationMinutes,
+        category_id: newService.categoryId,
+        category_name: categoryName,
+      });
+
+      const mapped: DomainService = {
+        id: created.id,
+        externalCode: created.external_code,
+        name: created.name,
+        categoryId: created.category_id,
+        categoryName: created.category_name,
+        price: created.price,
+        durationMinutes: created.duration_minutes,
+        isActive: created.is_active,
+      };
+
+      setServices((prev) => [mapped, ...prev]);
+    } catch (error) {
+      console.error("Erro ao criar serviço no Supabase, usando apenas estado local.", error);
+
+      const fallbackService: DomainService = {
+        id: `srv-custom-${Date.now()}`,
+        externalCode: "CUSTOM",
+        name: newService.name,
+        categoryId: newService.categoryId,
+        categoryName,
+        price: newService.price,
+        durationMinutes: newService.durationMinutes,
+        isActive: true,
+      };
+
+      setServices((prev) => [fallbackService, ...prev]);
+    }
+
     setNewService({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
     setShowAddService(false);
   };
 
-  const handleUpdateService = () => {
+  const handleUpdateService = async () => {
     if (!editingService) return;
-    setServices((prev) => prev.map((s) => (s.id === editingService.id ? editingService : s)));
+
+    try {
+      const updated = await updateSupabaseService(editingService.id, {
+        name: editingService.name,
+        price: editingService.price,
+        duration_minutes: editingService.durationMinutes,
+        category_id: editingService.categoryId,
+        category_name: editingService.categoryName,
+        is_active: editingService.isActive,
+      });
+
+      const mapped: DomainService = {
+        id: updated.id,
+        externalCode: updated.external_code,
+        name: updated.name,
+        categoryId: updated.category_id,
+        categoryName: updated.category_name,
+        price: updated.price,
+        durationMinutes: updated.duration_minutes,
+        isActive: updated.is_active,
+      };
+
+      setServices((prev) => prev.map((s) => (s.id === mapped.id ? mapped : s)));
+    } catch (error) {
+      console.error("Erro ao atualizar serviço no Supabase, mantendo atualização apenas em memória.", error);
+      setServices((prev) => prev.map((s) => (s.id === editingService.id ? editingService : s)));
+    }
+
     setEditingService(null);
+  };
+
+  const handleToggleServiceActive = async (service: DomainService) => {
+    const nextIsActive = !service.isActive;
+
+    // Atualização otimista no estado local
+    setServices((prev) =>
+      prev.map((s) => (s.id === service.id ? { ...s, isActive: nextIsActive } : s)),
+    );
+
+    try {
+      await updateSupabaseService(service.id, { is_active: nextIsActive });
+    } catch (error) {
+      console.error("Erro ao atualizar status do serviço no Supabase, revertendo no estado local.", error);
+      // Reverter em caso de erro
+      setServices((prev) =>
+        prev.map((s) => (s.id === service.id ? { ...s, isActive: service.isActive } : s)),
+      );
+    }
   };
 
   // Handlers para CRUD de Regras
@@ -744,26 +884,56 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-end justify-between h-44 gap-3 rounded-2xl chart-grid-y px-3 pb-3">
-                  {analytics.dailyRevenue.map((day, i) => {
-                    const maxRevenue = Math.max(...analytics.dailyRevenue.map(d => d.revenue), 1);
-                    const heightPercent = (day.revenue / maxRevenue) * 100;
-                    return (
-                      <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                        <span className={`text-[10px] md:text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                          {formatCurrency(day.revenue)}
-                        </span>
-                        <div 
-                          className={`w-full rounded-t-xl bg-gradient-to-t from-amber-500 via-amber-400 to-emerald-400 shadow-sm transition-all chart-bar-vertical`}
-                          data-chart-height={`${Math.max(heightPercent, 5)}%`}
-                        />
-                        <span className={`text-[10px] md:text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                          {new Date(day.date).toLocaleDateString("pt-BR", analyticsPeriodFilter === "7d" ? { weekday: "short" } : { day: "2-digit", month: "2-digit" }).slice(0, 5)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                {analytics.dailyRevenue.some((d) => d.revenue > 0) ? (
+                  <div className="flex items-end justify-between h-44 gap-3 rounded-2xl chart-grid-y px-3 pb-3">
+                    {analytics.dailyRevenue.map((day) => {
+                      const maxRevenue = Math.max(
+                        ...analytics.dailyRevenue.map((d) => d.revenue),
+                        1,
+                      );
+                      const heightPercent = (day.revenue / maxRevenue) * 100;
+                      return (
+                        <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                          <span
+                            className={`text-[10px] md:text-xs ${
+                              isDark ? "text-slate-400" : "text-slate-500"
+                            }`}
+                          >
+                            {formatCurrency(day.revenue)}
+                          </span>
+                          <div
+                            className={`w-full rounded-t-xl bg-gradient-to-t from-amber-500 via-amber-400 to-emerald-400 shadow-sm transition-all chart-bar-vertical`}
+                            data-chart-height={`${Math.max(heightPercent, 5)}%`}
+                          />
+                          <span
+                            className={`text-[10px] md:text-xs ${
+                              isDark ? "text-slate-500" : "text-slate-400"
+                            }`}
+                          >
+                            {new Date(day.date)
+                              .toLocaleDateString(
+                                "pt-BR",
+                                analyticsPeriodFilter === "7d"
+                                  ? { weekday: "short" }
+                                  : { day: "2-digit", month: "2-digit" },
+                              )
+                              .slice(0, 5)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    className={`flex h-40 items-center justify-center rounded-2xl border text-xs ${
+                      isDark
+                        ? "border-slate-700 text-slate-400 bg-slate-900/40"
+                        : "border-slate-200 text-slate-500 bg-slate-50"
+                    }`}
+                  >
+                    Nenhum dado de receita para o período e filtros selecionados.
+                  </div>
+                )}
               </div>
 
               {/* Top 5 Serviços */}
@@ -1255,7 +1425,22 @@ export default function AdminDashboard() {
                       <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{formatCurrency(client.totalSpent)}</td>
                       <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.totalAppointments}</td>
                       <td className={`p-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{client.lastVisit ? formatDate(client.lastVisit) : "-"}</td>
-                      <td className="p-3 text-right">
+                      <td className="p-3 text-right flex gap-2 justify-end">
+                        {getClientAvailableRewards(client.id).length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRedeemModal(client)}
+                            className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                              isDark
+                                ? "bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                                : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                            }`}
+                            aria-label={`Usar bônus de ${client.name}`}
+                          >
+                            <Gift className="h-3 w-3" />
+                            Usar Bônus
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleSendWhatsAppToClient(client)}
@@ -1609,7 +1794,14 @@ export default function AdminDashboard() {
                         isDark ? "text-slate-200" : "text-slate-700"
                       }`}
                     >
-                      Especialidades (separe por vírgulas)
+                      <span>Especialidades</span>
+                      <span
+                        className={`block text-xs font-normal ${
+                          isDark ? "text-slate-400" : "text-slate-500"
+                        }`}
+                      >
+                        Separe por vírgulas
+                      </span>
                     </label>
                     <input
                       type="text"
@@ -2001,7 +2193,7 @@ export default function AdminDashboard() {
                           type="number"
                           min={0}
                           step={1}
-                          value={newService.price}
+                          value={newService.price || ""}
                           onChange={(e) =>
                             setNewService({
                               ...newService,
@@ -2030,7 +2222,7 @@ export default function AdminDashboard() {
                         type="number"
                         min={5}
                         step={5}
-                        value={newService.durationMinutes}
+                        value={newService.durationMinutes || ""}
                         onChange={(e) =>
                           setNewService({
                             ...newService,
@@ -2158,7 +2350,7 @@ export default function AdminDashboard() {
                           type="number"
                           min={0}
                           step={1}
-                          value={editingService.price}
+                          value={editingService.price || ""}
                           onChange={(e) =>
                             setEditingService({
                               ...editingService,
@@ -2187,7 +2379,7 @@ export default function AdminDashboard() {
                         type="number"
                         min={5}
                         step={5}
-                        value={editingService.durationMinutes}
+                        value={editingService.durationMinutes || ""}
                         onChange={(e) =>
                           setEditingService({
                             ...editingService,
@@ -2582,7 +2774,7 @@ export default function AdminDashboard() {
                           type="number"
                           min={0}
                           step={1}
-                          value={newRule.thresholdValue}
+                          value={newRule.thresholdValue || ""}
                           onChange={(e) =>
                             setNewRule({
                               ...newRule,
@@ -2635,7 +2827,7 @@ export default function AdminDashboard() {
                           type="number"
                           min={0}
                           step={1}
-                          value={newRule.rewardValue}
+                          value={newRule.rewardValue || ""}
                           onChange={(e) =>
                             setNewRule({
                               ...newRule,
@@ -2662,7 +2854,7 @@ export default function AdminDashboard() {
                         type="number"
                         min={1}
                         step={1}
-                        value={newRule.validityDays}
+                        value={newRule.validityDays || ""}
                         onChange={(e) =>
                           setNewRule({
                             ...newRule,
@@ -2778,7 +2970,7 @@ export default function AdminDashboard() {
                           type="number"
                           min={0}
                           step={1}
-                          value={editingRule.thresholdValue || 0}
+                          value={editingRule.thresholdValue || ""}
                           onChange={(e) =>
                             setEditingRule({
                               ...editingRule,
@@ -2831,7 +3023,7 @@ export default function AdminDashboard() {
                           type="number"
                           min={0}
                           step={1}
-                          value={editingRule.rewardValue || 0}
+                          value={editingRule.rewardValue || ""}
                           onChange={(e) =>
                             setEditingRule({
                               ...editingRule,
@@ -2858,7 +3050,7 @@ export default function AdminDashboard() {
                         type="number"
                         min={1}
                         step={1}
-                        value={editingRule.validityDays}
+                        value={editingRule.validityDays || ""}
                         onChange={(e) =>
                           setEditingRule({
                             ...editingRule,
@@ -3206,6 +3398,87 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Modal Usar Bônus */}
+      {showRedeemModal && selectedClientForRedeem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className={`w-full max-w-md rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                Usar Bônus - {selectedClientForRedeem.name}
+              </h3>
+              <button 
+                onClick={() => setShowRedeemModal(false)} 
+                className={isDark ? "text-slate-400" : "text-slate-500"}
+                aria-label="Fechar modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {getClientAvailableRewards(selectedClientForRedeem.id).map((reward) => (
+                <label
+                  key={reward.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-colors ${
+                    selectedRewardId === reward.id
+                      ? isDark ? "border-amber-500 bg-amber-500/10" : "border-amber-500 bg-amber-50"
+                      : isDark ? "border-slate-700 hover:border-slate-600" : "border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="reward"
+                    value={reward.id}
+                    checked={selectedRewardId === reward.id}
+                    onChange={() => setSelectedRewardId(reward.id)}
+                    className="sr-only"
+                  />
+                  <Gift className={`h-5 w-5 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
+                  <div className="flex-1">
+                    <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{reward.title}</p>
+                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{reward.description}</p>
+                    <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                      Válido até: {formatDate(reward.expiresAt)}
+                    </p>
+                  </div>
+                  {selectedRewardId === reward.id && (
+                    <Check className="h-5 w-5 text-amber-500" />
+                  )}
+                </label>
+              ))}
+
+              {getClientAvailableRewards(selectedClientForRedeem.id).length === 0 && (
+                <p className={`text-center py-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  Nenhum bônus disponível para este cliente.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRedeemModal(false)}
+                className={`flex-1 py-2 rounded-lg font-medium ${
+                  isDark ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRedeemReward}
+                disabled={!selectedRewardId}
+                className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                  selectedRewardId
+                    ? "bg-amber-500 text-slate-900 hover:bg-amber-400"
+                    : isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                }`}
+              >
+                Confirmar Resgate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
