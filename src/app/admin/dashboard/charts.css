@@ -1,0 +1,11 @@
+/* Estilos para gráficos dinâmicos do dashboard admin */
+
+/* Barra vertical (altura dinâmica) */
+.chart-bar-vertical {
+  height: var(--chart-height, 0%);
+}
+
+/* Barra horizontal (largura dinâmica) */
+.chart-bar-horizontal {
+  width: var(--chart-width, 0%);
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, lazy, Suspense } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { getClientByPhone, validateClientPin } from "@/lib/mock-data";
 
 const ClientDashboard = lazy(() => import("./client-dashboard"));
@@ -140,7 +141,7 @@ export default function ClientAccessPage() {
                 : "bg-gradient-to-br from-amber-200 to-amber-300 ring-amber-400"
             }`}>
               <div className={`flex h-full w-full items-center justify-center rounded-full ${isDark ? "bg-slate-900" : "bg-white"}`}>
-                <img src="/logo.svg" alt="Logo" className="h-10 w-10 object-contain" />
+                <img src="/logo-bedeschi.svg" alt="Instituto Bedeschi" className="h-10 w-10 object-contain" />
               </div>
             </div>
             
@@ -154,23 +155,15 @@ export default function ClientAccessPage() {
 
             {/* QR Code */}
             <div className="my-5 flex justify-center">
-              <div className={`rounded-xl p-2 shadow-lg ${isDark ? "bg-white shadow-amber-500/10" : "bg-white shadow-amber-200"}`}>
-                <svg viewBox="0 0 100 100" className="h-20 w-20">
-                  <rect fill="#1e293b" x="10" y="10" width="25" height="25"/>
-                  <rect fill="#1e293b" x="65" y="10" width="25" height="25"/>
-                  <rect fill="#1e293b" x="10" y="65" width="25" height="25"/>
-                  <rect fill="#1e293b" x="40" y="40" width="20" height="20"/>
-                  <rect fill="#d97706" x="20" y="20" width="5" height="5"/>
-                  <rect fill="#d97706" x="75" y="20" width="5" height="5"/>
-                  <rect fill="#d97706" x="20" y="75" width="5" height="5"/>
-                  <rect fill="#1e293b" x="40" y="10" width="5" height="5"/>
-                  <rect fill="#1e293b" x="50" y="15" width="5" height="5"/>
-                  <rect fill="#1e293b" x="10" y="45" width="5" height="10"/>
-                  <rect fill="#1e293b" x="85" y="45" width="5" height="10"/>
-                  <rect fill="#1e293b" x="65" y="70" width="10" height="5"/>
-                  <rect fill="#1e293b" x="80" y="80" width="10" height="10"/>
-                  <rect fill="#1e293b" x="45" y="75" width="5" height="15"/>
-                </svg>
+              <div className={`rounded-xl p-3 shadow-lg ${isDark ? "bg-white shadow-amber-500/10" : "bg-white shadow-amber-200"}`}>
+                <QRCodeSVG 
+                  value="https://institutobedeschi.com.br"
+                  size={96}
+                  level="H"
+                  includeMargin={false}
+                  fgColor="#1e293b"
+                  bgColor="#ffffff"
+                />
               </div>
             </div>
             <p className={`text-[10px] mb-4 ${isDark ? "text-slate-500" : "text-slate-500"}`}>

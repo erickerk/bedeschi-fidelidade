@@ -402,96 +402,10 @@ export const mockProfessionals: Professional[] = [
   },
 ];
 
-// Gerar atendimentos dos últimos 6 meses para Analytics
-function generateAppointments(): Appointment[] {
-  const appointments: Appointment[] = [];
-  const clients = [
-    { id: "cli-1", name: "Maria Silva" },
-    { id: "cli-2", name: "Ana Santos" },
-    { id: "cli-3", name: "Carla Oliveira" },
-    { id: "cli-4", name: "Juliana Ferreira" },
-    { id: "cli-5", name: "Beatriz Lima" },
-    { id: "cli-6", name: "Fernanda Costa" },
-    { id: "cli-7", name: "Roberta Mendes" },
-    { id: "cli-8", name: "Tatiana Rocha" },
-  ];
-  const professionals = [
-    { id: "prof-1", name: "Dra. Amanda Costa" },
-    { id: "prof-2", name: "Carla Santos" },
-    { id: "prof-3", name: "Juliana Lima" },
-    { id: "prof-4", name: "Patricia Alves" },
-    { id: "prof-6", name: "Fernanda Oliveira" },
-  ];
-  const serviceOptions = [
-    { name: "Massagem Relaxante 60min", price: 180, catId: "cat-1" },
-    { name: "Massagem Relaxante 90min", price: 250, catId: "cat-1" },
-    { name: "Massagem Modeladora", price: 200, catId: "cat-1" },
-    { name: "Limpeza de Pele Profunda", price: 150, catId: "cat-2" },
-    { name: "Limpeza de Pele Express", price: 90, catId: "cat-2" },
-    { name: "Depilação Perna Completa", price: 80, catId: "cat-3" },
-    { name: "Depilação Meia Perna", price: 50, catId: "cat-3" },
-    { name: "Hidratação Facial", price: 120, catId: "cat-4" },
-    { name: "Drenagem Linfática", price: 160, catId: "cat-5" },
-    { name: "Manicure Tradicional", price: 35, catId: "cat-6" },
-  ];
+// Importar dados aprimorados
+import { generateRealisticAppointments } from "./enhanced-mock-data";
 
-  let aptId = 1;
-  const now = new Date();
-
-  // Gerar atendimentos para os últimos 6 meses
-  for (let monthOffset = 0; monthOffset < 6; monthOffset++) {
-    const monthDate = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
-    const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
-    
-    // Quantidade de atendimentos por mês (mais recentes = mais atendimentos)
-    const aptCount = 12 + Math.floor(Math.random() * 8) - monthOffset * 2;
-    
-    for (let i = 0; i < Math.max(aptCount, 5); i++) {
-      const day = Math.min(Math.floor(Math.random() * daysInMonth) + 1, daysInMonth);
-      const client = clients[Math.floor(Math.random() * clients.length)];
-      const prof = professionals[Math.floor(Math.random() * professionals.length)];
-      
-      // 1-3 serviços por atendimento
-      const numServices = Math.floor(Math.random() * 3) + 1;
-      const selectedServices: { name: string; price: number }[] = [];
-      const usedIndices = new Set<number>();
-      
-      for (let s = 0; s < numServices; s++) {
-        let idx = Math.floor(Math.random() * serviceOptions.length);
-        while (usedIndices.has(idx)) {
-          idx = Math.floor(Math.random() * serviceOptions.length);
-        }
-        usedIndices.add(idx);
-        selectedServices.push({ name: serviceOptions[idx].name, price: serviceOptions[idx].price });
-      }
-      
-      const total = selectedServices.reduce((sum, s) => sum + s.price, 0);
-      const hasReview = Math.random() > 0.4;
-      const dateStr = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      
-      appointments.push({
-        id: `apt-${aptId++}`,
-        clientId: client.id,
-        clientName: client.name,
-        professionalId: prof.id,
-        professionalName: prof.name,
-        date: dateStr,
-        time: `${9 + Math.floor(Math.random() * 9)}:${Math.random() > 0.5 ? "00" : "30"}`,
-        services: selectedServices,
-        total,
-        pointsEarned: total,
-        status: "completed",
-        hasReview,
-        review: hasReview ? { rating: 3 + Math.floor(Math.random() * 3), comment: "" } : undefined,
-      });
-    }
-  }
-  
-  // Ordenar por data decrescente
-  return appointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-}
-
-export const mockAppointments: Appointment[] = generateAppointments();
+export const mockAppointments: Appointment[] = generateRealisticAppointments();
 
 // Reviews (avaliações)
 export interface Review {

@@ -62,13 +62,15 @@ export default function StaffLoginPage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-slate-800 ring-1 ring-slate-700 flex items-center justify-center">
-            <svg className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-slate-800 ring-1 ring-amber-500/50 flex items-center justify-center">
+            <img
+              src="/logo-bedeschi.svg"
+              alt="Instituto Bedeschi"
+              className="h-10 w-10 object-contain"
+            />
           </div>
           <h1 className="text-2xl font-semibold text-white">Área do Colaborador</h1>
-          <p className="mt-2 text-slate-400">Instituto Bedeschi</p>
+          <p className="mt-2 text-amber-400">Instituto Bedeschi</p>
         </div>
 
         <div className="rounded-2xl bg-slate-800/50 p-8 ring-1 ring-slate-700/50 backdrop-blur-sm">

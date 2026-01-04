@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <!-- Shield background -->
+  <path d="M512 100L200 250V450C200 650 350 850 512 924C674 850 824 650 824 450V250L512 100Z" fill="#3B4252"/>
+  
+  <!-- Shield border -->
+  <path d="M512 100L200 250V450C200 650 350 850 512 924C674 850 824 650 824 450V250L512 100Z" stroke="#B8936F" stroke-width="20" fill="none"/>
+  
+  <!-- Quadrant 1 (Top Left) - Hands -->
+  <path d="M350 280L512 280L512 450L350 450Z" fill="#B8936F"/>
+  <g transform="translate(380, 320)">
+    <path d="M20 30C20 30 30 25 40 30M50 35C50 35 60 30 70 35" stroke="#3B4252" stroke-width="3" fill="none"/>
+  </g>
+  
+  <!-- Quadrant 2 (Top Right) - Face -->
+  <path d="M512 280L674 280L674 450L512 450Z" fill="#3B4252"/>
+  <g transform="translate(560, 320)">
+    <ellipse cx="30" cy="40" rx="25" ry="35" stroke="#B8936F" stroke-width="3" fill="none"/>
+    <path d="M20 35C20 35 25 30 30 30C35 30 40 35 40 35" stroke="#B8936F" stroke-width="2" fill="none"/>
+  </g>
+  
+  <!-- Quadrant 3 (Bottom Left) - Legs -->
+  <path d="M350 450L512 450L512 620L350 620Z" fill="#B8936F"/>
+  <g transform="translate(380, 490)">
+    <path d="M20 20L30 60M50 20L60 60" stroke="#3B4252" stroke-width="4"/>
+  </g>
+  
+  <!-- Quadrant 4 (Bottom Right) - Mirror and tools -->
+  <path d="M512 450L674 450L674 620L512 620Z" fill="#3B4252"/>
+  <g transform="translate(560, 480)">
+    <circle cx="30" cy="30" r="15" stroke="#B8936F" stroke-width="3" fill="none"/>
+    <line x1="30" y1="45" x2="30" y2="65" stroke="#B8936F" stroke-width="3"/>
+    <ellipse cx="60" cy="40" rx="8" ry="12" stroke="#B8936F" stroke-width="2" fill="none"/>
+  </g>
+  
+  <!-- Diagonal divider -->
+  <line x1="350" y1="280" x2="674" y2="620" stroke="#3B4252" stroke-width="4"/>
+  <line x1="512" y1="280" x2="512" y2="620" stroke="#3B4252" stroke-width="4"/>
+  <line x1="350" y1="450" x2="674" y2="450" stroke="#3B4252" stroke-width="4"/>
+</svg>

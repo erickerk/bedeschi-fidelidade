@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import "./charts.css";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/app-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { importedServices, importedCategories } from "@/lib/mock-data";
+import { importedServices, importedCategories, type Service, type Professional, type FidelityRule, type Client } from "@/lib/mock-data";
 import { 
   Sun, Moon, LogOut, Users, Calendar, Gift, Star, TrendingUp, Settings,
   Download, Plus, Edit2, Trash2, Search, Filter, ChevronDown, Check, X,
-  BarChart3, PieChart, UserPlus, Award, FileSpreadsheet, Eye, EyeOff
+  BarChart3, PieChart, UserPlus, Award, FileSpreadsheet, Eye, EyeOff,
+  Clock, DollarSign, Target, Zap, Info, AlertCircle, CheckCircle, Save,
+  ArrowUp, ArrowDown, Trophy, Crown, Percent, Hash, Send
 } from "lucide-react";
 
 type Tab = "dashboard" | "analytics" | "clientes" | "equipe" | "servicos" | "regras" | "relatorios";
@@ -20,24 +23,73 @@ interface StaffSession {
   loggedAt: string;
 }
 
+// Cores para gráficos
+const CHART_COLORS = [
+  "bg-amber-500", "bg-emerald-500", "bg-blue-500", "bg-purple-500", "bg-rose-500",
+  "bg-cyan-500", "bg-orange-500", "bg-pink-500", "bg-indigo-500", "bg-teal-500"
+];
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<StaffSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [searchTerm, setSearchTerm] = useState("");
-  const [showAddClient, setShowAddClient] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
   const [showAddProfessional, setShowAddProfessional] = useState(false);
-  const [editingRule, setEditingRule] = useState<string | null>(null);
-  const [clientFilter, setClientFilter] = useState<"all" | "withRewards" | "vip">("all");
-  const [professionalRoleFilter, setProfessionalRoleFilter] =
-    useState<"all" | "medico" | "profissional" | "recepcionista">("all");
+  const [showAddService, setShowAddService] = useState(false);
+  const [showAddRule, setShowAddRule] = useState(false);
+  const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editingRule, setEditingRule] = useState<FidelityRule | null>(null);
+  const [showRulesHelp, setShowRulesHelp] = useState(false);
+  
+  // Filtros
+  const [clientFilter, setClientFilter] = useState<"all" | "withRewards" | "vip" | "inactive">("all");
+  const [professionalRoleFilter, setProfessionalRoleFilter] = useState<"all" | "medico" | "profissional" | "recepcionista">("all");
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("all");
-  const [analyticsProfessionalFilter, setAnalyticsProfessionalFilter] =
-    useState<string>("all");
+  const [analyticsProfessionalFilter, setAnalyticsProfessionalFilter] = useState<string>("all");
+  const [analyticsPeriodFilter, setAnalyticsPeriodFilter] = useState<"7d" | "30d" | "90d" | "all">("30d");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  
+  // Estados para formulários
+  const [newProfessional, setNewProfessional] = useState<{
+    name: string;
+    role: Professional["role"];
+    specialty: string;
+    email: string;
+    phone: string;
+    servicesIds: string[];
+  }>({
+    name: "",
+    role: "profissional",
+    specialty: "",
+    email: "",
+    phone: "",
+    servicesIds: [],
+  });
+  const [newService, setNewService] = useState({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
+  const [newRule, setNewRule] = useState<{
+    name: string;
+    description: string;
+    type: FidelityRule["type"];
+    thresholdValue: number;
+    rewardType: FidelityRule["rewardType"];
+    rewardValue: number;
+    validityDays: number;
+    categoryId: string;
+  }>({
+    name: "",
+    description: "",
+    type: "VALUE_ACCUMULATION",
+    thresholdValue: 0,
+    rewardType: "DISCOUNT_PERCENT",
+    rewardValue: 0,
+    validityDays: 30,
+    categoryId: "",
+  });
 
   const appData = useApp();
   const { 
@@ -64,14 +116,79 @@ export default function AdminDashboard() {
     setLoading(false);
   }, [router]);
 
+  // Aplicar estilos dinâmicos dos gráficos via DOM para evitar style inline
+  useEffect(() => {
+    // Evita rodar desnecessariamente em telas que não usam gráficos
+    if (tab !== "dashboard" && tab !== "analytics") return;
+
+    const applyChartStyles = () => {
+      document.querySelectorAll('[data-chart-height]').forEach((el) => {
+        const height = el.getAttribute("data-chart-height");
+        if (height) (el as HTMLElement).style.setProperty("--chart-height", height);
+      });
+      document.querySelectorAll('[data-chart-width]').forEach((el) => {
+        const width = el.getAttribute("data-chart-width");
+        if (width) (el as HTMLElement).style.setProperty("--chart-width", width);
+      });
+    };
+
+    applyChartStyles();
+  }, [tab, analyticsPeriodFilter, analyticsProfessionalFilter, dateFrom, dateTo]);
+
   const handleLogout = () => {
     localStorage.removeItem("staffSession");
     router.push("/staff/login");
   };
 
-  // Analytics calculados
+  const handleSendWhatsAppToClient = (client: Client) => {
+    if (typeof window === "undefined") return;
+
+    const rawPhone = client.phone || "";
+    const digits = rawPhone.replace(/\D/g, "");
+    if (!digits) return;
+
+    const phoneWithCountry = digits.startsWith("55") ? digits : `55${digits}`;
+
+    const appUrl = `${window.location.origin}/c/bedeschi`;
+    const loginInfo = `Telefone: ${client.phone} | PIN: ${client.pin}`;
+
+    const message = [
+      `Olá ${client.name.split(" ")[0]}, tudo bem?`,
+      "",
+      "Bem-vindo(a) ao programa de fidelidade do Instituto Bedeschi.",
+      `Acesse seus pontos e benefícios em: ${appUrl}`,
+      "",
+      "Seus dados de acesso são:",
+      loginInfo,
+      "",
+      "Qualquer dúvida, responda esta mensagem e nossa equipe irá te ajudar.",
+    ].join("\n");
+
+    const encodedMessage = encodeURIComponent(message);
+    const url = `https://wa.me/${phoneWithCountry}?text=${encodedMessage}`;
+    window.open(url, "_blank");
+  };
+
+  // Filtrar atendimentos por período
+  const getFilteredAppointments = useCallback((period: string) => {
+    const now = new Date();
+    let startDate: Date;
+    
+    switch (period) {
+      case "7d": startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+      case "30d": startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+      case "90d": startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
+      default: return appointments;
+    }
+    
+    return appointments.filter(a => new Date(a.date) >= startDate);
+  }, [appointments]);
+
+  // Analytics calculados com filtros
   const analytics = useMemo(() => {
     const now = new Date();
+    const filteredApts = getFilteredAppointments(analyticsPeriodFilter);
+    
     const thisMonth = appointments.filter((a) => {
       const d = new Date(a.date);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -84,70 +201,114 @@ export default function AdminDashboard() {
 
     const revenueThisMonth = thisMonth.reduce((sum, a) => sum + a.total, 0);
     const revenueLastMonth = lastMonth.reduce((sum, a) => sum + a.total, 0);
-    const revenueGrowth =
-      revenueLastMonth > 0
-        ? (((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100).toFixed(1)
-        : "N/A";
+    const revenueGrowth = revenueLastMonth > 0
+      ? (((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100).toFixed(1)
+      : "N/A";
 
+    // Serviços mais populares
     const serviceCount: Record<string, number> = {};
-    appointments.forEach((a) => {
+    const serviceRevenue: Record<string, number> = {};
+    filteredApts.forEach((a) => {
       a.services.forEach((s) => {
         serviceCount[s.name] = (serviceCount[s.name] || 0) + 1;
+        serviceRevenue[s.name] = (serviceRevenue[s.name] || 0) + s.price;
       });
     });
     const topServices = Object.entries(serviceCount)
       .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, count, revenue: serviceRevenue[name] || 0 }));
+
+    // Top clientes por gasto
+    const topClients = [...clients]
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 10)
+      .map(c => ({ ...c, appointmentsInPeriod: filteredApts.filter(a => a.clientId === c.id).length }));
+
+    // Performance da equipe
+    const professionalPerformance = professionals.map((p) => {
+      const profAppointments = filteredApts.filter((a) => a.professionalId === p.id);
+      const profReviews = reviews.filter((r) => {
+        const apt = appointments.find((a) => a.id === r.appointmentId);
+        return apt?.professionalId === p.id;
+      });
+      const avgRating = profReviews.length > 0
+        ? (profReviews.reduce((sum, r) => sum + r.rating, 0) / profReviews.length).toFixed(1)
+        : "N/A";
+      const totalRevenue = profAppointments.reduce((sum, a) => sum + a.total, 0);
+
+      return {
+        ...p,
+        appointmentsCount: profAppointments.length,
+        revenue: totalRevenue,
+        avgRating,
+        reviewsCount: profReviews.length,
+      };
+    }).sort((a, b) => b.revenue - a.revenue);
+
+    // Profissionais mais bem avaliados
+    const topRatedProfessionals = [...professionalPerformance]
+      .filter(p => p.avgRating !== "N/A")
+      .sort((a, b) => parseFloat(b.avgRating as string) - parseFloat(a.avgRating as string))
       .slice(0, 5);
 
-    // Performance da equipe baseada em atendimentos e avaliações ligadas ao atendimento
-    const professionalPerformance = professionals
-      .map((p) => {
-        const profAppointments = appointments.filter((a) => a.professionalId === p.id);
-        const profReviews = reviews.filter((r) => {
-          const apt = appointments.find((a) => a.id === r.appointmentId);
-          return apt?.professionalId === p.id;
-        });
-        const avgRating =
-          profReviews.length > 0
-            ? (
-                profReviews.reduce((sum, r) => sum + r.rating, 0) /
-                profReviews.length
-              ).toFixed(1)
-            : "N/A";
+    // Profissionais que mais atendem
+    const mostActiveProfessionals = [...professionalPerformance]
+      .sort((a, b) => b.appointmentsCount - a.appointmentsCount)
+      .slice(0, 5);
 
-        return {
-          ...p,
-          appointmentsCount: profAppointments.length,
-          revenue: profAppointments.reduce((sum, a) => sum + a.total, 0),
-          avgRating,
-        };
-      })
-      .sort((a, b) => b.revenue - a.revenue);
+    // Receita por categoria
+    const categoryRevenue: Record<string, number> = {};
+    filteredApts.forEach((a) => {
+      a.services.forEach((s) => {
+        const serviceData = importedServices.find((srv) => srv.name === s.name);
+        const categoryName = serviceData?.categoryName ?? "Outros";
+        categoryRevenue[categoryName] = (categoryRevenue[categoryName] || 0) + s.price;
+      });
+    });
+    const revenueByCategory = Object.entries(categoryRevenue)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+
+    // Receita diária dos últimos 7 dias
+    const dailyRevenue: { date: string; revenue: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split("T")[0];
+      const dayRevenue = appointments
+        .filter(a => a.date === dateStr)
+        .reduce((sum, a) => sum + a.total, 0);
+      dailyRevenue.push({ date: dateStr, revenue: dayRevenue });
+    }
 
     return {
       totalRevenue: clients.reduce((sum, c) => sum + c.totalSpent, 0),
       revenueThisMonth,
+      revenueLastMonth,
       revenueGrowth,
-      avgTicket:
-        appointments.length > 0
-          ? appointments.reduce((sum, a) => sum + a.total, 0) / appointments.length
-          : 0,
+      revenuePeriod: filteredApts.reduce((sum, a) => sum + a.total, 0),
+      appointmentsPeriod: filteredApts.length,
+      avgTicket: filteredApts.length > 0 ? filteredApts.reduce((sum, a) => sum + a.total, 0) / filteredApts.length : 0,
       topServices,
+      topClients,
       professionalPerformance,
+      topRatedProfessionals,
+      mostActiveProfessionals,
+      revenueByCategory,
+      dailyRevenue,
       clientsThisMonth: clients.filter((c) => {
         const d = new Date(c.createdAt);
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       }).length,
       totalPoints: clients.reduce((sum, c) => sum + c.pointsBalance, 0),
-      avgRating:
-        reviews.length > 0
-          ? (
-              reviews.reduce((sum, r) => sum + r.rating, 0) /
-              reviews.length
-            ).toFixed(1)
-          : "N/A",
+      avgRating: reviews.length > 0
+        ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+        : "N/A",
+      totalReviews: reviews.length,
+      activeRewards: rewards.filter(r => r.status === "available").length,
+      redeemedRewards: rewards.filter(r => r.status === "redeemed").length,
     };
-  }, [clients, appointments, reviews, professionals]);
+  }, [clients, appointments, reviews, professionals, rewards, getFilteredAppointments, analyticsPeriodFilter]);
 
   // Exportar para CSV
   const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
@@ -172,17 +333,85 @@ export default function AdminDashboard() {
     if (!matchesSearch) return false;
 
     if (clientFilter === "withRewards") {
-      return rewards.some(
-        (r) => r.clientId === c.id && r.status === "available",
-      );
+      return rewards.some((r) => r.clientId === c.id && r.status === "available");
     }
-
     if (clientFilter === "vip") {
       return c.totalSpent >= 3000 || c.pointsBalance >= 2000;
     }
-
+    if (clientFilter === "inactive") {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      return !c.lastVisit || new Date(c.lastVisit) < thirtyDaysAgo;
+    }
     return true;
   });
+
+  const filteredServices = useMemo(
+    () =>
+      importedServices
+        .filter((s) =>
+          serviceCategoryFilter === "all" ? true : s.categoryId === serviceCategoryFilter,
+        )
+        .filter((s) =>
+          serviceSearch.trim()
+            ? s.name.toLowerCase().includes(serviceSearch.toLowerCase())
+            : true,
+        ),
+    [serviceCategoryFilter, serviceSearch],
+  );
+
+  // Handlers para CRUD de Profissionais
+  const handleAddProfessional = () => {
+    if (!newProfessional.name) return;
+    const professional: Professional = {
+      id: `prof-${Date.now()}`,
+      name: newProfessional.name,
+      role: newProfessional.role,
+      specialty: newProfessional.specialty,
+      email: newProfessional.email,
+      phone: newProfessional.phone,
+      servicesIds: newProfessional.servicesIds,
+      rating: 5.0,
+      totalAppointments: 0,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    addProfessional(professional);
+    setNewProfessional({ name: "", role: "profissional", specialty: "", email: "", phone: "", servicesIds: [] });
+    setShowAddProfessional(false);
+  };
+
+  const handleUpdateProfessional = () => {
+    if (!editingProfessional) return;
+    updateProfessional(editingProfessional);
+    setEditingProfessional(null);
+  };
+
+  // Handlers para CRUD de Regras
+  const handleAddRule = () => {
+    if (!newRule.name) return;
+    const rule: FidelityRule = {
+      id: `rule-${Date.now()}`,
+      name: newRule.name,
+      description: newRule.description,
+      type: newRule.type,
+      categoryId: newRule.categoryId || undefined,
+      categoryName: importedCategories.find(c => c.id === newRule.categoryId)?.name,
+      thresholdValue: newRule.thresholdValue,
+      rewardType: newRule.rewardType,
+      rewardValue: newRule.rewardValue,
+      validityDays: newRule.validityDays,
+      isActive: true,
+    };
+    addRule(rule);
+    setNewRule({ name: "", description: "", type: "VALUE_ACCUMULATION", thresholdValue: 0, rewardType: "DISCOUNT_PERCENT", rewardValue: 0, validityDays: 30, categoryId: "" });
+    setShowAddRule(false);
+  };
+
+  const handleUpdateRule = () => {
+    if (!editingRule) return;
+    updateRule(editingRule);
+    setEditingRule(null);
+  };
 
   const filteredProfessionals = useMemo(
     () =>
@@ -278,102 +507,39 @@ export default function AdminDashboard() {
 
       {/* Content */}
       <main className="p-6">
-        {/* Dashboard */}
+        {/* Dashboard - Visão Geral com Gráficos */}
         {tab === "dashboard" && (
           <div className="space-y-6">
+            {/* KPIs Principais */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard title="Total de Clientes" value={clients.length} icon={Users} isDark={isDark} />
-              <StatCard title="Receita Total" value={formatCurrency(analytics.totalRevenue)} icon={TrendingUp} isDark={isDark} />
-              <StatCard title="Recompensas Ativas" value={rewards.filter((r) => r.status === "available").length} icon={Gift} isDark={isDark} />
-              <StatCard title="Avaliação Média" value={analytics.avgRating} icon={Star} isDark={isDark} />
-            </div>
-          </div>
-        )}
-
-        {/* Analytics */}
-        {tab === "analytics" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Receita do Mês</p>
-                <p className={`text-3xl font-bold mt-1 ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(analytics.revenueThisMonth)}</p>
-                <p className={`text-sm mt-2 ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : "text-red-500"}`}>
-                  {analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}% vs mês anterior` : "Sem dados anteriores"}
-                </p>
-              </div>
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Ticket Médio</p>
-                <p className={`text-3xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{formatCurrency(analytics.avgTicket)}</p>
-                <p className={`text-sm mt-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{appointments.length} atendimentos</p>
-              </div>
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Novos Clientes (Mês)</p>
-                <p className={`text-3xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{analytics.clientsThisMonth}</p>
-                <p className={`text-sm mt-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{analytics.totalPoints.toLocaleString()} pontos distribuídos</p>
-              </div>
+              <StatCard title="Total de Clientes" value={clients.length} icon={Users} isDark={isDark} trend={`+${analytics.clientsThisMonth} este mês`} />
+              <StatCard title="Receita Total" value={formatCurrency(analytics.totalRevenue)} icon={DollarSign} isDark={isDark} trend={analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : undefined} trendUp={Number(analytics.revenueGrowth) > 0} />
+              <StatCard title="Ticket Médio" value={formatCurrency(analytics.avgTicket)} icon={Target} isDark={isDark} />
+              <StatCard title="Avaliação Média" value={`${analytics.avgRating} ⭐`} icon={Star} isDark={isDark} trend={`${analytics.totalReviews} avaliações`} />
             </div>
 
+            {/* Gráficos em Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Gráfico de Receita Diária */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3
-                    className={`text-lg font-semibold ${
-                      isDark ? "text-white" : "text-slate-800"
-                    }`}
-                  >
-                    Serviços Mais Populares
-                  </h3>
-                </div>
-                <div className="space-y-3">
-                  {analytics.topServices.map(([name, count], i) => {
-                    const max = analytics.topServices[0]?.[1] || 1;
-                    const ratio = max > 0 ? Number(count) / Number(max) : 0;
-                    const widthClass =
-                      ratio >= 0.95
-                        ? "w-full"
-                        : ratio >= 0.8
-                        ? "w-11/12"
-                        : ratio >= 0.6
-                        ? "w-9/12"
-                        : ratio >= 0.4
-                        ? "w-7/12"
-                        : ratio >= 0.2
-                        ? "w-5/12"
-                        : "w-3/12";
-
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  📈 Receita dos Últimos 7 Dias
+                </h3>
+                <div className="flex items-end justify-between h-40 gap-2">
+                  {analytics.dailyRevenue.map((day, i) => {
+                    const maxRevenue = Math.max(...analytics.dailyRevenue.map(d => d.revenue), 1);
+                    const heightPercent = (day.revenue / maxRevenue) * 100;
                     return (
-                      <div key={name} className="flex items-center gap-3">
-                        <span
-                          className={`text-lg font-bold ${
-                            isDark ? "text-amber-400" : "text-amber-600"
-                          }`}
-                        >
-                          #{i + 1}
+                      <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                        <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          {formatCurrency(day.revenue)}
                         </span>
-                        <div className="flex-1">
-                          <p
-                            className={`font-medium ${
-                              isDark ? "text-white" : "text-slate-800"
-                            }`}
-                          >
-                            {name}
-                          </p>
-                          <div
-                            className={`h-2 rounded-full mt-1 ${
-                              isDark ? "bg-slate-700" : "bg-slate-200"
-                            }`}
-                          >
-                            <div
-                              className={`h-2 rounded-full bg-amber-500 ${widthClass}`}
-                            />
-                          </div>
-                        </div>
-                        <span
-                          className={`text-sm ${
-                            isDark ? "text-slate-400" : "text-slate-500"
-                          }`}
-                        >
-                          {count}x
+                        <div 
+                          className={`w-full rounded-t-lg ${CHART_COLORS[i % CHART_COLORS.length]} transition-all chart-bar-vertical`}
+                          data-chart-height={`${Math.max(heightPercent, 5)}%`}
+                        />
+                        <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                          {new Date(day.date).toLocaleDateString("pt-BR", { weekday: "short" }).slice(0, 3)}
                         </span>
                       </div>
                     );
@@ -381,49 +547,361 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Top 5 Serviços */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3
-                    className={`text-lg font-semibold ${
-                      isDark ? "text-white" : "text-slate-800"
-                    }`}
-                  >
-                    Performance da Equipe
-                  </h3>
-                  <select
-                    value={analyticsProfessionalFilter}
-                    onChange={(e) => setAnalyticsProfessionalFilter(e.target.value)}
-                    aria-label="Filtrar performance por profissional"
-                    className={`rounded-lg border px-2 py-1 text-xs ${
-                      isDark
-                        ? "bg-slate-800 border-slate-600 text-slate-200"
-                        : "bg-white border-slate-200 text-slate-700"
-                    }`}
-                  >
-                    <option value="all">Todos os profissionais</option>
-                    {professionals.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  🏆 Top 5 Procedimentos
+                </h3>
                 <div className="space-y-3">
-                  {filteredProfessionalPerformance.slice(0, 5).map((p) => (
-                    <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                      <div>
-                        <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{p.name}</p>
-                        <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{p.appointmentsCount} atendimentos</p>
+                  {analytics.topServices.slice(0, 5).map((service, i) => {
+                    const maxCount = analytics.topServices[0]?.count || 1;
+                    const widthPercent = (service.count / maxCount) * 100;
+                    return (
+                      <div key={service.name} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
+                            {i + 1}. {service.name}
+                          </span>
+                          <span className={`text-sm ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                            {service.count}x • {formatCurrency(service.revenue)}
+                          </span>
+                        </div>
+                        <div className={`h-2 rounded-full ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
+                          <div 
+                            className={`h-2 rounded-full ${CHART_COLORS[i]} chart-bar-horizontal`}
+                            data-chart-width={`${widthPercent}%`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top 5 Clientes */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  👑 Top Clientes por Gasto
+                </h3>
+                <div className="space-y-3">
+                  {analytics.topClients.slice(0, 5).map((client, i) => (
+                    <div key={client.id} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-amber-500 text-white" : i === 1 ? "bg-slate-400 text-white" : i === 2 ? "bg-amber-700 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
+                          {i + 1}
+                        </div>
+                        <div>
+                          <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{client.name}</p>
+                          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{client.totalAppointments} visitas</p>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(p.revenue)}</p>
-                        <div className="flex items-center gap-1 justify-end">
-                          <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
-                          <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{p.avgRating}</span>
-                        </div>
+                        <p className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(client.totalSpent)}</p>
+                        <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>{client.pointsBalance.toLocaleString()} pts</p>
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Receita por Categoria */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  📊 Receita por Categoria
+                </h3>
+                <div className="space-y-3">
+                  {analytics.revenueByCategory.map(([category, revenue], i) => {
+                    const total = analytics.revenueByCategory.reduce((sum, [, r]) => sum + r, 0);
+                    const percent = total > 0 ? ((revenue / total) * 100).toFixed(1) : "0";
+                    return (
+                      <div key={category} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{category}</span>
+                          <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{formatCurrency(revenue)} ({percent}%)</span>
+                        </div>
+                        <div className={`h-3 rounded-full ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
+                          <div 
+                            className={`h-3 rounded-full ${CHART_COLORS[i]} chart-bar-horizontal`}
+                            data-chart-width={`${percent}%`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Profissionais - Grid de 3 colunas */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Top Avaliados */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  ⭐ Mais Bem Avaliados
+                </h3>
+                <div className="space-y-3">
+                  {analytics.topRatedProfessionals.map((prof, i) => (
+                    <div key={prof.id} className={`flex items-center justify-between p-2 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
+                        <span className={`text-sm ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                        <span className={`text-sm font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mais Atendimentos */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  🔥 Mais Atendimentos
+                </h3>
+                <div className="space-y-3">
+                  {analytics.mostActiveProfessionals.map((prof, i) => (
+                    <div key={prof.id} className={`flex items-center justify-between p-2 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
+                        <span className={`text-sm ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</span>
+                      </div>
+                      <span className={`text-sm font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{prof.appointmentsCount} atend.</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* KPIs Rápidos */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  📋 Resumo Rápido
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recompensas Ativas</span>
+                    <span className={`font-semibold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{analytics.activeRewards}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recompensas Resgatadas</span>
+                    <span className={`font-semibold ${isDark ? "text-blue-400" : "text-blue-600"}`}>{analytics.redeemedRewards}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Pontos Distribuídos</span>
+                    <span className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{analytics.totalPoints.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Regras Ativas</span>
+                    <span className={`font-semibold ${isDark ? "text-purple-400" : "text-purple-600"}`}>{rules.filter(r => r.isActive).length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Profissionais Ativos</span>
+                    <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-cyan-600"}`}>{professionals.filter(p => p.isActive).length}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics - Análises Avançadas */}
+        {tab === "analytics" && (
+          <div className="space-y-6">
+            {/* Filtros de Período */}
+            <div className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Filter className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+                  <span className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}>Período:</span>
+                </div>
+                <div className="flex gap-2">
+                  {[
+                    { value: "7d", label: "7 dias" },
+                    { value: "30d", label: "30 dias" },
+                    { value: "90d", label: "90 dias" },
+                    { value: "all", label: "Todo período" },
+                  ].map((period) => (
+                    <button
+                      key={period.value}
+                      onClick={() => setAnalyticsPeriodFilter(period.value as typeof analyticsPeriodFilter)}
+                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        analyticsPeriodFilter === period.value
+                          ? "bg-amber-500 text-white"
+                          : isDark ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <select
+                    value={analyticsProfessionalFilter}
+                    onChange={(e) => setAnalyticsProfessionalFilter(e.target.value)}
+                    aria-label="Filtrar por profissional"
+                    className={`rounded-lg border px-3 py-1.5 text-sm ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-white border-slate-200 text-slate-700"}`}
+                  >
+                    <option value="all">Todos os profissionais</option>
+                    {professionals.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* KPIs do Período */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${isDark ? "bg-amber-500/20" : "bg-amber-50"}`}>
+                    <DollarSign className={`h-6 w-6 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Receita no Período</p>
+                    <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(analytics.revenuePeriod)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${isDark ? "bg-emerald-500/20" : "bg-emerald-50"}`}>
+                    <Calendar className={`h-6 w-6 ${isDark ? "text-emerald-400" : "text-emerald-600"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Atendimentos</p>
+                    <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{analytics.appointmentsPeriod}</p>
+                  </div>
+                </div>
+              </div>
+              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${isDark ? "bg-blue-500/20" : "bg-blue-50"}`}>
+                    <Target className={`h-6 w-6 ${isDark ? "text-blue-400" : "text-blue-600"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Ticket Médio</p>
+                    <p className={`text-2xl font-bold ${isDark ? "text-blue-400" : "text-blue-600"}`}>{formatCurrency(analytics.avgTicket)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${isDark ? "bg-purple-500/20" : "bg-purple-50"}`}>
+                    <TrendingUp className={`h-6 w-6 ${isDark ? "text-purple-400" : "text-purple-600"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Crescimento</p>
+                    <p className={`text-2xl font-bold ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : Number(analytics.revenueGrowth) < 0 ? "text-red-500" : isDark ? "text-slate-300" : "text-slate-600"}`}>
+                      {analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Gráficos Detalhados */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top 10 Serviços */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  📊 Top 10 Procedimentos por Receita
+                </h3>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {analytics.topServices.map((service, i) => {
+                    const maxRevenue = analytics.topServices[0]?.revenue || 1;
+                    const widthPercent = (service.revenue / maxRevenue) * 100;
+                    return (
+                      <div key={service.name} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm ${isDark ? "text-white" : "text-slate-800"}`}>
+                            <span className={`font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>#{i + 1}</span> {service.name}
+                          </span>
+                          <div className="text-right">
+                            <span className={`text-sm font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(service.revenue)}</span>
+                            <span className={`text-xs ml-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>({service.count}x)</span>
+                          </div>
+                        </div>
+                        <div className={`h-2 rounded-full ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
+                          <div 
+                            className={`h-2 rounded-full ${CHART_COLORS[i % CHART_COLORS.length]} chart-bar-horizontal`}
+                            data-chart-width={`${widthPercent}%`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Performance Detalhada da Equipe */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  👥 Performance Detalhada da Equipe
+                </h3>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {filteredProfessionalPerformance.map((prof, i) => (
+                    <div key={prof.id} className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-amber-500 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
+                            {i + 1}
+                          </div>
+                          <div>
+                            <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</p>
+                            <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>{prof.role === "medico" ? "Médico" : prof.role === "profissional" ? "Profissional" : "Recepção"}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(prof.revenue)}</p>
+                          <div className="flex items-center gap-2 justify-end">
+                            <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.appointmentsCount} atend.</span>
+                            <div className="flex items-center gap-0.5">
+                              <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                              <span className={`text-xs font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`h-1.5 rounded-full ${isDark ? "bg-slate-600" : "bg-slate-200"}`}>
+                        <div
+                          className="h-1.5 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 chart-bar-horizontal"
+                          data-chart-width={`${(prof.revenue / (analytics.professionalPerformance[0]?.revenue || 1)) * 100}%`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Comparativo Mensal */}
+            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                📈 Comparativo Mensal
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Atual</p>
+                  <p className={`text-2xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{formatCurrency(analytics.revenueThisMonth)}</p>
+                </div>
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Anterior</p>
+                  <p className={`text-2xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{formatCurrency(analytics.revenueLastMonth)}</p>
+                </div>
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Variação</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {Number(analytics.revenueGrowth) > 0 ? (
+                      <ArrowUp className="h-5 w-5 text-green-500" />
+                    ) : Number(analytics.revenueGrowth) < 0 ? (
+                      <ArrowDown className="h-5 w-5 text-red-500" />
+                    ) : null}
+                    <p className={`text-2xl font-bold ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : Number(analytics.revenueGrowth) < 0 ? "text-red-500" : isDark ? "text-slate-300" : "text-slate-600"}`}>
+                      {analytics.revenueGrowth !== "N/A" ? `${analytics.revenueGrowth}%` : "N/A"}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -466,6 +944,7 @@ export default function AdminDashboard() {
                   <option value="all">Todos os clientes</option>
                   <option value="withRewards">Com brinde disponível</option>
                   <option value="vip">VIP (alto gasto/pontos)</option>
+                  <option value="inactive">Inativos (30+ dias)</option>
                 </select>
               </div>
             </div>
@@ -480,6 +959,7 @@ export default function AdminDashboard() {
                     <th className="text-left p-3 text-sm font-medium">Total Gasto</th>
                     <th className="text-left p-3 text-sm font-medium">Visitas</th>
                     <th className="text-left p-3 text-sm font-medium">Última Visita</th>
+                    <th className="text-right p-3 text-sm font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -492,6 +972,21 @@ export default function AdminDashboard() {
                       <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{formatCurrency(client.totalSpent)}</td>
                       <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.totalAppointments}</td>
                       <td className={`p-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{client.lastVisit ? formatDate(client.lastVisit) : "-"}</td>
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleSendWhatsAppToClient(client)}
+                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            isDark
+                              ? "bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          }`}
+                          aria-label={`Enviar acesso via WhatsApp para ${client.name}`}
+                        >
+                          <Send className="h-3 w-3" />
+                          WhatsApp
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -502,211 +997,466 @@ export default function AdminDashboard() {
 
         {/* Equipe */}
         {tab === "equipe" && (
-          <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Gestão da Equipe</h3>
-              <button
-                onClick={() => setShowAddProfessional(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400"
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar
-              </button>
-            </div>
-            <div className="flex items-center justify-between mb-4">
-              <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                {professionals.length} profissionais cadastrados
-              </p>
-              <select
-                value={professionalRoleFilter}
-                onChange={(e) =>
-                  setProfessionalRoleFilter(
-                    e.target.value as typeof professionalRoleFilter,
-                  )
-                }
-                aria-label="Filtrar equipe por papel"
-                className={`rounded-lg border px-2 py-1 text-xs ${
-                  isDark
-                    ? "bg-slate-800 border-slate-600 text-slate-200"
-                    : "bg-white border-slate-200 text-slate-700"
-                }`}
-              >
-                <option value="all">Todos os papéis</option>
-                <option value="medico">Médicos</option>
-                <option value="profissional">Profissionais</option>
-                <option value="recepcionista">Recepção</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProfessionals.map((prof) => (
-                <div key={prof.id} className={`p-4 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</p>
-                      <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.specialty || prof.role}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${prof.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {prof.isActive ? "Ativo" : "Inativo"}
-                    </span>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                      <span className={`text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}>{prof.rating}</span>
-                    </div>
-                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.totalAppointments} atendimentos</p>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-slate-600/30 flex gap-2">
-                    <button className={`flex-1 py-2 rounded-lg text-sm ${isDark ? "bg-slate-600 text-white hover:bg-slate-500" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}>
-                      <Edit2 className="h-3 w-3 inline mr-1" /> Editar
-                    </button>
-                    <button
-                      onClick={() => updateProfessional({ ...prof, isActive: !prof.isActive })}
-                      className={`flex-1 py-2 rounded-lg text-sm ${prof.isActive ? "bg-red-500/20 text-red-400 hover:bg-red-500/30" : "bg-green-500/20 text-green-400 hover:bg-green-500/30"}`}
-                    >
-                      {prof.isActive ? <><EyeOff className="h-3 w-3 inline mr-1" /> Desativar</> : <><Eye className="h-3 w-3 inline mr-1" /> Ativar</>}
-                    </button>
-                  </div>
+          <div className="space-y-6">
+            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                    Gestão da Equipe
+                  </h3>
+                  <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Gerencie profissionais, médicos e recepcionistas da clínica
+                  </p>
                 </div>
-              ))}
+                <button
+                  onClick={() => setShowAddProfessional(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 font-medium"
+                >
+                  <Plus className="h-4 w-4" />
+                  Novo Profissional
+                </button>
+              </div>
+
+              {/* Resumo por função */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{professionals.length}</p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Total</p>
+                </div>
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-2xl font-bold ${isDark ? "text-blue-400" : "text-blue-600"}`}>
+                    {professionals.filter((p) => p.role === "medico").length}
+                  </p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Médicos</p>
+                </div>
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                    {professionals.filter((p) => p.role === "profissional").length}
+                  </p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Profissionais</p>
+                </div>
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-2xl font-bold ${isDark ? "text-purple-400" : "text-purple-600"}`}>
+                    {professionals.filter((p) => p.role === "recepcionista").length}
+                  </p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recepção</p>
+                </div>
+              </div>
+
+              {/* Filtro */}
+              <div className="flex items-center justify-between mb-4">
+                <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  {filteredProfessionals.length} profissionais encontrados
+                </p>
+                <select
+                  value={professionalRoleFilter}
+                  onChange={(e) =>
+                    setProfessionalRoleFilter(e.target.value as typeof professionalRoleFilter)
+                  }
+                  aria-label="Filtrar equipe por papel"
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    isDark
+                      ? "bg-slate-700 border-slate-600 text-slate-200"
+                      : "bg-white border-slate-200 text-slate-700"
+                  }`}
+                >
+                  <option value="all">Todos os papéis</option>
+                  <option value="medico">Médicos</option>
+                  <option value="profissional">Profissionais</option>
+                  <option value="recepcionista">Recepção</option>
+                </select>
+              </div>
+
+              {/* Grid de Profissionais */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProfessionals.map((prof) => {
+                  const profPerf = analytics.professionalPerformance.find(
+                    (p) => p.id === prof.id,
+                  );
+                  return (
+                    <div
+                      key={prof.id}
+                      className={`p-4 rounded-xl border ${
+                        isDark
+                          ? "bg-slate-700/30 border-slate-600"
+                          : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${
+                              prof.role === "medico"
+                                ? "bg-blue-500/20 text-blue-400"
+                                : prof.role === "profissional"
+                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  : "bg-purple-500/20 text-purple-400"
+                            }`}
+                          >
+                            {prof.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                              {prof.name}
+                            </p>
+                            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                              {prof.role === "medico"
+                                ? "Médico"
+                                : prof.role === "profissional"
+                                  ? "Profissional"
+                                  : "Recepção"}
+                              {prof.specialty && ` • ${prof.specialty}`}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            prof.isActive
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {prof.isActive ? "Ativo" : "Inativo"}
+                        </span>
+                      </div>
+
+                      {/* Métricas */}
+                      <div
+                        className={`grid grid-cols-3 gap-2 p-3 rounded-lg mb-3 ${
+                          isDark ? "bg-slate-800/50" : "bg-slate-50"
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                            <span
+                              className={`font-semibold ${
+                                isDark ? "text-white" : "text-slate-800"
+                              }`}
+                            >
+                              {profPerf?.avgRating || prof.rating}
+                            </span>
+                          </div>
+                          <p
+                            className={`text-xs ${
+                              isDark ? "text-slate-500" : "text-slate-400"
+                            }`}
+                          >
+                            Avaliação
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p
+                            className={`font-semibold ${
+                              isDark ? "text-white" : "text-slate-800"
+                            }`}
+                          >
+                            {profPerf?.appointmentsCount || prof.totalAppointments}
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              isDark ? "text-slate-500" : "text-slate-400"
+                            }`}
+                          >
+                            Atend.
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p
+                            className={`font-semibold ${
+                              isDark ? "text-amber-400" : "text-amber-600"
+                            }`}
+                          >
+                            {formatCurrency(profPerf?.revenue || 0)}
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              isDark ? "text-slate-500" : "text-slate-400"
+                            }`}
+                          >
+                            Receita
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Ações */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingProfessional(prof)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 ${
+                            isDark
+                              ? "bg-slate-600 text-white hover:bg-slate-500"
+                              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          }`}
+                        >
+                          <Edit2 className="h-3 w-3" /> Editar
+                        </button>
+                        <button
+                          onClick={() => updateProfessional({ ...prof, isActive: !prof.isActive })}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-1 ${
+                            prof.isActive
+                              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                              : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                          }`}
+                        >
+                          {prof.isActive ? (
+                            <span className="flex items-center gap-1">
+                              <EyeOff className="h-3 w-3" />
+                              Desativar
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              Ativar
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
         {/* Serviços */}
         {tab === "servicos" && (
-          <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
-                Catálogo de Serviços
-              </h3>
-              <div className="flex items-center gap-3">
-                <p
-                  className={`text-sm ${
-                    isDark ? "text-slate-400" : "text-slate-500"
-                  }`}
-                >
-                  {importedServices.length} serviços em {importedCategories.length} categorias
-                </p>
-                <select
-                  value={serviceCategoryFilter}
-                  onChange={(e) => setServiceCategoryFilter(e.target.value)}
-                  aria-label="Filtrar serviços por categoria"
-                  className={`rounded-lg border px-2 py-1 text-xs ${
-                    isDark
-                      ? "bg-slate-800 border-slate-600 text-slate-200"
-                      : "bg-white border-slate-200 text-slate-700"
-                  }`}
-                >
-                  <option value="all">Todas as categorias</option>
-                  {importedCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="space-y-6">
-              {importedCategories
-                .filter((cat) =>
-                  serviceCategoryFilter === "all"
-                    ? true
-                    : cat.id === serviceCategoryFilter,
-                )
-                .map((cat) => {
-                const catServices = importedServices.filter(s => s.categoryId === cat.id);
-                return (
-                  <div key={cat.id}>
-                    <h4 className={`font-medium mb-3 ${isDark ? "text-amber-400" : "text-amber-600"}`}>{cat.name} ({catServices.length})</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {catServices.slice(0, 6).map((service) => (
-                        <div key={service.id} className={`p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                          <p className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-800"}`}>{service.name}</p>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className={`text-sm ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(service.price)}</span>
-                            <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>{service.durationMinutes}min</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+          <div className="space-y-6">
+            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                    Catálogo de Serviços
+                  </h3>
+                  <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Serviços importados da planilha e organizados por categoria
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-slate-700" : "bg-slate-100"}`}>
+                    <Search className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+                    <input
+                      type="text"
+                      placeholder="Buscar serviço..."
+                      value={serviceSearch}
+                      onChange={(e) => setServiceSearch(e.target.value)}
+                      className={`bg-transparent border-none outline-none text-sm ${isDark ? "text-white placeholder:text-slate-500" : "text-slate-800 placeholder:text-slate-400"}`}
+                    />
                   </div>
-                );
-              })}
+                  <select
+                    value={serviceCategoryFilter}
+                    onChange={(e) => setServiceCategoryFilter(e.target.value)}
+                    aria-label="Filtrar serviços por categoria"
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <option value="all">Todas as categorias</option>
+                    {importedCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className={isDark ? "text-slate-400" : "text-slate-500"}>
+                      <th className="text-left p-3 font-medium">Nome</th>
+                      <th className="text-left p-3 font-medium">Categoria</th>
+                      <th className="text-left p-3 font-medium">Preço</th>
+                      <th className="text-left p-3 font-medium">Duração</th>
+                      <th className="text-left p-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredServices.map((s) => (
+                      <tr
+                        key={s.id}
+                        className={`border-t ${isDark ? "border-slate-700" : "border-slate-100"}`}
+                      >
+                        <td className={`p-3 ${isDark ? "text-white" : "text-slate-800"}`}>
+                          {s.name}
+                        </td>
+                        <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                          {s.categoryName}
+                        </td>
+                        <td className={`p-3 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                          {formatCurrency(s.price)}
+                        </td>
+                        <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                          {s.durationMinutes} min
+                        </td>
+                        <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                          {s.isActive ? "Ativo" : "Inativo"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredServices.length === 0 && (
+                <p className={`mt-4 text-sm ${isDark ? "text-slate-500" : "text-slate-500"}`}>
+                  Nenhum serviço encontrado para os filtros selecionados.
+                </p>
+              )}
             </div>
           </div>
         )}
 
         {/* Regras */}
         {tab === "regras" && (
-          <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Regras de Fidelidade</h3>
-            </div>
-            <div className="space-y-4">
-              {rules.map((rule) => (
-                <div key={rule.id} className={`p-4 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h4 className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>{rule.name}</h4>
-                        <span className={`text-xs px-2 py-1 rounded-full ${rule.isActive ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"}`}>
-                          {rule.isActive ? "Ativa" : "Inativa"}
-                        </span>
+          <div className="space-y-6">
+            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                    Regras de Fidelidade
+                  </h3>
+                  <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Configure e acompanhe as regras que geram pontos, créditos e brindes
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+                    {rules.length}
+                  </p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Regras cadastradas
+                  </p>
+                </div>
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                    {rules.filter((r) => r.isActive).length}
+                  </p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Regras ativas
+                  </p>
+                </div>
+                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                  <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                    {rules.filter((r) => !r.isActive).length}
+                  </p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Regras pausadas
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {rules.map((rule) => (
+                  <div
+                    key={rule.id}
+                    className={`p-4 rounded-xl border ${
+                      isDark
+                        ? "bg-slate-800/60 border-slate-700"
+                        : "bg-slate-50 border-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                          {rule.name}
+                        </p>
+                        <p className={`text-sm mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                          {rule.description}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                          <span
+                            className={`px-2 py-1 rounded-full ${
+                              isDark
+                                ? "bg-slate-700 text-slate-200"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            Tipo: {rule.type}
+                          </span>
+                          {rule.thresholdValue && (
+                            <span
+                              className={`px-2 py-1 rounded-full ${
+                                isDark
+                                  ? "bg-slate-700 text-slate-200"
+                                  : "bg-slate-200 text-slate-700"
+                              }`}
+                            >
+                              Gatilho: {formatCurrency(rule.thresholdValue)}
+                            </span>
+                          )}
+                          {rule.thresholdQuantity && (
+                            <span
+                              className={`px-2 py-1 rounded-full ${
+                                isDark
+                                  ? "bg-slate-700 text-slate-200"
+                                  : "bg-slate-200 text-slate-700"
+                              }`}
+                            >
+                              Quantidade: {rule.thresholdQuantity}
+                            </span>
+                          )}
+                          <span
+                            className={`px-2 py-1 rounded-full ${
+                              isDark
+                                ? "bg-slate-700 text-slate-200"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            Recompensa: {rule.rewardType}
+                            {rule.rewardValue ? ` (${formatCurrency(rule.rewardValue)})` : ""}
+                          </span>
+                          <span
+                            className={`px-2 py-1 rounded-full ${
+                              isDark
+                                ? "bg-slate-700 text-slate-200"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            Validade: {rule.validityDays} dias
+                          </span>
+                        </div>
                       </div>
-                      <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{rule.description}</p>
-                      <div className="flex items-center gap-4 mt-3">
+                      <div className="flex flex-col items-end gap-2">
                         <span
-                          className={`text-xs ${
-                            isDark ? "text-slate-500" : "text-slate-400"
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            rule.isActive
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-slate-600/40 text-slate-200"
                           }`}
                         >
-                          Tipo: {rule.type.replace(/_/g, " ")}
+                          {rule.isActive ? "Ativa" : "Pausada"}
                         </span>
-                        {rule.categoryName && (
-                          <span
-                            className={`text-xs ${
-                              isDark ? "text-amber-400" : "text-amber-600"
-                            }`}
-                          >
-                            Categoria: {rule.categoryName}
-                          </span>
-                        )}
-                        {(rule.thresholdValue !== undefined ||
-                          rule.thresholdQuantity !== undefined) && (
-                          <span
-                            className={`text-xs ${
-                              isDark ? "text-slate-500" : "text-slate-400"
-                            }`}
-                          >
-                            {rule.type === "VALUE_ACCUMULATION" ||
-                            rule.type === "COMBO_VALUE"
-                              ? `Meta: ${formatCurrency(rule.thresholdValue ?? 0)}`
-                              : rule.type === "QUANTITY_ACCUMULATION"
-                              ? `Meta: ${(rule.thresholdQuantity ?? 0).toString()} sessões`
-                              : rule.type === "POINTS_CONVERSION"
-                              ? `Meta: ${Number(
-                                  rule.thresholdValue ?? 0
-                                ).toLocaleString()} pontos`
-                              : ""}
-                          </span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleRule(rule.id)}
+                          className={`mt-1 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
+                            rule.isActive
+                              ? "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                              : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                          }`}
+                        >
+                          {rule.isActive ? (
+                            <>
+                              <EyeOff className="h-3 w-3" /> Pausar
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-3 w-3" /> Ativar
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleRule(rule.id)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        rule.isActive
-                          ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                          : isDark ? "bg-slate-600 text-slate-400 hover:bg-slate-500" : "bg-slate-200 text-slate-500 hover:bg-slate-300"
-                      }`}
-                    >
-                      {rule.isActive ? <Check className="h-5 w-5" /> : <X className="h-5 w-5" />}
-                    </button>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -715,11 +1465,19 @@ export default function AdminDashboard() {
         {tab === "relatorios" && (
           <div className="space-y-6">
             <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+              <h3
+                className={`text-lg font-semibold mb-4 ${
+                  isDark ? "text-white" : "text-slate-800"
+                }`}
+              >
                 Exportar Relatórios
               </h3>
               <div className="flex flex-wrap items-center gap-3 mb-6">
-                <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                <span
+                  className={`text-xs ${
+                    isDark ? "text-slate-400" : "text-slate-500"
+                  }`}
+                >
                   Período (para agendamentos e resumo)
                 </span>
                 <input
@@ -733,7 +1491,13 @@ export default function AdminDashboard() {
                       : "bg-white border-slate-200 text-slate-700"
                   }`}
                 />
-                <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>até</span>
+                <span
+                  className={`text-xs ${
+                    isDark ? "text-slate-500" : "text-slate-400"
+                  }`}
+                >
+                  até
+                </span>
                 <input
                   type="date"
                   value={dateTo}
@@ -764,12 +1528,43 @@ export default function AdminDashboard() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <button
-                  onClick={() => exportToCSV(clients.map(c => ({ Nome: c.name, Telefone: c.phone, Email: c.email || "", Pontos: c.pointsBalance, TotalGasto: c.totalSpent, Visitas: c.totalAppointments, UltimaVisita: c.lastVisit || "" })), "clientes")}
-                  className={`p-4 rounded-xl text-left ${isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"}`}
+                  onClick={() =>
+                    exportToCSV(
+                      clients.map((c) => ({
+                        Nome: c.name,
+                        Telefone: c.phone,
+                        Email: c.email || "",
+                        Pontos: c.pointsBalance,
+                        TotalGasto: c.totalSpent,
+                        Visitas: c.totalAppointments,
+                        UltimaVisita: c.lastVisit || "",
+                      })),
+                      "clientes",
+                    )
+                  }
+                  className={`p-4 rounded-xl text-left ${
+                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                  }`}
                 >
-                  <Users className={`h-8 w-8 mb-3 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-                  <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Clientes</p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Lista completa com pontos e gastos</p>
+                  <Users
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Clientes
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Lista completa com pontos e gastos
+                  </p>
                 </button>
 
                 <button
@@ -787,38 +1582,141 @@ export default function AdminDashboard() {
                       "agendamentos",
                     )
                   }
-                  className={`p-4 rounded-xl text-left ${isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"}`}
+                  className={`p-4 rounded-xl text-left ${
+                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                  }`}
                 >
-                  <Calendar className={`h-8 w-8 mb-3 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-                  <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Agendamentos</p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Histórico de atendimentos</p>
+                  <Calendar
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Agendamentos
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Histórico de atendimentos
+                  </p>
                 </button>
 
                 <button
-                  onClick={() => exportToCSV(rewards.map(r => ({ Titulo: r.title, Cliente: clients.find(c => c.id === r.clientId)?.name || "", Status: r.status, Expira: r.expiresAt })), "recompensas")}
-                  className={`p-4 rounded-xl text-left ${isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"}`}
+                  onClick={() =>
+                    exportToCSV(
+                      rewards.map((r) => ({
+                        Titulo: r.title,
+                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
+                        Status: r.status,
+                        Expira: r.expiresAt,
+                      })),
+                      "recompensas",
+                    )
+                  }
+                  className={`p-4 rounded-xl text-left ${
+                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                  }`}
                 >
-                  <Gift className={`h-8 w-8 mb-3 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-                  <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Recompensas</p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Brindes e status de resgate</p>
+                  <Gift
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Recompensas
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Brindes e status de resgate
+                  </p>
                 </button>
 
                 <button
-                  onClick={() => exportToCSV(reviews.map(r => ({ Cliente: clients.find(c => c.id === r.clientId)?.name || "", Nota: r.rating, Comentario: r.comment || "", Data: r.createdAt })), "avaliacoes")}
-                  className={`p-4 rounded-xl text-left ${isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"}`}
+                  onClick={() =>
+                    exportToCSV(
+                      reviews.map((r) => ({
+                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
+                        Nota: r.rating,
+                        Comentario: r.comment || "",
+                        Data: r.createdAt,
+                      })),
+                      "avaliacoes",
+                    )
+                  }
+                  className={`p-4 rounded-xl text-left ${
+                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                  }`}
                 >
-                  <Star className={`h-8 w-8 mb-3 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-                  <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Avaliações</p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Feedback dos clientes</p>
+                  <Star
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Avaliações
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Feedback dos clientes
+                  </p>
                 </button>
 
                 <button
-                  onClick={() => exportToCSV(professionals.map(p => ({ Nome: p.name, Especialidade: p.specialty || "", Avaliacao: p.rating, Atendimentos: p.totalAppointments, Status: p.isActive ? "Ativo" : "Inativo" })), "equipe")}
-                  className={`p-4 rounded-xl text-left ${isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"}`}
+                  onClick={() =>
+                    exportToCSV(
+                      professionals.map((p) => ({
+                        Nome: p.name,
+                        Especialidade: p.specialty || "",
+                        Avaliacao: p.rating,
+                        Atendimentos: p.totalAppointments,
+                        Status: p.isActive ? "Ativo" : "Inativo",
+                      })),
+                      "equipe",
+                    )
+                  }
+                  className={`p-4 rounded-xl text-left ${
+                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                  }`}
                 >
-                  <UserPlus className={`h-8 w-8 mb-3 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-                  <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Equipe</p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Profissionais e performance</p>
+                  <UserPlus
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Equipe
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Profissionais e performance
+                  </p>
                 </button>
 
                 <button
@@ -840,11 +1738,29 @@ export default function AdminDashboard() {
                     };
                     exportToCSV([report], "resumo_executivo");
                   }}
-                  className={`p-4 rounded-xl text-left ${isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"}`}
+                  className={`p-4 rounded-xl text-left ${
+                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                  }`}
                 >
-                  <BarChart3 className={`h-8 w-8 mb-3 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-                  <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Resumo Executivo</p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>KPIs e métricas principais</p>
+                  <BarChart3
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Resumo Executivo
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    KPIs e métricas principais
+                  </p>
                 </button>
               </div>
             </div>
@@ -855,13 +1771,25 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({ title, value, icon: Icon, isDark }: { title: string; value: string | number; icon: React.ElementType; isDark: boolean }) {
+function StatCard({ title, value, icon: Icon, isDark, trend, trendUp }: { 
+  title: string; 
+  value: string | number; 
+  icon: React.ElementType; 
+  isDark: boolean;
+  trend?: string;
+  trendUp?: boolean;
+}) {
   return (
     <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{title}</p>
           <p className={`text-2xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{value}</p>
+          {trend && (
+            <p className={`text-xs mt-1 ${trendUp === true ? "text-emerald-500" : trendUp === false ? "text-red-500" : isDark ? "text-slate-500" : "text-slate-400"}`}>
+              {trend}
+            </p>
+          )}
         </div>
         <div className={`p-3 rounded-lg ${isDark ? "bg-slate-700" : "bg-amber-50"}`}>
           <Icon className={`h-6 w-6 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
