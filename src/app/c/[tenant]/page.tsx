@@ -77,10 +77,18 @@ export default function ClientAccessPage() {
     setLoading(false);
   };
 
+  const handleLogout = () => {
+    setStep("login");
+    setClientId(null);
+    setPhone("");
+    setOtp("");
+    setError("");
+  };
+
   if (step === "dashboard" && clientId) {
     return (
       <Suspense fallback={<LoadingScreen isDark={isDark} />}>
-        <ClientDashboard clientId={clientId} />
+        <ClientDashboard clientId={clientId} onLogout={handleLogout} />
       </Suspense>
     );
   }

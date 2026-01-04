@@ -8,11 +8,12 @@ import { formatCurrency, formatDate, daysUntil } from "@/lib/utils";
 
 interface ClientDashboardProps {
   clientId: string;
+  onLogout?: () => void;
 }
 
 type Tab = "inicio" | "historico" | "beneficios";
 
-export default function ClientDashboard({ clientId }: ClientDashboardProps) {
+export default function ClientDashboard({ clientId, onLogout }: ClientDashboardProps) {
   const { 
     getClientById, 
     getClientAppointments, 
@@ -170,16 +171,29 @@ export default function ClientDashboard({ clientId }: ClientDashboardProps) {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-24">
       {/* Header Premium */}
-      <header className="relative px-6 pt-8 pb-6">
+      <header className="relative px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-slate-500 text-sm">Olá,</p>
             <h1 className="text-2xl font-light text-white">{client.name.split(" ")[0]}</h1>
           </div>
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/30 flex items-center justify-center ring-1 ring-amber-500/30">
-            <span className="text-amber-400 font-semibold">
-              {client.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-            </span>
+          <div className="flex items-center gap-3">
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                aria-label="Sair"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            )}
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/30 flex items-center justify-center ring-1 ring-amber-500/30">
+              <span className="text-amber-400 font-semibold text-sm">
+                {client.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+              </span>
+            </div>
           </div>
         </div>
       </header>
