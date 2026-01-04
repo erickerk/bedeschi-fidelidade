@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { StarRating } from "@/components/ui/star-rating";
 import { useApp } from "@/lib/app-context";
 import { mockCategoryProgress } from "@/lib/mock-data";
@@ -13,6 +13,8 @@ interface ClientDashboardProps {
 
 type Tab = "inicio" | "historico" | "beneficios";
 
+const INACTIVITY_TIMEOUT = 3 * 60 * 1000; // 3 minutos em ms
+
 export default function ClientDashboard({ clientId, onLogout }: ClientDashboardProps) {
   const { 
     getClientById, 
@@ -24,6 +26,33 @@ export default function ClientDashboard({ clientId, onLogout }: ClientDashboardP
     redeemReward,
     updateAppointment,
   } = useApp();
+
+  // Timeout de inatividade - logout após 3 minutos
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (onLogout) onLogout();
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    
+    events.forEach(event => {
+      document.addEventListener(event, resetTimer, { passive: true });
+    });
+
+    resetTimer(); // Inicia o timer
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => {
+        document.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [onLogout]);
 
   const client = getClientById(clientId);
   const appointments = getClientAppointments(clientId);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type UserRole = "admin" | "recepcao" | "qa";
 
@@ -17,11 +18,11 @@ const STAFF_CREDENTIALS: Record<string, StaffUser> = {
 };
 
 export default function StaffLoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loggedUser, setLoggedUser] = useState<{ name: string; role: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,45 +50,13 @@ export default function StaffLoginPage() {
       loggedAt: new Date().toISOString(),
     }));
 
-    setLoggedUser({ name: user.name, role: user.role });
-    setLoading(false);
+    // Redireciona para o painel administrativo
+    if (user.role === "admin" || user.role === "qa") {
+      router.push("/admin/dashboard");
+    } else {
+      router.push("/admin/dashboard"); // Recepção também vai para o admin por enquanto
+    }
   };
-
-  const handleLogout = () => {
-    localStorage.removeItem("staffSession");
-    setLoggedUser(null);
-    setEmail("");
-    setPassword("");
-  };
-
-  if (loggedUser) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
-        <div className="w-full max-w-md text-center">
-          <div className="mx-auto mb-6 h-20 w-20 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/30 flex items-center justify-center ring-2 ring-amber-500/40">
-            <svg className="h-10 w-10 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Bem-vindo!</h1>
-          <p className="text-amber-400 text-lg">{loggedUser.name}</p>
-          <p className="text-slate-400 text-sm mt-1 uppercase">{loggedUser.role}</p>
-          
-          <div className="mt-8 p-6 rounded-2xl bg-slate-800/50 ring-1 ring-slate-700/50">
-            <p className="text-slate-300 text-sm mb-4">Login realizado com sucesso!</p>
-            <p className="text-slate-500 text-xs">Painel administrativo em desenvolvimento.</p>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            className="mt-6 px-6 py-3 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors"
-          >
-            Sair
-          </button>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
