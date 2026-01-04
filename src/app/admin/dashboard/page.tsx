@@ -29,12 +29,20 @@ const CHART_COLORS = [
   "bg-cyan-500", "bg-orange-500", "bg-pink-500", "bg-indigo-500", "bg-teal-500"
 ];
 
+const PERIOD_LABEL: Record<"7d" | "30d" | "90d" | "all", string> = {
+  "7d": "7 dias",
+  "30d": "30 dias",
+  "90d": "90 dias",
+  all: "todo o período",
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<StaffSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [services, setServices] = useState<Service[]>(importedServices);
   const [searchTerm, setSearchTerm] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [showAddProfessional, setShowAddProfessional] = useState(false);
@@ -49,6 +57,7 @@ export default function AdminDashboard() {
   const [clientFilter, setClientFilter] = useState<"all" | "withRewards" | "vip" | "inactive">("all");
   const [professionalRoleFilter, setProfessionalRoleFilter] = useState<"all" | "medico" | "profissional" | "recepcionista">("all");
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("all");
+  const [analyticsCategoryFilter, setAnalyticsCategoryFilter] = useState<string>("all");
   const [analyticsProfessionalFilter, setAnalyticsProfessionalFilter] = useState<string>("all");
   const [analyticsPeriodFilter, setAnalyticsPeriodFilter] = useState<"7d" | "30d" | "90d" | "all">("30d");
   const [dateFrom, setDateFrom] = useState("");
@@ -62,6 +71,7 @@ export default function AdminDashboard() {
     email: string;
     phone: string;
     servicesIds: string[];
+    loginPassword: string;
   }>({
     name: "",
     role: "profissional",
@@ -69,6 +79,7 @@ export default function AdminDashboard() {
     email: "",
     phone: "",
     servicesIds: [],
+    loginPassword: "",
   });
   const [newService, setNewService] = useState({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
   const [newRule, setNewRule] = useState<{
@@ -133,7 +144,7 @@ export default function AdminDashboard() {
     };
 
     applyChartStyles();
-  }, [tab, analyticsPeriodFilter, analyticsProfessionalFilter, dateFrom, dateTo]);
+  }, [tab, analyticsPeriodFilter, analyticsProfessionalFilter, analyticsCategoryFilter, dateFrom, dateTo]);
 
   const handleLogout = () => {
     localStorage.removeItem("staffSession");
@@ -187,8 +198,21 @@ export default function AdminDashboard() {
   // Analytics calculados com filtros
   const analytics = useMemo(() => {
     const now = new Date();
-    const filteredApts = getFilteredAppointments(analyticsPeriodFilter);
-    
+
+    // Filtra atendimentos por período
+    const baseFilteredApts = getFilteredAppointments(analyticsPeriodFilter);
+
+    // Filtra por categoria de procedimento quando selecionado
+    const filteredApts =
+      analyticsCategoryFilter === "all"
+        ? baseFilteredApts
+        : baseFilteredApts.filter((a) =>
+            a.services.some((s) => {
+              const serviceData = services.find((srv) => srv.name === s.name);
+              return serviceData?.categoryId === analyticsCategoryFilter;
+            }),
+          );
+
     const thisMonth = appointments.filter((a) => {
       const d = new Date(a.date);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -223,33 +247,41 @@ export default function AdminDashboard() {
     const topClients = [...clients]
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, 10)
-      .map(c => ({ ...c, appointmentsInPeriod: filteredApts.filter(a => a.clientId === c.id).length }));
+      .map((c) => ({
+        ...c,
+        appointmentsInPeriod: filteredApts.filter((a) => a.clientId === c.id).length,
+      }));
 
     // Performance da equipe
-    const professionalPerformance = professionals.map((p) => {
-      const profAppointments = filteredApts.filter((a) => a.professionalId === p.id);
-      const profReviews = reviews.filter((r) => {
-        const apt = appointments.find((a) => a.id === r.appointmentId);
-        return apt?.professionalId === p.id;
-      });
-      const avgRating = profReviews.length > 0
-        ? (profReviews.reduce((sum, r) => sum + r.rating, 0) / profReviews.length).toFixed(1)
-        : "N/A";
-      const totalRevenue = profAppointments.reduce((sum, a) => sum + a.total, 0);
+    const professionalPerformance = professionals
+      .map((p) => {
+        const profAppointments = filteredApts.filter((a) => a.professionalId === p.id);
+        const profReviews = reviews.filter((r) => {
+          const apt = appointments.find((a) => a.id === r.appointmentId);
+          return apt?.professionalId === p.id;
+        });
+        const avgRating =
+          profReviews.length > 0
+            ? (profReviews.reduce((sum, r) => sum + r.rating, 0) / profReviews.length).toFixed(1)
+            : "N/A";
+        const totalRevenue = profAppointments.reduce((sum, a) => sum + a.total, 0);
 
-      return {
-        ...p,
-        appointmentsCount: profAppointments.length,
-        revenue: totalRevenue,
-        avgRating,
-        reviewsCount: profReviews.length,
-      };
-    }).sort((a, b) => b.revenue - a.revenue);
+        return {
+          ...p,
+          appointmentsCount: profAppointments.length,
+          revenue: totalRevenue,
+          avgRating,
+          reviewsCount: profReviews.length,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue);
 
     // Profissionais mais bem avaliados
     const topRatedProfessionals = [...professionalPerformance]
-      .filter(p => p.avgRating !== "N/A")
-      .sort((a, b) => parseFloat(b.avgRating as string) - parseFloat(a.avgRating as string))
+      .filter((p) => p.avgRating !== "N/A")
+      .sort(
+        (a, b) => parseFloat(b.avgRating as string) - parseFloat(a.avgRating as string),
+      )
       .slice(0, 5);
 
     // Profissionais que mais atendem
@@ -257,11 +289,17 @@ export default function AdminDashboard() {
       .sort((a, b) => b.appointmentsCount - a.appointmentsCount)
       .slice(0, 5);
 
+    // Piores profissionais por avaliação
+    const worstProfessionals = [...professionalPerformance]
+      .filter((p) => p.avgRating !== "N/A")
+      .sort((a, b) => parseFloat(a.avgRating as string) - parseFloat(b.avgRating as string))
+      .slice(0, 5);
+
     // Receita por categoria
     const categoryRevenue: Record<string, number> = {};
     filteredApts.forEach((a) => {
       a.services.forEach((s) => {
-        const serviceData = importedServices.find((srv) => srv.name === s.name);
+        const serviceData = services.find((srv) => srv.name === s.name);
         const categoryName = serviceData?.categoryName ?? "Outros";
         categoryRevenue[categoryName] = (categoryRevenue[categoryName] || 0) + s.price;
       });
@@ -270,13 +308,13 @@ export default function AdminDashboard() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6);
 
-    // Receita diária dos últimos 7 dias
+    // Receita diária dos últimos 7 dias (respeitando filtros)
     const dailyRevenue: { date: string; revenue: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split("T")[0];
-      const dayRevenue = appointments
-        .filter(a => a.date === dateStr)
+      const dayRevenue = filteredApts
+        .filter((a) => a.date === dateStr)
         .reduce((sum, a) => sum + a.total, 0);
       dailyRevenue.push({ date: dateStr, revenue: dayRevenue });
     }
@@ -288,12 +326,16 @@ export default function AdminDashboard() {
       revenueGrowth,
       revenuePeriod: filteredApts.reduce((sum, a) => sum + a.total, 0),
       appointmentsPeriod: filteredApts.length,
-      avgTicket: filteredApts.length > 0 ? filteredApts.reduce((sum, a) => sum + a.total, 0) / filteredApts.length : 0,
+      avgTicket:
+        filteredApts.length > 0
+          ? filteredApts.reduce((sum, a) => sum + a.total, 0) / filteredApts.length
+          : 0,
       topServices,
       topClients,
       professionalPerformance,
       topRatedProfessionals,
       mostActiveProfessionals,
+      worstProfessionals,
       revenueByCategory,
       dailyRevenue,
       clientsThisMonth: clients.filter((c) => {
@@ -301,14 +343,25 @@ export default function AdminDashboard() {
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       }).length,
       totalPoints: clients.reduce((sum, c) => sum + c.pointsBalance, 0),
-      avgRating: reviews.length > 0
-        ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-        : "N/A",
+      avgRating:
+        reviews.length > 0
+          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+          : "N/A",
       totalReviews: reviews.length,
-      activeRewards: rewards.filter(r => r.status === "available").length,
-      redeemedRewards: rewards.filter(r => r.status === "redeemed").length,
+      activeRewards: rewards.filter((r) => r.status === "available").length,
+      redeemedRewards: rewards.filter((r) => r.status === "redeemed").length,
     };
-  }, [clients, appointments, reviews, professionals, rewards, getFilteredAppointments, analyticsPeriodFilter]);
+  }, [
+    clients,
+    appointments,
+    reviews,
+    professionals,
+    rewards,
+    getFilteredAppointments,
+    analyticsPeriodFilter,
+    analyticsCategoryFilter,
+    services,
+  ]);
 
   // Exportar para CSV
   const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
@@ -347,7 +400,7 @@ export default function AdminDashboard() {
 
   const filteredServices = useMemo(
     () =>
-      importedServices
+      services
         .filter((s) =>
           serviceCategoryFilter === "all" ? true : s.categoryId === serviceCategoryFilter,
         )
@@ -356,7 +409,7 @@ export default function AdminDashboard() {
             ? s.name.toLowerCase().includes(serviceSearch.toLowerCase())
             : true,
         ),
-    [serviceCategoryFilter, serviceSearch],
+    [services, serviceCategoryFilter, serviceSearch],
   );
 
   // Handlers para CRUD de Profissionais
@@ -374,9 +427,44 @@ export default function AdminDashboard() {
       totalAppointments: 0,
       isActive: true,
       createdAt: new Date().toISOString(),
+      loginPassword:
+        newProfessional.role === "recepcionista" && newProfessional.loginPassword
+          ? newProfessional.loginPassword
+          : undefined,
     };
     addProfessional(professional);
-    setNewProfessional({ name: "", role: "profissional", specialty: "", email: "", phone: "", servicesIds: [] });
+
+    if (
+      professional.role === "recepcionista" &&
+      professional.email &&
+      newProfessional.loginPassword &&
+      typeof window !== "undefined"
+    ) {
+      try {
+        const emailKey = professional.email.toLowerCase();
+        const raw = localStorage.getItem("extraStaffCredentials");
+        const extras = raw
+          ? (JSON.parse(raw) as Record<string, { password: string; role: string; name: string }>)
+          : {};
+        extras[emailKey] = {
+          password: newProfessional.loginPassword,
+          role: "recepcao",
+          name: professional.name,
+        };
+        localStorage.setItem("extraStaffCredentials", JSON.stringify(extras));
+      } catch {
+      }
+    }
+
+    setNewProfessional({
+      name: "",
+      role: "profissional",
+      specialty: "",
+      email: "",
+      phone: "",
+      servicesIds: [],
+      loginPassword: "",
+    });
     setShowAddProfessional(false);
   };
 
@@ -384,6 +472,31 @@ export default function AdminDashboard() {
     if (!editingProfessional) return;
     updateProfessional(editingProfessional);
     setEditingProfessional(null);
+  };
+
+  // Handlers para CRUD de Serviços (estado local)
+  const handleAddService = () => {
+    if (!newService.name || !newService.categoryId) return;
+    const category = importedCategories.find((c) => c.id === newService.categoryId);
+    const service: Service = {
+      id: `srv-custom-${Date.now()}`,
+      externalCode: "CUSTOM",
+      name: newService.name,
+      categoryId: newService.categoryId,
+      categoryName: category?.name ?? "Outros",
+      price: newService.price,
+      durationMinutes: newService.durationMinutes,
+      isActive: true,
+    };
+    setServices((prev) => [service, ...prev]);
+    setNewService({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
+    setShowAddService(false);
+  };
+
+  const handleUpdateService = () => {
+    if (!editingService) return;
+    setServices((prev) => prev.map((s) => (s.id === editingService.id ? editingService : s)));
+    setEditingService(null);
   };
 
   // Handlers para CRUD de Regras
@@ -468,11 +581,36 @@ export default function AdminDashboard() {
   return (
     <div className={`min-h-screen transition-colors ${isDark ? "bg-slate-900" : "bg-slate-100"}`}>
       {/* Header */}
-      <header className={`px-6 py-4 ${isDark ? "bg-slate-800" : "bg-white border-b border-slate-200"}`}>
+      <header className={`px-6 py-4 ${isDark ? "bg-slate-800/95 backdrop-blur" : "bg-white/95 backdrop-blur border-b border-slate-200"}`}>
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className={`text-xl font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Painel Administrativo</h1>
-            <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Instituto Bedeschi</p>
+          <div className="flex items-center gap-4">
+            <div className="shrink-0">
+              <img
+                src="/Logo.png"
+                alt="Instituto Bedeschi"
+                className={`h-9 w-auto object-contain ${
+                  isDark
+                    ? "drop-shadow-[0_0_22px_rgba(251,191,36,0.45)]"
+                    : "drop-shadow-[0_0_18px_rgba(148,163,184,0.55)]"
+                }`}
+              />
+            </div>
+            <div>
+              <h1
+                className={`text-xl font-semibold ${
+                  isDark ? "text-white" : "text-slate-800"
+                }`}
+              >
+                Painel Administrativo
+              </h1>
+              <p
+                className={`text-sm ${
+                  isDark ? "text-slate-400" : "text-slate-500"
+                }`}
+              >
+                Instituto Bedeschi
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={toggleTheme} className={`p-2 rounded-lg transition-colors ${isDark ? "bg-slate-700 text-amber-400 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`} aria-label="Alternar tema">
@@ -510,6 +648,80 @@ export default function AdminDashboard() {
         {/* Dashboard - Visão Geral com Gráficos */}
         {tab === "dashboard" && (
           <div className="space-y-6">
+            {/* Filtros rápidos do Dashboard */}
+            <div className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Filter
+                    className={`h-4 w-4 ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      isDark ? "text-slate-300" : "text-slate-600"
+                    }`}
+                  >
+                    Visão geral por período e tipo de procedimento
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  {[
+                    { value: "7d", label: "7 dias" },
+                    { value: "30d", label: "30 dias" },
+                    { value: "90d", label: "90 dias" },
+                    { value: "all", label: "Todo período" },
+                  ].map((period) => (
+                    <button
+                      key={period.value}
+                      onClick={() =>
+                        setAnalyticsPeriodFilter(
+                          period.value as typeof analyticsPeriodFilter,
+                        )
+                      }
+                      className={`px-3 py-1.5 rounded-lg text-xs md:text-sm transition-colors ${
+                        analyticsPeriodFilter === period.value
+                          ? "bg-amber-500 text-white"
+                          : isDark
+                            ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <span
+                    id="dashboard-category-label"
+                    className={`text-xs ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Tipo de procedimento
+                  </span>
+                  <select
+                    aria-labelledby="dashboard-category-label"
+                    title="Filtrar visão geral por tipo de procedimento"
+                    value={analyticsCategoryFilter}
+                    onChange={(e) => setAnalyticsCategoryFilter(e.target.value)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs md:text-sm ${
+                      isDark
+                        ? "bg-slate-900 border-slate-700 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <option value="all">Todos</option>
+                    {importedCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {/* KPIs Principais */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard title="Total de Clientes" value={clients.length} icon={Users} isDark={isDark} trend={`+${analytics.clientsThisMonth} este mês`} />
@@ -522,24 +734,31 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Gráfico de Receita Diária */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
-                  📈 Receita dos Últimos 7 Dias
-                </h3>
-                <div className="flex items-end justify-between h-40 gap-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                      📈 Receita no período ({PERIOD_LABEL[analyticsPeriodFilter]})
+                    </h3>
+                    <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      Valores já filtrados por período e tipo de procedimento selecionados.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between h-44 gap-3 rounded-2xl chart-grid-y px-3 pb-3">
                   {analytics.dailyRevenue.map((day, i) => {
                     const maxRevenue = Math.max(...analytics.dailyRevenue.map(d => d.revenue), 1);
                     const heightPercent = (day.revenue / maxRevenue) * 100;
                     return (
                       <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                        <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                        <span className={`text-[10px] md:text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                           {formatCurrency(day.revenue)}
                         </span>
                         <div 
-                          className={`w-full rounded-t-lg ${CHART_COLORS[i % CHART_COLORS.length]} transition-all chart-bar-vertical`}
+                          className={`w-full rounded-t-xl bg-gradient-to-t from-amber-500 via-amber-400 to-emerald-400 shadow-sm transition-all chart-bar-vertical`}
                           data-chart-height={`${Math.max(heightPercent, 5)}%`}
                         />
-                        <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                          {new Date(day.date).toLocaleDateString("pt-BR", { weekday: "short" }).slice(0, 3)}
+                        <span className={`text-[10px] md:text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                          {new Date(day.date).toLocaleDateString("pt-BR", analyticsPeriodFilter === "7d" ? { weekday: "short" } : { day: "2-digit", month: "2-digit" }).slice(0, 5)}
                         </span>
                       </div>
                     );
@@ -701,6 +920,47 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+              {/* Piores Avaliações */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3
+                  className={`text-lg font-semibold mb-4 ${
+                    isDark ? "text-white" : "text-slate-800"
+                  }`}
+                >
+                  ⚠️ Piores Avaliações
+                </h3>
+                <div className="space-y-3">
+                  {analytics.worstProfessionals.map((prof, i) => (
+                    <div
+                      key={prof.id}
+                      className={`flex items-center justify-between p-2 rounded-lg ${
+                        isDark ? "bg-slate-700/50" : "bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-red-400">{i + 1}º</span>
+                        <span
+                          className={`text-sm ${
+                            isDark ? "text-white" : "text-slate-800"
+                          }`}
+                        >
+                          {prof.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 text-red-400 fill-red-400" />
+                        <span
+                          className={`text-sm font-medium ${
+                            isDark ? "text-red-400" : "text-red-600"
+                          }`}
+                        >
+                          {prof.avgRating}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -735,16 +995,39 @@ export default function AdminDashboard() {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 ml-auto">
+                <div className="flex items-center gap-3 ml-auto">
+                  <select
+                    value={analyticsCategoryFilter}
+                    onChange={(e) => setAnalyticsCategoryFilter(e.target.value)}
+                    aria-label="Filtrar por categoria de procedimento"
+                    className={`rounded-lg border px-3 py-1.5 text-sm ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <option value="all">Todos os tipos</option>
+                    {importedCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
                   <select
                     value={analyticsProfessionalFilter}
                     onChange={(e) => setAnalyticsProfessionalFilter(e.target.value)}
                     aria-label="Filtrar por profissional"
-                    className={`rounded-lg border px-3 py-1.5 text-sm ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-white border-slate-200 text-slate-700"}`}
+                    className={`rounded-lg border px-3 py-1.5 text-sm ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
                   >
                     <option value="all">Todos os profissionais</option>
                     {professionals.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -1220,6 +1503,270 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Modal de novo profissional / recepcionista */}
+        {(showAddProfessional || editingProfessional) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div
+              className={`w-full max-w-lg rounded-2xl p-6 shadow-xl ${
+                isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+              }`}
+            >
+              <h3
+                className={`text-lg font-semibold mb-4 ${
+                  isDark ? "text-white" : "text-slate-800"
+                }`}
+              >
+                {editingProfessional
+                  ? "Editar Profissional"
+                  : "Novo Profissional / Recepcionista"}
+              </h3>
+              {!editingProfessional && (
+                <p
+                  className={`text-xs mb-4 ${
+                    isDark ? "text-slate-400" : "text-slate-500"
+                  }`}
+                >
+                  Use este formulário para cadastrar profissionais em geral, médicos
+                  e também recepcionistas (basta escolher o papel "Recepção").
+                </p>
+              )}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  editingProfessional
+                    ? handleUpdateProfessional()
+                    : handleAddProfessional();
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <label
+                    className={`text-sm font-medium ${
+                      isDark ? "text-slate-200" : "text-slate-700"
+                    }`}
+                  >
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    value={editingProfessional ? editingProfessional.name : newProfessional.name}
+                    onChange={(e) =>
+                      editingProfessional
+                        ? setEditingProfessional((prev) =>
+                            prev ? { ...prev, name: e.target.value } : prev,
+                          )
+                        : setNewProfessional({
+                            ...newProfessional,
+                            name: e.target.value,
+                          })
+                    }
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
+                      isDark
+                        ? "bg-slate-800 border-slate-600 text-slate-50 placeholder:text-slate-500"
+                        : "bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                    }`}
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label
+                      className={`text-sm font-medium ${
+                        isDark ? "text-slate-200" : "text-slate-700"
+                      }`}
+                    >
+                      Papel
+                    </label>
+                    <select
+                      aria-label="Selecionar o papel do profissional"
+                      value={editingProfessional ? editingProfessional.role : newProfessional.role}
+                      onChange={(e) =>
+                        editingProfessional
+                          ? setEditingProfessional((prev) =>
+                              prev
+                                ? { ...prev, role: e.target.value as Professional["role"] }
+                                : prev,
+                            )
+                          : setNewProfessional({
+                              ...newProfessional,
+                              role: e.target.value as Professional["role"],
+                            })
+                      }
+                      className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                        isDark
+                          ? "bg-slate-800 border-slate-600 text-slate-50"
+                          : "bg-white border-slate-300 text-slate-900"
+                      }`}
+                    >
+                      <option value="profissional">Profissional</option>
+                      <option value="medico">Médico</option>
+                      <option value="recepcionista">Recepção</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      className={`text-sm font-medium ${
+                        isDark ? "text-slate-200" : "text-slate-700"
+                      }`}
+                    >
+                      Especialidades (separe por vírgulas)
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        editingProfessional
+                          ? editingProfessional.specialty || ""
+                          : newProfessional.specialty
+                      }
+                      onChange={(e) =>
+                        editingProfessional
+                          ? setEditingProfessional((prev) =>
+                              prev
+                                ? { ...prev, specialty: e.target.value }
+                                : prev,
+                            )
+                          : setNewProfessional({
+                              ...newProfessional,
+                              specialty: e.target.value,
+                            })
+                      }
+                      className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                        isDark
+                          ? "bg-slate-800 border-slate-600 text-slate-50"
+                          : "bg-white border-slate-300 text-slate-900"
+                      }`}
+                      placeholder="Ex: Esteticista, Médico Dermatologista"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label
+                      className={`text-sm font-medium ${
+                        isDark ? "text-slate-200" : "text-slate-700"
+                      }`}
+                    >
+                      Email (opcional)
+                    </label>
+                    <input
+                      type="email"
+                      value={editingProfessional ? editingProfessional.email || "" : newProfessional.email}
+                      onChange={(e) =>
+                        editingProfessional
+                          ? setEditingProfessional((prev) =>
+                              prev ? { ...prev, email: e.target.value } : prev,
+                            )
+                          : setNewProfessional({
+                              ...newProfessional,
+                              email: e.target.value,
+                            })
+                      }
+                      className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                        isDark
+                          ? "bg-slate-800 border-slate-600 text-slate-50"
+                          : "bg-white border-slate-300 text-slate-900"
+                      }`}
+                      placeholder="contato@clinica.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      className={`text-sm font-medium ${
+                        isDark ? "text-slate-200" : "text-slate-700"
+                      }`}
+                    >
+                      Telefone (opcional)
+                    </label>
+                    <input
+                      type="tel"
+                      value={editingProfessional ? editingProfessional.phone || "" : newProfessional.phone}
+                      onChange={(e) =>
+                        editingProfessional
+                          ? setEditingProfessional((prev) =>
+                              prev ? { ...prev, phone: e.target.value } : prev,
+                            )
+                          : setNewProfessional({
+                              ...newProfessional,
+                              phone: e.target.value,
+                            })
+                      }
+                      className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                        isDark
+                          ? "bg-slate-800 border-slate-600 text-slate-50"
+                          : "bg-white border-slate-300 text-slate-900"
+                      }`}
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                </div>
+                {(editingProfessional ? editingProfessional.role : newProfessional.role) === "recepcionista" && (
+                  <div className="space-y-2">
+                    <label
+                      className={`text-sm font-medium ${
+                        isDark ? "text-slate-200" : "text-slate-700"
+                      }`}
+                    >
+                      Senha de acesso da recepção
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        editingProfessional
+                          ? (editingProfessional as Professional).loginPassword || ""
+                          : newProfessional.loginPassword
+                      }
+                      onChange={(e) =>
+                        editingProfessional
+                          ? setEditingProfessional((prev) =>
+                              prev
+                                ? { ...(prev as Professional), loginPassword: e.target.value }
+                                : prev,
+                            )
+                          : setNewProfessional({
+                              ...newProfessional,
+                              loginPassword: e.target.value,
+                            })
+                      }
+                      className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                        isDark
+                          ? "bg-slate-800 border-slate-600 text-slate-50"
+                          : "bg-white border-slate-300 text-slate-900"
+                      }`}
+                      placeholder="Defina uma senha forte para uso na tela de recepção"
+                    />
+                    <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-500"}`}>
+                      Essa senha será usada no login de recepção junto com o email informado acima.
+                    </p>
+                  </div>
+                )}
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddProfessional(false);
+                      setEditingProfessional(null);
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm ${
+                      isDark
+                        ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-slate-900 hover:bg-amber-400 flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {editingProfessional ? "Salvar" : "Cadastrar"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Serviços */}
         {tab === "servicos" && (
           <div className="space-y-6">
@@ -1261,6 +1808,17 @@ export default function AdminDashboard() {
                       </option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewService({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
+                      setShowAddService(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 text-sm font-medium"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Novo Serviço
+                  </button>
                 </div>
               </div>
 
@@ -1273,6 +1831,7 @@ export default function AdminDashboard() {
                       <th className="text-left p-3 font-medium">Preço</th>
                       <th className="text-left p-3 font-medium">Duração</th>
                       <th className="text-left p-3 font-medium">Status</th>
+                      <th className="text-right p-3 font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1296,6 +1855,51 @@ export default function AdminDashboard() {
                         <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
                           {s.isActive ? "Ativo" : "Inativo"}
                         </td>
+                        <td className="p-3 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingService(s)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
+                                isDark
+                                  ? "bg-slate-700 text-slate-100 hover:bg-slate-600"
+                                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                              }`}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setServices((prev) =>
+                                  prev.map((svc) =>
+                                    svc.id === s.id
+                                      ? { ...svc, isActive: !svc.isActive }
+                                      : svc,
+                                  ),
+                                )
+                              }
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
+                                s.isActive
+                                  ? "bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                                  : "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                              }`}
+                            >
+                              {s.isActive ? (
+                                <>
+                                  <EyeOff className="h-3 w-3" />
+                                  Desativar
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="h-3 w-3" />
+                                  Ativar
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1307,6 +1911,321 @@ export default function AdminDashboard() {
                 </p>
               )}
             </div>
+
+            {/* Modais de Serviços */}
+            {showAddService && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div
+                  className={`w-full max-w-lg rounded-2xl p-6 shadow-xl ${
+                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                  }`}
+                >
+                  <h3
+                    className={`text-lg font-semibold mb-4 ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Novo Serviço
+                  </h3>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleAddService();
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <label
+                        className={`text-sm font-medium ${
+                          isDark ? "text-slate-200" : "text-slate-700"
+                        }`}
+                      >
+                        Nome do serviço
+                      </label>
+                      <input
+                        type="text"
+                        value={newService.name}
+                        onChange={(e) =>
+                          setNewService({ ...newService, name: e.target.value })
+                        }
+                        placeholder="Ex: Limpeza de pele premium"
+                        title="Nome do serviço"
+                        className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          className={`text-sm font-medium ${
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }`}
+                        >
+                          Categoria
+                        </label>
+                        <select
+                          title="Selecione a categoria do serviço"
+                          value={newService.categoryId}
+                          onChange={(e) =>
+                            setNewService({
+                              ...newService,
+                              categoryId: e.target.value,
+                            })
+                          }
+                          className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        >
+                          <option value="">Selecione uma categoria</option>
+                          {importedCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          className={`text-sm font-medium ${
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }`}
+                        >
+                          Preço
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={newService.price}
+                          onChange={(e) =>
+                            setNewService({
+                              ...newService,
+                              price: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Valor em reais"
+                          title="Preço do serviço em reais"
+                          className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        className={`text-sm font-medium ${
+                          isDark ? "text-slate-200" : "text-slate-700"
+                        }`}
+                      >
+                        Duração (minutos)
+                      </label>
+                      <input
+                        type="number"
+                        min={5}
+                        step={5}
+                        value={newService.durationMinutes}
+                        onChange={(e) =>
+                          setNewService({
+                            ...newService,
+                            durationMinutes: Number(e.target.value) || 0,
+                          })
+                        }
+                        placeholder="Duração em minutos"
+                        title="Duração estimada do serviço em minutos"
+                        className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddService(false)}
+                        className={`px-4 py-2 rounded-lg text-sm ${
+                          isDark
+                            ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-slate-900 hover:bg-amber-400 flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" /> Cadastrar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+            {editingService && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div
+                  className={`w-full max-w-lg rounded-2xl p-6 shadow-xl ${
+                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                  }`}
+                >
+                  <h3
+                    className={`text-lg font-semibold mb-4 ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Editar Serviço
+                  </h3>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleUpdateService();
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <label
+                        className={`text-sm font-medium ${
+                          isDark ? "text-slate-200" : "text-slate-700"
+                        }`}
+                      >
+                        Nome do serviço
+                      </label>
+                      <input
+                        type="text"
+                        value={editingService.name}
+                        onChange={(e) =>
+                          setEditingService({ ...editingService, name: e.target.value })
+                        }
+                        placeholder="Nome do serviço"
+                        title="Nome do serviço"
+                        className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          className={`text-sm font-medium ${
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }`}
+                        >
+                          Categoria
+                        </label>
+                        <select
+                          title="Categoria do serviço"
+                          value={editingService.categoryId}
+                          onChange={(e) => {
+                            const cat = importedCategories.find((c) => c.id === e.target.value);
+                            setEditingService({
+                              ...editingService,
+                              categoryId: e.target.value,
+                              categoryName: cat?.name ?? editingService.categoryName,
+                            });
+                          }}
+                          className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        >
+                          {importedCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          className={`text-sm font-medium ${
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }`}
+                        >
+                          Preço
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={editingService.price}
+                          onChange={(e) =>
+                            setEditingService({
+                              ...editingService,
+                              price: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Valor em reais"
+                          title="Preço do serviço em reais"
+                          className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        className={`text-sm font-medium ${
+                          isDark ? "text-slate-200" : "text-slate-700"
+                        }`}
+                      >
+                        Duração (minutos)
+                      </label>
+                      <input
+                        type="number"
+                        min={5}
+                        step={5}
+                        value={editingService.durationMinutes}
+                        onChange={(e) =>
+                          setEditingService({
+                            ...editingService,
+                            durationMinutes: Number(e.target.value) || 0,
+                          })
+                        }
+                        placeholder="Duração em minutos"
+                        title="Duração estimada do serviço em minutos"
+                        className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingService(null)}
+                        className={`px-4 py-2 rounded-lg text-sm ${
+                          isDark
+                            ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-slate-900 hover:bg-amber-400 flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" /> Salvar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1322,9 +2241,70 @@ export default function AdminDashboard() {
                   <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                     Configure e acompanhe as regras que geram pontos, créditos e brindes
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowRulesHelp((prev) => !prev)}
+                    className={`mt-3 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium ${
+                      isDark
+                        ? "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Info className="h-3 w-3" />
+                    Como funcionam as regras?
+                  </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewRule({
+                      name: "",
+                      description: "",
+                      type: "VALUE_ACCUMULATION",
+                      thresholdValue: 0,
+                      rewardType: "DISCOUNT_PERCENT",
+                      rewardValue: 0,
+                      validityDays: 30,
+                      categoryId: "",
+                    });
+                    setShowAddRule(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 text-sm font-medium"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nova Regra
+                </button>
               </div>
-
+              {showRulesHelp && (
+                <div
+                  className={`mb-6 rounded-xl border px-4 py-3 text-xs leading-relaxed ${
+                    isDark
+                      ? "border-slate-700 bg-slate-900 text-slate-200"
+                      : "border-amber-100 bg-amber-50 text-slate-800"
+                  }`}
+                >
+                  <p className="font-semibold mb-1">Como configurar boas regras:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>
+                      <span className="font-medium">Acúmulo por valor:</span> defina um
+                      valor mínimo gasto (gatilho) para liberar um desconto ou crédito.
+                    </li>
+                    <li>
+                      <span className="font-medium">Acúmulo por quantidade:</span> ideal
+                      para combos do tipo "a cada 10 sessões, ganhe 1 grátis".
+                    </li>
+                    <li>
+                      <span className="font-medium">Tipo de recompensa:</span> escolha se
+                      o benefício será desconto em reais, desconto em %, serviço grátis ou
+                      crédito em carteira.
+                    </li>
+                    <li>
+                      <span className="font-medium">Validade:</span> use a validade em
+                      dias para estimular o resgate dentro de um período saudável.
+                    </li>
+                  </ul>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
                   <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
@@ -1435,6 +2415,17 @@ export default function AdminDashboard() {
                         </span>
                         <button
                           type="button"
+                          onClick={() => setEditingRule(rule)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
+                            isDark
+                              ? "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          }`}
+                        >
+                          <Edit2 className="h-3 w-3" /> Editar
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => toggleRule(rule.id)}
                           className={`mt-1 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
                             rule.isActive
@@ -1458,6 +2449,454 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
+            {/* Modais de Regras */}
+            {showAddRule && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div
+                  className={`w-full max-w-xl rounded-2xl p-6 shadow-xl ${
+                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                  }`}
+                >
+                  <h3
+                    className={`text-lg font-semibold mb-4 ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Nova Regra de Fidelidade
+                  </h3>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleAddRule();
+                    }}
+                    className="space-y-4 text-sm"
+                  >
+                    <div className="space-y-2">
+                      <label
+                        className={isDark ? "text-slate-200" : "text-slate-700"}
+                      >
+                        Nome
+                      </label>
+                      <input
+                        type="text"
+                        value={newRule.name}
+                        onChange={(e) =>
+                          setNewRule({ ...newRule, name: e.target.value })
+                        }
+                        className={`w-full rounded-lg border px-3 py-2 ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                        placeholder="Ex: R$ 1.000 em 90 dias = 10% de desconto"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        className={isDark ? "text-slate-200" : "text-slate-700"}
+                      >
+                        Descrição
+                      </label>
+                      <textarea
+                        value={newRule.description}
+                        onChange={(e) =>
+                          setNewRule({ ...newRule, description: e.target.value })
+                        }
+                        rows={3}
+                        className={`w-full rounded-lg border px-3 py-2 ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                        placeholder="Explique de forma simples quando o cliente ganha o benefício."
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Tipo de regra
+                        </label>
+                        <select
+                          title="Tipo de regra de fidelidade"
+                          value={newRule.type}
+                          onChange={(e) =>
+                            setNewRule({
+                              ...newRule,
+                              type: e.target.value as FidelityRule["type"],
+                            })
+                          }
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        >
+                          <option value="VALUE_ACCUMULATION">Acúmulo por valor</option>
+                          <option value="QUANTITY_ACCUMULATION">
+                            Acúmulo por quantidade
+                          </option>
+                          <option value="POINTS_CONVERSION">Conversão de pontos</option>
+                          <option value="SERVICE_SPECIFIC">
+                            Serviço específico
+                          </option>
+                          <option value="COMBO_VALUE">Combo / pacote</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Categoria (opcional)
+                        </label>
+                        <select
+                          title="Categoria de serviços à qual a regra se aplica"
+                          value={newRule.categoryId}
+                          onChange={(e) =>
+                            setNewRule({ ...newRule, categoryId: e.target.value })
+                          }
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        >
+                          <option value="">Todas as categorias</option>
+                          {importedCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Gatilho (valor mínimo)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={newRule.thresholdValue}
+                          onChange={(e) =>
+                            setNewRule({
+                              ...newRule,
+                              thresholdValue: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Valor mínimo gasto para aplicar a regra"
+                          title="Valor mínimo gasto para que a regra seja aplicada"
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Tipo de recompensa
+                        </label>
+                        <select
+                          title="Tipo de recompensa oferecida pela regra"
+                          value={newRule.rewardType}
+                          onChange={(e) =>
+                            setNewRule({
+                              ...newRule,
+                              rewardType: e.target.value as FidelityRule["rewardType"],
+                            })
+                          }
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        >
+                          <option value="DISCOUNT_PERCENT">Desconto %</option>
+                          <option value="DISCOUNT_FIXED">Desconto em R$</option>
+                          <option value="FREE_SERVICE">Serviço grátis</option>
+                          <option value="CREDIT">Crédito em carteira</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Valor da recompensa
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={newRule.rewardValue}
+                          onChange={(e) =>
+                            setNewRule({
+                              ...newRule,
+                              rewardValue: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Valor da recompensa (percentual ou em reais)"
+                          title="Valor da recompensa (percentual ou em reais, conforme o tipo)"
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        className={isDark ? "text-slate-200" : "text-slate-700"}
+                      >
+                        Validade (dias)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={newRule.validityDays}
+                        onChange={(e) =>
+                          setNewRule({
+                            ...newRule,
+                            validityDays: Number(e.target.value) || 1,
+                          })
+                        }
+                        placeholder="Validade em dias"
+                        title="Número de dias de validade da recompensa"
+                        className={`w-full rounded-lg border px-3 py-2 ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddRule(false)}
+                        className={`px-4 py-2 rounded-lg text-sm ${
+                          isDark
+                            ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-slate-900 hover:bg-amber-400 flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" /> Cadastrar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+            {editingRule && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div
+                  className={`w-full max-w-xl rounded-2xl p-6 shadow-xl ${
+                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                  }`}
+                >
+                  <h3
+                    className={`text-lg font-semibold mb-4 ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Editar Regra
+                  </h3>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleUpdateRule();
+                    }}
+                    className="space-y-4 text-sm"
+                  >
+                    <div className="space-y-2">
+                      <label
+                        className={isDark ? "text-slate-200" : "text-slate-700"}
+                      >
+                        Nome
+                      </label>
+                      <input
+                        type="text"
+                        value={editingRule.name}
+                        onChange={(e) =>
+                          setEditingRule({ ...editingRule, name: e.target.value })
+                        }
+                        placeholder="Nome da regra de fidelidade"
+                        title="Nome da regra de fidelidade"
+                        className={`w-full rounded-lg border px-3 py-2 ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        className={isDark ? "text-slate-200" : "text-slate-700"}
+                      >
+                        Descrição
+                      </label>
+                      <textarea
+                        value={editingRule.description}
+                        onChange={(e) =>
+                          setEditingRule({
+                            ...editingRule,
+                            description: e.target.value,
+                          })
+                        }
+                        rows={3}
+                        placeholder="Explique de forma simples quando o cliente ganha o benefício."
+                        title="Descrição detalhada da regra de fidelidade"
+                        className={`w-full rounded-lg border px-3 py-2 ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Gatilho (valor mínimo)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={editingRule.thresholdValue || 0}
+                          onChange={(e) =>
+                            setEditingRule({
+                              ...editingRule,
+                              thresholdValue: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Valor mínimo gasto para aplicar a regra"
+                          title="Valor mínimo gasto para que a regra seja aplicada"
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Tipo de recompensa
+                        </label>
+                        <select
+                          title="Tipo de recompensa oferecida pela regra"
+                          value={editingRule.rewardType}
+                          onChange={(e) =>
+                            setEditingRule({
+                              ...editingRule,
+                              rewardType: e.target.value as FidelityRule["rewardType"],
+                            })
+                          }
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        >
+                          <option value="DISCOUNT_PERCENT">Desconto %</option>
+                          <option value="DISCOUNT_FIXED">Desconto em R$</option>
+                          <option value="FREE_SERVICE">Serviço grátis</option>
+                          <option value="CREDIT">Crédito em carteira</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                        >
+                          Valor da recompensa
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={editingRule.rewardValue || 0}
+                          onChange={(e) =>
+                            setEditingRule({
+                              ...editingRule,
+                              rewardValue: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Valor da recompensa (percentual ou em reais)"
+                          title="Valor da recompensa (percentual ou em reais, conforme o tipo)"
+                          className={`w-full rounded-lg border px-3 py-2 ${
+                            isDark
+                              ? "bg-slate-800 border-slate-600 text-slate-50"
+                              : "bg-white border-slate-300 text-slate-900"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        className={isDark ? "text-slate-200" : "text-slate-700"}
+                      >
+                        Validade (dias)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={editingRule.validityDays}
+                        onChange={(e) =>
+                          setEditingRule({
+                            ...editingRule,
+                            validityDays: Number(e.target.value) || 1,
+                          })
+                        }
+                        placeholder="Validade em dias"
+                        title="Número de dias de validade da recompensa"
+                        className={`w-full rounded-lg border px-3 py-2 ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingRule(null)}
+                        className={`px-4 py-2 rounded-lg text-sm ${
+                          isDark
+                            ? "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-slate-900 hover:bg-amber-400 flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" /> Salvar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

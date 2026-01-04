@@ -135,13 +135,13 @@ export default function ClientAccessPage() {
         {step === "login" && (
           <div className="w-full max-w-xs text-center">
             {/* Logo */}
-            <div className={`mx-auto mb-4 h-16 w-16 rounded-full p-0.5 ring-1 ${
+            <div className={`mx-auto mb-4 h-20 w-20 rounded-full p-0.5 ring-1 ${
               isDark 
                 ? "bg-gradient-to-br from-amber-400/20 to-amber-600/30 ring-amber-500/40" 
                 : "bg-gradient-to-br from-amber-200 to-amber-300 ring-amber-400"
             }`}>
               <div className={`flex h-full w-full items-center justify-center rounded-full ${isDark ? "bg-slate-900" : "bg-white"}`}>
-                <img src="/logo-bedeschi.svg" alt="Instituto Bedeschi" className="h-10 w-10 object-contain" />
+                <img src="/Logo.png" alt="Instituto Bedeschi" className="h-14 w-14 object-contain" />
               </div>
             </div>
             

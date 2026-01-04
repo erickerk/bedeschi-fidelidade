@@ -9,3 +9,13 @@
 .chart-bar-horizontal {
   width: var(--chart-width, 0%);
 }
+
+/* Grid de fundo sutil para gráficos de barras verticais */
+.chart-grid-y {
+  background-image: linear-gradient(
+    to top,
+    rgba(148, 163, 184, 0.16) 1px,
+    transparent 1px
+  );
+  background-size: 100% 25%;
+}

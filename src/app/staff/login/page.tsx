@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Sun, Moon } from "lucide-react";
 
 type UserRole = "admin" | "recepcao" | "qa";
 
@@ -23,6 +24,10 @@ export default function StaffLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  const isDark = theme === "dark";
+  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +41,21 @@ export default function StaffLoginPage() {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 500));
 
-    const user = STAFF_CREDENTIALS[email.toLowerCase()];
+    const lowerEmail = email.toLowerCase();
+
+    let user: StaffUser | undefined = STAFF_CREDENTIALS[lowerEmail];
+
+    if (!user && typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("extraStaffCredentials");
+        if (raw) {
+          const extras = JSON.parse(raw) as Record<string, StaffUser>;
+          user = extras[lowerEmail];
+        }
+      } catch {
+        // ignore erro de parse e segue com credenciais padrão
+      }
+    }
     if (!user || user.password !== password) {
       setError("Email ou senha incorretos");
       setLoading(false);
@@ -59,61 +78,132 @@ export default function StaffLoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
+    <main
+      className={`min-h-screen flex items-center justify-center p-6 transition-colors ${
+        isDark
+          ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
+          : "bg-gradient-to-br from-amber-50 via-white to-amber-50"
+      }`}
+    >
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-slate-800 ring-1 ring-amber-500/50 flex items-center justify-center">
-            <img
-              src="/logo-bedeschi.svg"
-              alt="Instituto Bedeschi"
-              className="h-10 w-10 object-contain"
-            />
-          </div>
-          <h1 className="text-2xl font-semibold text-white">Área do Colaborador</h1>
-          <p className="mt-2 text-amber-400">Instituto Bedeschi</p>
+        <div className="flex justify-end mb-4">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label="Alternar tema"
+            className={`p-2 rounded-full transition-colors ${
+              isDark
+                ? "bg-slate-800 text-amber-400 hover:bg-slate-700"
+                : "bg-amber-100 text-amber-600 hover:bg-amber-200"
+            }`}
+          >
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
         </div>
 
-        <div className="rounded-2xl bg-slate-800/50 p-8 ring-1 ring-slate-700/50 backdrop-blur-sm">
+        <div className="text-center mb-8">
+          <img
+            src="/Logo.png"
+            alt="Instituto Bedeschi"
+            className={`mx-auto mb-4 h-14 w-auto object-contain ${
+              isDark
+                ? "drop-shadow-[0_0_28px_rgba(251,191,36,0.5)]"
+                : "drop-shadow-[0_0_22px_rgba(148,163,184,0.6)]"
+            }`}
+          />
+          <h1
+            className={`text-2xl font-semibold ${
+              isDark ? "text-white" : "text-slate-900"
+            }`}
+          >
+            Área do Colaborador
+          </h1>
+          <p
+            className={`mt-2 text-sm ${
+              isDark ? "text-amber-400" : "text-amber-600"
+            }`}
+          >
+            Instituto Bedeschi
+          </p>
+        </div>
+
+        <div
+          className={`rounded-2xl p-8 ring-1 backdrop-blur-sm ${
+            isDark
+              ? "bg-slate-800/50 ring-slate-700/50"
+              : "bg-white/80 ring-amber-100"
+          }`}
+        >
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  isDark ? "text-slate-300" : "text-slate-700"
+                }`}
+              >
+                Email
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 autoComplete="email"
-                className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                className={`w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 ${
+                  isDark
+                    ? "border-slate-600 bg-slate-700/50 text-white placeholder:text-slate-500 focus:border-amber-500"
+                    : "border-amber-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-amber-500"
+                }`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Senha</label>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  isDark ? "text-slate-300" : "text-slate-700"
+                }`}
+              >
+                Senha
+              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-3 text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                className={`w-full rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 ${
+                  isDark
+                    ? "border-slate-600 bg-slate-700/50 text-white placeholder:text-slate-500 focus:border-amber-500"
+                    : "border-amber-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-amber-500"
+                }`}
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-400 text-center">{error}</p>
+              <p
+                className={`text-sm text-center ${
+                  isDark ? "text-red-400" : "text-red-500"
+                }`}
+              >
+                {error}
+              </p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-amber-500 py-3 font-medium text-slate-900 transition-all hover:bg-amber-400 disabled:opacity-50"
+              className="w-full rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-medium text-slate-900 transition-all hover:from-amber-600 hover:to-amber-700 disabled:opacity-50"
             >
               {loading ? "Entrando..." : "Entrar"}
             </button>
           </form>
         </div>
 
-        <p className="mt-8 text-center text-xs text-slate-600">
+        <p
+          className={`mt-8 text-center text-xs ${
+            isDark ? "text-slate-500" : "text-slate-500"
+          }`}
+        >
           © 2026 Instituto Bedeschi
         </p>
       </div>

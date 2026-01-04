@@ -38,6 +38,7 @@ export interface Professional {
   totalAppointments: number;
   isActive: boolean;
   createdAt: string;
+  loginPassword?: string;
 }
 
 export interface Service {
@@ -386,6 +387,7 @@ export const mockProfessionals: Professional[] = [
     totalAppointments: 0,
     isActive: true,
     createdAt: "2024-01-15",
+    loginPassword: "Recep#Julia2026",
   },
   {
     id: "prof-6",
