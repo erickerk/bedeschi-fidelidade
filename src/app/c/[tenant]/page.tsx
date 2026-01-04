@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PhoneInput } from "@/components/ui/input";
-import { getClientByPhone } from "@/lib/mock-data";
+import { getClientByPhone, validateClientPin } from "@/lib/mock-data";
 import { isValidPhone, cleanPhone } from "@/lib/utils";
 import ClientDashboard from "./client-dashboard";
 
-type Step = "phone" | "otp" | "dashboard";
+type Step = "phone" | "pin" | "dashboard";
 
 export default function ClientAccessPage() {
   const [step, setStep] = useState<Step>("phone");
@@ -39,27 +39,33 @@ export default function ClientAccessPage() {
       return;
     }
 
-    // Em produção, enviaria OTP via WhatsApp
-    // Por ora, pula direto para o dashboard (modo facilitado)
-    setClientId(client.id);
-    setStep("dashboard");
+    // Vai para tela de PIN
+    setStep("pin");
     setLoading(false);
   };
 
-  const handleOtpSubmit = async (e: React.FormEvent) => {
+  const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (otp.length !== 4) {
-      setError("Digite o código de 4 dígitos");
+      setError("Digite seu código de 4 dígitos");
       return;
     }
 
     setLoading(true);
     await new Promise((r) => setTimeout(r, 500));
 
-    // Em produção, validaria o OTP
-    // Por ora, aceita qualquer código
+    const cleanedPhone = cleanPhone(phone);
+    const client = validateClientPin(cleanedPhone, otp);
+    
+    if (!client) {
+      setError("Código incorreto. Tente novamente.");
+      setLoading(false);
+      return;
+    }
+    
+    setClientId(client.id);
     setStep("dashboard");
     setLoading(false);
   };
@@ -133,14 +139,17 @@ export default function ClientAccessPage() {
             </form>
           )}
 
-          {step === "otp" && (
-            <form onSubmit={handleOtpSubmit} className="space-y-6">
+          {step === "pin" && (
+            <form onSubmit={handlePinSubmit} className="space-y-6">
               <div className="text-center">
                 <h2 className="text-xl font-semibold text-slate-800">
-                  Código de Verificação
+                  Digite seu Código PIN 🔐
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Enviamos um código para seu WhatsApp
+                  Seu código de 4 dígitos para acessar
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  (Padrão: últimos 4 dígitos do celular)
                 </p>
               </div>
 
@@ -151,7 +160,8 @@ export default function ClientAccessPage() {
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
-                    aria-label={`Dígito ${i + 1} do código`}
+                    autoFocus={i === 0}
+                    aria-label={`Dígito ${i + 1} do PIN`}
                     placeholder="•"
                     className="h-14 w-14 rounded-xl border-2 border-slate-200 text-center text-2xl font-bold focus:border-gold-500 focus:outline-none focus:ring-4 focus:ring-gold-500/20 placeholder:text-slate-300"
                     value={otp[i] || ""}
@@ -180,24 +190,28 @@ export default function ClientAccessPage() {
                 <p className="text-center text-sm text-red-500">{error}</p>
               )}
 
-              <Button type="submit" className="w-full" loading={loading}>
-                Verificar
-              </Button>
+              <button 
+                type="submit" 
+                disabled={loading || otp.length !== 4}
+                className="btn-premium w-full text-center disabled:opacity-50"
+              >
+                {loading ? "Verificando..." : "Entrar"}
+              </button>
 
               <div className="flex justify-center gap-4 text-sm">
                 <button
                   type="button"
                   className="text-gold-600 hover:underline"
                   onClick={() => {
-                    /* Reenviar OTP */
+                    alert("Fale com a recepção para redefinir seu PIN");
                   }}
                 >
-                  Reenviar código
+                  Esqueci meu PIN
                 </button>
                 <button
                   type="button"
                   className="text-slate-500 hover:underline"
-                  onClick={() => setStep("phone")}
+                  onClick={() => { setStep("phone"); setOtp(""); setError(""); }}
                 >
                   Voltar
                 </button>

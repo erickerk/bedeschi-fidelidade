@@ -14,12 +14,29 @@ export interface Client {
   id: string;
   name: string;
   phone: string;
+  pin: string; // Código PIN de 4 dígitos para login
   email?: string;
   birthDate?: string;
   pointsBalance: number;
   totalSpent: number;
   totalAppointments: number;
   lastVisit?: string;
+  createdAt: string;
+}
+
+// Profissionais da clínica
+export interface Professional {
+  id: string;
+  name: string;
+  role: "profissional" | "recepcionista" | "medico";
+  specialty?: string;
+  email?: string;
+  phone?: string;
+  photo?: string;
+  servicesIds: string[]; // IDs dos serviços que atende
+  rating: number;
+  totalAppointments: number;
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -45,6 +62,8 @@ export interface Appointment {
   id: string;
   clientId: string;
   clientName: string;
+  professionalId?: string; // Profissional que atendeu
+  professionalName?: string;
   date: string;
   time: string;
   services: { name: string; price: number }[];
@@ -55,6 +74,7 @@ export interface Appointment {
   review?: {
     rating: number;
     comment?: string;
+    professionalRating?: number;
   };
 }
 
@@ -75,12 +95,15 @@ export interface FidelityRule {
   id: string;
   name: string;
   description: string;
-  type: "VALUE_ACCUMULATION" | "QUANTITY_ACCUMULATION" | "POINTS_CONVERSION";
+  type: "VALUE_ACCUMULATION" | "QUANTITY_ACCUMULATION" | "POINTS_CONVERSION" | "SERVICE_SPECIFIC" | "COMBO_VALUE";
   categoryId?: string;
   categoryName?: string;
+  serviceId?: string; // Para regras de serviço específico
+  serviceName?: string;
   thresholdValue?: number;
   thresholdQuantity?: number;
   rewardType: "FREE_SERVICE" | "DISCOUNT_FIXED" | "DISCOUNT_PERCENT" | "CREDIT";
+  rewardServiceId?: string;
   rewardServiceName?: string;
   rewardValue?: number;
   validityDays: number;
@@ -206,6 +229,7 @@ export const mockClients: Client[] = [
     id: "cli-1",
     name: "Maria Silva",
     phone: "11999999999",
+    pin: "9999", // Últimos 4 dígitos do celular como PIN padrão
     email: "maria@email.com",
     birthDate: "1985-05-15",
     pointsBalance: 1250,
@@ -218,6 +242,7 @@ export const mockClients: Client[] = [
     id: "cli-2",
     name: "Ana Santos",
     phone: "11988888888",
+    pin: "8888",
     email: "ana@email.com",
     pointsBalance: 500,
     totalSpent: 980.0,
@@ -229,6 +254,7 @@ export const mockClients: Client[] = [
     id: "cli-3",
     name: "Carla Oliveira",
     phone: "11977777777",
+    pin: "7777",
     pointsBalance: 2100,
     totalSpent: 4200.0,
     totalAppointments: 25,
@@ -237,11 +263,94 @@ export const mockClients: Client[] = [
   },
 ];
 
+// Profissionais da clínica
+export const mockProfessionals: Professional[] = [
+  {
+    id: "prof-1",
+    name: "Dra. Amanda Costa",
+    role: "medico",
+    specialty: "Dermatologia Estética",
+    email: "amanda@bedeschi.com",
+    phone: "11999001001",
+    servicesIds: ["EF1", "EF2", "EF3", "EF4", "EF30"],
+    rating: 4.9,
+    totalAppointments: 145,
+    isActive: true,
+    createdAt: "2023-01-15",
+  },
+  {
+    id: "prof-2",
+    name: "Carla Santos",
+    role: "profissional",
+    specialty: "Massagem e Estética Corporal",
+    email: "carla@bedeschi.com",
+    phone: "11999002002",
+    servicesIds: ["EC1", "EC2", "EC3", "EC4", "EC36"],
+    rating: 4.8,
+    totalAppointments: 128,
+    isActive: true,
+    createdAt: "2023-03-10",
+  },
+  {
+    id: "prof-3",
+    name: "Juliana Lima",
+    role: "profissional",
+    specialty: "Depilação",
+    email: "juliana@bedeschi.com",
+    phone: "11999003003",
+    servicesIds: ["DC1", "DC2", "DC3", "DC4", "DC5", "DC6", "DR1", "DR2"],
+    rating: 4.7,
+    totalAppointments: 98,
+    isActive: true,
+    createdAt: "2023-06-20",
+  },
+  {
+    id: "prof-4",
+    name: "Patricia Alves",
+    role: "profissional",
+    specialty: "Tratamento Corporal",
+    email: "patricia@bedeschi.com",
+    phone: "11999004004",
+    servicesIds: ["EC1", "EC2", "EC49", "EC50", "EC60"],
+    rating: 4.6,
+    totalAppointments: 87,
+    isActive: true,
+    createdAt: "2023-08-15",
+  },
+  {
+    id: "prof-5",
+    name: "Julia Atendente",
+    role: "recepcionista",
+    email: "julia@bedeschi.com",
+    phone: "11999998888",
+    servicesIds: [],
+    rating: 5.0,
+    totalAppointments: 0,
+    isActive: true,
+    createdAt: "2024-01-15",
+  },
+  {
+    id: "prof-6",
+    name: "Fernanda Oliveira",
+    role: "profissional",
+    specialty: "Manicure e Pedicure",
+    email: "fernanda@bedeschi.com",
+    phone: "11999005005",
+    servicesIds: ["MP1", "MP2", "MP3", "MP4", "MP6"],
+    rating: 4.8,
+    totalAppointments: 156,
+    isActive: true,
+    createdAt: "2023-02-10",
+  },
+];
+
 export const mockAppointments: Appointment[] = [
   {
     id: "apt-1",
     clientId: "cli-1",
     clientName: "Maria Silva",
+    professionalId: "prof-2",
+    professionalName: "Carla Santos",
     date: "2025-12-28",
     time: "14:30",
     services: [{ name: "Massagem Relaxante 60min", price: 180.0 }],
@@ -254,6 +363,8 @@ export const mockAppointments: Appointment[] = [
     id: "apt-2",
     clientId: "cli-1",
     clientName: "Maria Silva",
+    professionalId: "prof-1",
+    professionalName: "Dra. Amanda Costa",
     date: "2025-12-15",
     time: "10:00",
     services: [
@@ -264,12 +375,14 @@ export const mockAppointments: Appointment[] = [
     pointsEarned: 270,
     status: "completed",
     hasReview: true,
-    review: { rating: 5, comment: "Excelente atendimento!" },
+    review: { rating: 5, comment: "Excelente atendimento!", professionalRating: 5 },
   },
   {
     id: "apt-3",
     clientId: "cli-3",
     clientName: "Carla Oliveira",
+    professionalId: "prof-4",
+    professionalName: "Patricia Alves",
     date: "2026-01-02",
     time: "16:00",
     services: [{ name: "Drenagem Linfática", price: 160.0 }],
@@ -345,13 +458,12 @@ export const mockRewards: Reward[] = [
 export const mockFidelityRules: FidelityRule[] = [
   {
     id: "rule-1",
-    name: "Massagem Grátis por Acúmulo",
-    description: "A cada R$ 1.000 em Massagem, ganha 1 sessão grátis",
-    type: "VALUE_ACCUMULATION",
-    categoryId: "cat-1",
-    categoryName: "Massagem",
+    name: "Combo Valor - Massagem Grátis",
+    description: "Gastou R$ 1.000 em qualquer serviço = Massagem Relaxante grátis",
+    type: "COMBO_VALUE",
     thresholdValue: 1000,
     rewardType: "FREE_SERVICE",
+    rewardServiceId: "srv-1",
     rewardServiceName: "Massagem Relaxante 60min",
     validityDays: 60,
     isActive: true,
@@ -378,6 +490,32 @@ export const mockFidelityRules: FidelityRule[] = [
     rewardType: "CREDIT",
     rewardValue: 50,
     validityDays: 180,
+    isActive: true,
+  },
+  {
+    id: "rule-4",
+    name: "Limpeza de Pele - Fidelidade",
+    description: "A cada 5 limpezas de pele, ganha 1 hidratação facial",
+    type: "SERVICE_SPECIFIC",
+    serviceId: "srv-4",
+    serviceName: "Limpeza de Pele Profunda",
+    thresholdQuantity: 5,
+    rewardType: "FREE_SERVICE",
+    rewardServiceId: "srv-8",
+    rewardServiceName: "Hidratação Facial",
+    validityDays: 90,
+    isActive: true,
+  },
+  {
+    id: "rule-5",
+    name: "Combo Premium - R$ 2.000",
+    description: "Gastou R$ 2.000 = Drenagem Linfática grátis",
+    type: "COMBO_VALUE",
+    thresholdValue: 2000,
+    rewardType: "FREE_SERVICE",
+    rewardServiceId: "srv-9",
+    rewardServiceName: "Drenagem Linfática",
+    validityDays: 90,
     isActive: true,
   },
 ];
@@ -429,6 +567,36 @@ export const mockCategoryProgress: Record<string, CategoryProgress[]> = {
 export function getClientByPhone(phone: string): Client | undefined {
   const cleanPhone = phone.replace(/\D/g, "");
   return mockClients.find((c) => c.phone === cleanPhone);
+}
+
+export function validateClientPin(phone: string, pin: string): Client | undefined {
+  const client = getClientByPhone(phone);
+  if (client && client.pin === pin) {
+    return client;
+  }
+  return undefined;
+}
+
+export function generateDefaultPin(phone: string): string {
+  const cleanPhone = phone.replace(/\D/g, "");
+  return cleanPhone.slice(-4); // Últimos 4 dígitos
+}
+
+// Funções para profissionais
+export function getProfessionalById(id: string): Professional | undefined {
+  return mockProfessionals.find((p) => p.id === id);
+}
+
+export function getProfessionalsByRole(role: Professional["role"]): Professional[] {
+  return mockProfessionals.filter((p) => p.role === role && p.isActive);
+}
+
+export function getProfessionalsByService(serviceCode: string): Professional[] {
+  return mockProfessionals.filter((p) => p.servicesIds.includes(serviceCode) && p.isActive);
+}
+
+export function getAllActiveProfessionals(): Professional[] {
+  return mockProfessionals.filter((p) => p.isActive);
 }
 
 export function getClientById(id: string): Client | undefined {

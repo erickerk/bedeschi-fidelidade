@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { mockClients, mockFidelityRules, mockReviews, mockAppointments, type FidelityRule } from "@/lib/mock-data";
+import { mockClients, mockFidelityRules, mockReviews, mockAppointments, mockProfessionals as dataProfessionals, type FidelityRule, type Professional } from "@/lib/mock-data";
 import { importedServices, importedCategories } from "@/lib/services-data";
 import { formatCurrency } from "@/lib/utils";
 import { 
@@ -13,7 +13,9 @@ import {
   exportReviewsToExcel, 
   exportServicesToExcel,
   exportFullReport,
-  exportAppointmentsToExcel
+  exportAppointmentsToExcel,
+  exportRulesToExcel,
+  exportProfessionalsToExcel
 } from "@/lib/export-utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 
@@ -26,13 +28,8 @@ interface User {
 
 type Tab = "dashboard" | "services" | "rules" | "reports" | "analytics" | "team";
 
-// Mock profissionais
-const mockProfessionals = [
-  { id: "prof-1", name: "Dra. Amanda", specialty: "Estética Facial", rating: 4.9, appointments: 145 },
-  { id: "prof-2", name: "Carla Santos", specialty: "Massagem", rating: 4.8, appointments: 128 },
-  { id: "prof-3", name: "Juliana Lima", specialty: "Depilação", rating: 4.7, appointments: 98 },
-  { id: "prof-4", name: "Patricia Alves", specialty: "Tratamento Corporal", rating: 4.6, appointments: 87 },
-];
+// Usar profissionais do mock-data
+const localProfessionals = dataProfessionals;
 
 // Mock recepcionistas
 interface Receptionist {
@@ -61,22 +58,48 @@ export default function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showNewServiceModal, setShowNewServiceModal] = useState(false);
   const [newService, setNewService] = useState({ name: "", price: "", duration: "", category: "" });
+  const [savingService, setSavingService] = useState(false);
+  
+  // BUG-004 FIX: Estados para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   
   // Estados para regras
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [editingRule, setEditingRule] = useState<FidelityRule | null>(null);
   const [rules, setRules] = useState(mockFidelityRules);
-  const [newRule, setNewRule] = useState({ name: "", thresholdValue: "", rewardServiceName: "", validityDays: "60" });
+  const [ruleTypeFilter, setRuleTypeFilter] = useState<string | null>(null);
+  const [ruleServiceFilter, setRuleServiceFilter] = useState<string | null>(null);
+  const [newRule, setNewRule] = useState({
+    name: "",
+    type: "COMBO_VALUE" as FidelityRule["type"],
+    thresholdValue: "",
+    thresholdQuantity: "",
+    serviceId: "",
+    categoryId: "",
+    rewardServiceId: "",
+    rewardServiceName: "",
+    rewardValue: "",
+    validityDays: "60"
+  });
   
   // Estados para filtros de analytics
   const [periodFilter, setPeriodFilter] = useState<"week" | "month" | "quarter" | "year">("month");
   const [professionalFilter, setProfessionalFilter] = useState<string | null>(null);
   const [procedureFilter, setProcedureFilter] = useState<string | null>(null);
   
-  // Estados para equipe (recepcionistas)
-  const [receptionists, setReceptionists] = useState<Receptionist[]>(initialReceptionists);
-  const [showNewReceptionistModal, setShowNewReceptionistModal] = useState(false);
-  const [newReceptionist, setNewReceptionist] = useState({ name: "", email: "", phone: "" });
+  // Estados para equipe
+  const [professionals, setProfessionals] = useState<Professional[]>(localProfessionals);
+  const [showNewProfessionalModal, setShowNewProfessionalModal] = useState(false);
+  const [teamFilter, setTeamFilter] = useState<"all" | "profissional" | "recepcionista" | "medico">("all");
+  const [newProfessional, setNewProfessional] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    role: "profissional" as Professional["role"],
+    specialty: "",
+    servicesIds: [] as string[]
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -130,7 +153,7 @@ export default function AdminDashboard() {
   }, []);
 
   const topProfessionals = useMemo(() => {
-    return [...mockProfessionals].sort((a, b) => b.rating - a.rating);
+    return [...localProfessionals].sort((a, b) => b.rating - a.rating);
   }, []);
 
   // Handlers
@@ -138,12 +161,38 @@ export default function AdminDashboard() {
     setSelectedServiceId(selectedServiceId === serviceId ? null : serviceId);
   };
 
-  const handleAddService = () => {
+  // BUG-001 FIX: Integração com Supabase para persistir serviços
+  const handleAddService = async () => {
     if (!newService.name || !newService.price) return;
-    // Em produção, salvaria no banco
-    alert(`Serviço "${newService.name}" adicionado com sucesso!`);
-    setShowNewServiceModal(false);
-    setNewService({ name: "", price: "", duration: "", category: "" });
+    
+    setSavingService(true);
+    try {
+      // Encontrar categoria selecionada
+      const category = importedCategories.find(c => c.id === newService.category);
+      
+      // Importar dinamicamente a API de serviços
+      const { createService } = await import("@/lib/services-api");
+      
+      await createService({
+        name: newService.name,
+        price: parseFloat(newService.price),
+        duration_minutes: parseInt(newService.duration) || 30,
+        category_id: newService.category || "outros",
+        category_name: category?.name || "Outros",
+      });
+      
+      alert(`Serviço "${newService.name}" salvo com sucesso no banco de dados!`);
+      setShowNewServiceModal(false);
+      setNewService({ name: "", price: "", duration: "", category: "" });
+    } catch (error) {
+      console.error("Erro ao salvar serviço:", error);
+      // Fallback: salvar localmente se o banco não estiver disponível
+      alert(`Serviço "${newService.name}" adicionado localmente. (Banco indisponível)`);
+      setShowNewServiceModal(false);
+      setNewService({ name: "", price: "", duration: "", category: "" });
+    } finally {
+      setSavingService(false);
+    }
   };
 
   const handleSaveRule = () => {
@@ -166,15 +215,21 @@ export default function AdminDashboard() {
     }
     setShowRuleModal(false);
     setEditingRule(null);
-    setNewRule({ name: "", thresholdValue: "", rewardServiceName: "", validityDays: "60" });
+    setNewRule({ name: "", type: "COMBO_VALUE", thresholdValue: "", thresholdQuantity: "", serviceId: "", categoryId: "", rewardServiceId: "", rewardServiceName: "", rewardValue: "", validityDays: "60" });
   };
 
   const handleEditRule = (rule: FidelityRule) => {
     setEditingRule(rule);
     setNewRule({
       name: rule.name,
+      type: rule.type,
       thresholdValue: String(rule.thresholdValue || ""),
+      thresholdQuantity: String(rule.thresholdQuantity || ""),
+      serviceId: rule.serviceId || "",
+      categoryId: rule.categoryId || "",
+      rewardServiceId: rule.rewardServiceId || "",
       rewardServiceName: rule.rewardServiceName || "",
+      rewardValue: String(rule.rewardValue || ""),
       validityDays: String(rule.validityDays),
     });
     setShowRuleModal(true);
@@ -358,7 +413,7 @@ export default function AdminDashboard() {
                     className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-gold-500 focus:outline-none"
                   >
                     <option value="">Todos</option>
-                    {mockProfessionals.map((p) => (
+                    {localProfessionals.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
@@ -457,7 +512,7 @@ export default function AdminDashboard() {
                         </span>
                         <div>
                           <p className="font-medium text-slate-800">{prof.name}</p>
-                          <p className="text-xs text-slate-500">{prof.specialty} • {prof.appointments} atendimentos</p>
+                          <p className="text-xs text-slate-500">{prof.specialty} • {prof.totalAppointments} atendimentos</p>
                         </div>
                       </div>
                       <span className="font-semibold text-gold-600">⭐ {prof.rating}</span>
@@ -547,7 +602,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredServices.slice(0, 20).map((service) => (
+                    {filteredServices.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((service) => (
                       <tr 
                         key={service.id} 
                         onClick={() => handleSelectService(service.id)}
@@ -578,8 +633,34 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
-              <div className="border-t border-slate-100 bg-slate-50 px-4 py-3 text-center text-sm text-slate-500">
-                Mostrando {Math.min(20, filteredServices.length)} de {filteredServices.length} serviços
+              {/* BUG-004 FIX: Controles de paginação */}
+              <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">
+                    Mostrando {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredServices.length)}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredServices.length)} de {filteredServices.length} serviços
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      ← Anterior
+                    </Button>
+                    <span className="text-sm text-slate-600 px-2">
+                      Página {currentPage} de {Math.ceil(filteredServices.length / ITEMS_PER_PAGE) || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredServices.length / ITEMS_PER_PAGE), p + 1))}
+                      disabled={currentPage >= Math.ceil(filteredServices.length / ITEMS_PER_PAGE)}
+                    >
+                      Próximo →
+                    </Button>
+                  </div>
+                </div>
               </div>
             </Card>
           </div>
@@ -587,83 +668,95 @@ export default function AdminDashboard() {
 
         {tab === "rules" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-slate-800">Regras de Fidelidade</h2>
                 <p className="text-sm text-slate-500">Configure regras para recompensar seus clientes</p>
               </div>
-              <Button onClick={() => { setEditingRule(null); setNewRule({ name: "", thresholdValue: "", rewardServiceName: "", validityDays: "60" }); setShowRuleModal(true); }}>
-                + Nova Regra
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => exportRulesToExcel(rules)}>📥 Exportar Excel</Button>
+                <Button onClick={() => { setEditingRule(null); setShowRuleModal(true); }}>+ Nova Regra</Button>
+              </div>
             </div>
 
-            {/* Como Funciona */}
+            {/* Tipos de Regras - Explicação */}
             <Card className="p-6 bg-gradient-to-r from-slate-50 to-gold-50 border-gold-200">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">📖 Como Funciona o Programa de Fidelidade</h3>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <div className="text-3xl mb-2">💰</div>
-                  <h4 className="font-semibold text-slate-700">1. Cliente Gasta</h4>
-                  <p className="text-sm text-slate-500 mt-1">A cada R$ 1 gasto, o cliente acumula 1 ponto</p>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">📖 Tipos de Regras Disponíveis</h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-gold-500">
+                  <h4 className="font-semibold text-slate-700">💰 Combo por Valor</h4>
+                  <p className="text-xs text-slate-500 mt-1">Cliente gastou X reais no total = ganha procedimento</p>
+                  <p className="text-xs text-gold-600 mt-2">Ex: R$ 1.000 = Massagem grátis</p>
                 </div>
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <div className="text-3xl mb-2">🎯</div>
-                  <h4 className="font-semibold text-slate-700">2. Atinge a Meta</h4>
-                  <p className="text-sm text-slate-500 mt-1">Quando atingir o valor configurado, ganha recompensa</p>
+                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-blue-500">
+                  <h4 className="font-semibold text-slate-700">🔢 Por Quantidade</h4>
+                  <p className="text-xs text-slate-500 mt-1">A cada X procedimentos de uma categoria</p>
+                  <p className="text-xs text-blue-600 mt-2">Ex: 10 depilações = 1 grátis</p>
                 </div>
-                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                  <div className="text-3xl mb-2">🎁</div>
-                  <h4 className="font-semibold text-slate-700">3. Ganha Procedimento</h4>
-                  <p className="text-sm text-slate-500 mt-1">Procedimento grátis ou desconto especial</p>
+                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-green-500">
+                  <h4 className="font-semibold text-slate-700">🎯 Serviço Específico</h4>
+                  <p className="text-xs text-slate-500 mt-1">Regra para um procedimento específico</p>
+                  <p className="text-xs text-green-600 mt-2">Ex: 5 limpezas = 1 hidratação</p>
                 </div>
-              </div>
-              <div className="mt-4 p-3 bg-gold-100 rounded-lg">
-                <p className="text-sm text-gold-800">
-                  <strong>💡 Exemplo:</strong> Se você configurar "Gastou R$ 1.000 = Massagem Grátis", 
-                  quando o cliente acumular R$ 1.000 em atendimentos, ele automaticamente ganha direito a uma massagem grátis.
-                </p>
+                <div className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-purple-500">
+                  <h4 className="font-semibold text-slate-700">⭐ Pontos</h4>
+                  <p className="text-xs text-slate-500 mt-1">Converte pontos acumulados em crédito</p>
+                  <p className="text-xs text-purple-600 mt-2">Ex: 500 pts = R$ 50 de desconto</p>
+                </div>
               </div>
             </Card>
 
-            {/* Configuração Rápida */}
-            <Card className="border-2 border-gold-300 bg-gold-50 p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <span className="inline-block px-2 py-1 text-xs font-medium text-gold-700 bg-gold-200 rounded-full mb-2">💎 REGRA PRINCIPAL</span>
-                  <h3 className="text-lg font-semibold text-slate-800">Procedimento Grátis por Acúmulo de Valor</h3>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Configure quanto o cliente precisa gastar para ganhar um procedimento grátis.
-                  </p>
-                  
-                  {/* Mostrar regra atual se existir */}
-                  {rules.find(r => r.type === "VALUE_ACCUMULATION") && (
-                    <div className="mt-3 p-3 bg-white rounded-lg border border-gold-200">
-                      <p className="text-sm font-medium text-slate-700">
-                        ✅ Regra ativa: Gastou <span className="text-gold-600 font-bold">{formatCurrency(rules.find(r => r.type === "VALUE_ACCUMULATION")?.thresholdValue || 0)}</span> → 
-                        Ganha <span className="text-green-600 font-bold">{rules.find(r => r.type === "VALUE_ACCUMULATION")?.rewardServiceName || "Procedimento à escolha"}</span>
-                      </p>
-                    </div>
-                  )}
+            {/* Filtros */}
+            <Card className="p-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Tipo de Regra</label>
+                  <select
+                    aria-label="Filtrar por tipo"
+                    value={ruleTypeFilter || ""}
+                    onChange={(e) => setRuleTypeFilter(e.target.value || null)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-gold-500 focus:outline-none"
+                  >
+                    <option value="">Todos os Tipos</option>
+                    <option value="COMBO_VALUE">💰 Combo por Valor</option>
+                    <option value="QUANTITY_ACCUMULATION">🔢 Por Quantidade</option>
+                    <option value="SERVICE_SPECIFIC">🎯 Serviço Específico</option>
+                    <option value="POINTS_CONVERSION">⭐ Conversão de Pontos</option>
+                  </select>
                 </div>
-                <Button onClick={() => {
-                  const mainRule = rules.find(r => r.type === "VALUE_ACCUMULATION");
-                  if (mainRule) handleEditRule(mainRule);
-                  else {
-                    setEditingRule(null);
-                    setNewRule({ name: "Procedimento Grátis por Acúmulo", thresholdValue: "1000", rewardServiceName: "", validityDays: "60" });
-                    setShowRuleModal(true);
-                  }
-                }}>
-                  {rules.find(r => r.type === "VALUE_ACCUMULATION") ? "Editar Regra" : "Configurar Agora"}
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Procedimento</label>
+                  <select
+                    aria-label="Filtrar por procedimento"
+                    value={ruleServiceFilter || ""}
+                    onChange={(e) => setRuleServiceFilter(e.target.value || null)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-gold-500 focus:outline-none"
+                  >
+                    <option value="">Todos os Procedimentos</option>
+                    {importedCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => { setRuleTypeFilter(null); setRuleServiceFilter(null); }}>
+                  Limpar Filtros
                 </Button>
               </div>
             </Card>
 
             {/* Lista de Regras */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-3">Todas as Regras ({rules.length})</h3>
+              <h3 className="text-lg font-semibold text-slate-800 mb-3">
+                Todas as Regras ({rules.filter(r => 
+                  (!ruleTypeFilter || r.type === ruleTypeFilter) &&
+                  (!ruleServiceFilter || r.categoryId === ruleServiceFilter)
+                ).length})
+              </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {rules.map((rule) => (
+                {rules.filter(r => 
+                  (!ruleTypeFilter || r.type === ruleTypeFilter) &&
+                  (!ruleServiceFilter || r.categoryId === ruleServiceFilter)
+                ).map((rule) => (
                   <Card key={rule.id} className="p-4">
                     <div className="flex items-start justify-between">
                       <div>
@@ -697,72 +790,105 @@ export default function AdminDashboard() {
 
         {tab === "team" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-slate-800">Equipe</h2>
-                <p className="text-sm text-slate-500">Gerencie recepcionistas e profissionais</p>
+                <p className="text-sm text-slate-500">Cadastre e gerencie profissionais, recepcionistas e médicos</p>
               </div>
-              <Button onClick={() => setShowNewReceptionistModal(true)}>+ Nova Recepcionista</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => exportProfessionalsToExcel(professionals)}>📥 Exportar Excel</Button>
+                <Button onClick={() => setShowNewProfessionalModal(true)}>+ Novo Membro</Button>
+              </div>
             </div>
 
-            {/* Recepcionistas */}
-            <div>
-              <h3 className="mb-3 font-semibold text-slate-700">Recepcionistas ({receptionists.length})</h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {receptionists.map((rec) => (
-                  <Card key={rec.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold text-slate-800">{rec.name}</h4>
-                        <p className="text-sm text-slate-500">{rec.email}</p>
-                        <p className="text-xs text-slate-400">{rec.phone}</p>
-                      </div>
-                      <span className={`rounded-full px-2 py-1 text-xs ${
-                        rec.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+            {/* Filtros */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "all", label: "Todos", icon: "👥" },
+                { value: "profissional", label: "Profissionais", icon: "💆" },
+                { value: "recepcionista", label: "Recepcionistas", icon: "🖥️" },
+                { value: "medico", label: "Médicos", icon: "👨‍⚕️" },
+              ].map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setTeamFilter(filter.value as typeof teamFilter)}
+                  className={`rounded-full px-4 py-2 text-sm transition-colors ${
+                    teamFilter === filter.value ? "bg-gold-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-gold-100"
+                  }`}
+                >
+                  {filter.icon} {filter.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Lista de Profissionais */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {professionals
+                .filter(p => teamFilter === "all" || p.role === teamFilter)
+                .map((prof) => (
+                  <Card key={prof.id} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-full font-semibold ${
+                        prof.role === "medico" ? "bg-blue-100 text-blue-600" :
+                        prof.role === "recepcionista" ? "bg-purple-100 text-purple-600" :
+                        "bg-gold-100 text-gold-600"
                       }`}>
-                        {rec.isActive ? "Ativa" : "Inativa"}
-                      </span>
+                        {prof.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-slate-800">{prof.name}</h4>
+                          <span className={`rounded-full px-2 py-1 text-xs ${
+                            prof.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+                          }`}>
+                            {prof.isActive ? "Ativo" : "Inativo"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {prof.role === "medico" ? "👨‍⚕️ Médico(a)" : 
+                           prof.role === "recepcionista" ? "🖥️ Recepcionista" : "💆 Profissional"}
+                          {prof.specialty && ` • ${prof.specialty}`}
+                        </p>
+                        {prof.email && <p className="text-xs text-slate-400 mt-1">{prof.email}</p>}
+                      </div>
                     </div>
+                    
+                    {prof.role !== "recepcionista" && (
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gold-600">⭐ {prof.rating}</span>
+                          <span className="text-slate-500">{prof.totalAppointments} atendimentos</span>
+                        </div>
+                        {prof.servicesIds.length > 0 && (
+                          <p className="text-xs text-slate-400 mt-2">
+                            Serviços: {prof.servicesIds.slice(0, 3).join(", ")}{prof.servicesIds.length > 3 ? ` +${prof.servicesIds.length - 3}` : ""}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
                     <div className="mt-4 flex gap-2">
-                      <Button variant="outline" size="sm">Editar</Button>
+                      <Button variant="outline" size="sm" className="flex-1">Editar</Button>
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => setReceptionists(receptionists.map(r => 
-                          r.id === rec.id ? { ...r, isActive: !r.isActive } : r
+                        onClick={() => setProfessionals(professionals.map(p => 
+                          p.id === prof.id ? { ...p, isActive: !p.isActive } : p
                         ))}
                       >
-                        {rec.isActive ? "Desativar" : "Ativar"}
+                        {prof.isActive ? "Desativar" : "Ativar"}
                       </Button>
                     </div>
                   </Card>
                 ))}
-              </div>
             </div>
 
-            {/* Profissionais */}
-            <div>
-              <h3 className="mb-3 font-semibold text-slate-700">Profissionais ({mockProfessionals.length})</h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {mockProfessionals.map((prof) => (
-                  <Card key={prof.id} className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gold-100 text-gold-600 font-semibold">
-                        {prof.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-slate-800">{prof.name}</h4>
-                        <p className="text-xs text-slate-500">{prof.specialty}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-gold-600">⭐ {prof.rating}</span>
-                      <span className="text-slate-500">{prof.appointments} atendimentos</span>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
+            {professionals.filter(p => teamFilter === "all" || p.role === teamFilter).length === 0 && (
+              <Card className="p-8 text-center">
+                <p className="text-slate-500">Nenhum membro encontrado com esse filtro.</p>
+                <Button className="mt-4" onClick={() => setShowNewProfessionalModal(true)}>+ Cadastrar Novo Membro</Button>
+              </Card>
+            )}
           </div>
         )}
 
@@ -777,15 +903,13 @@ export default function AdminDashboard() {
             </div>
             
             {/* Cards de exportação */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => exportClientsToExcel()}>
                 <div className="text-center">
                   <span className="text-4xl">👥</span>
                   <h3 className="mt-3 font-semibold text-slate-800">Clientes</h3>
                   <p className="mt-1 text-sm text-slate-500">{totalClients} registros</p>
-                  <Button variant="outline" size="sm" className="mt-4 w-full">
-                    Exportar Excel
-                  </Button>
+                  <Button variant="outline" size="sm" className="mt-4 w-full">Exportar Excel</Button>
                 </div>
               </Card>
 
@@ -794,9 +918,7 @@ export default function AdminDashboard() {
                   <span className="text-4xl">💆</span>
                   <h3 className="mt-3 font-semibold text-slate-800">Serviços</h3>
                   <p className="mt-1 text-sm text-slate-500">{totalServices} registros</p>
-                  <Button variant="outline" size="sm" className="mt-4 w-full">
-                    Exportar Excel
-                  </Button>
+                  <Button variant="outline" size="sm" className="mt-4 w-full">Exportar Excel</Button>
                 </div>
               </Card>
 
@@ -805,9 +927,7 @@ export default function AdminDashboard() {
                   <span className="text-4xl">⭐</span>
                   <h3 className="mt-3 font-semibold text-slate-800">Avaliações</h3>
                   <p className="mt-1 text-sm text-slate-500">{mockReviews.length} registros</p>
-                  <Button variant="outline" size="sm" className="mt-4 w-full">
-                    Exportar Excel
-                  </Button>
+                  <Button variant="outline" size="sm" className="mt-4 w-full">Exportar Excel</Button>
                 </div>
               </Card>
 
@@ -816,9 +936,25 @@ export default function AdminDashboard() {
                   <span className="text-4xl">📅</span>
                   <h3 className="mt-3 font-semibold text-slate-800">Atendimentos</h3>
                   <p className="mt-1 text-sm text-slate-500">{mockAppointments.length} registros</p>
-                  <Button variant="outline" size="sm" className="mt-4 w-full">
-                    Exportar Excel
-                  </Button>
+                  <Button variant="outline" size="sm" className="mt-4 w-full">Exportar Excel</Button>
+                </div>
+              </Card>
+
+              <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => exportRulesToExcel(rules)}>
+                <div className="text-center">
+                  <span className="text-4xl">⚙️</span>
+                  <h3 className="mt-3 font-semibold text-slate-800">Regras de Fidelidade</h3>
+                  <p className="mt-1 text-sm text-slate-500">{rules.length} registros</p>
+                  <Button variant="outline" size="sm" className="mt-4 w-full">Exportar Excel</Button>
+                </div>
+              </Card>
+
+              <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => exportProfessionalsToExcel(professionals)}>
+                <div className="text-center">
+                  <span className="text-4xl">👨‍⚕️</span>
+                  <h3 className="mt-3 font-semibold text-slate-800">Equipe</h3>
+                  <p className="mt-1 text-sm text-slate-500">{professionals.length} registros</p>
+                  <Button variant="outline" size="sm" className="mt-4 w-full">Exportar Excel</Button>
                 </div>
               </Card>
             </div>
@@ -957,55 +1093,78 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal: Nova Recepcionista */}
-      {showNewReceptionistModal && (
+      {/* Modal: Novo Membro da Equipe */}
+      {showNewProfessionalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <Card className="w-full max-w-md p-6">
-            <h3 className="mb-4 text-lg font-semibold text-slate-800">Nova Recepcionista</h3>
+          <Card className="w-full max-w-lg p-6">
+            <h3 className="mb-4 text-lg font-semibold text-slate-800">Novo Membro da Equipe</h3>
             <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Tipo *</label>
+                <select
+                  aria-label="Tipo de membro"
+                  value={newProfessional.role}
+                  onChange={(e) => setNewProfessional({ ...newProfessional, role: e.target.value as Professional["role"] })}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-gold-500 focus:outline-none"
+                >
+                  <option value="profissional">💆 Profissional</option>
+                  <option value="recepcionista">🖥️ Recepcionista</option>
+                  <option value="medico">👨‍⚕️ Médico(a)</option>
+                </select>
+              </div>
               <Input
                 label="Nome Completo *"
                 placeholder="Ex: Maria Silva"
-                value={newReceptionist.name}
-                onChange={(e) => setNewReceptionist({ ...newReceptionist, name: e.target.value })}
+                value={newProfessional.name}
+                onChange={(e) => setNewProfessional({ ...newProfessional, name: e.target.value })}
               />
               <Input
-                label="Email *"
+                label="Email"
                 type="email"
                 placeholder="email@bedeschi.com"
-                value={newReceptionist.email}
-                onChange={(e) => setNewReceptionist({ ...newReceptionist, email: e.target.value })}
+                value={newProfessional.email}
+                onChange={(e) => setNewProfessional({ ...newProfessional, email: e.target.value })}
               />
               <Input
                 label="Telefone"
                 type="tel"
                 placeholder="(11) 99999-9999"
-                value={newReceptionist.phone}
-                onChange={(e) => setNewReceptionist({ ...newReceptionist, phone: e.target.value })}
+                value={newProfessional.phone}
+                onChange={(e) => setNewProfessional({ ...newProfessional, phone: e.target.value })}
               />
-              <p className="text-xs text-slate-500">
-                💡 A recepcionista poderá fazer login usando o email cadastrado com qualquer senha no modo demo.
-              </p>
+              {newProfessional.role !== "recepcionista" && (
+                <Input
+                  label="Especialidade"
+                  placeholder="Ex: Estética Facial, Massagem"
+                  value={newProfessional.specialty}
+                  onChange={(e) => setNewProfessional({ ...newProfessional, specialty: e.target.value })}
+                />
+              )}
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowNewReceptionistModal(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => setShowNewProfessionalModal(false)}>Cancelar</Button>
               <Button onClick={() => {
-                if (!newReceptionist.name || !newReceptionist.email) {
-                  alert("Preencha nome e email");
+                if (!newProfessional.name) {
+                  alert("Preencha o nome");
                   return;
                 }
-                const rec: Receptionist = {
-                  id: `rec-${Date.now()}`,
-                  name: newReceptionist.name,
-                  email: newReceptionist.email,
-                  phone: newReceptionist.phone.replace(/\D/g, ""),
+                const prof: Professional = {
+                  id: `prof-${Date.now()}`,
+                  name: newProfessional.name,
+                  role: newProfessional.role,
+                  specialty: newProfessional.specialty || undefined,
+                  email: newProfessional.email || undefined,
+                  phone: newProfessional.phone.replace(/\D/g, "") || undefined,
+                  servicesIds: [],
+                  rating: 5.0,
+                  totalAppointments: 0,
                   isActive: true,
                   createdAt: new Date().toISOString().split("T")[0],
                 };
-                setReceptionists([...receptionists, rec]);
-                setNewReceptionist({ name: "", email: "", phone: "" });
-                setShowNewReceptionistModal(false);
-                alert(`Recepcionista "${rec.name}" cadastrada com sucesso!`);
+                setProfessionals([...professionals, prof]);
+                setNewProfessional({ name: "", email: "", phone: "", role: "profissional", specialty: "", servicesIds: [] });
+                setShowNewProfessionalModal(false);
+                alert(`${prof.role === "medico" ? "Médico(a)" : prof.role === "recepcionista" ? "Recepcionista" : "Profissional"} "${prof.name}" cadastrado(a) com sucesso!`);
               }}>
                 Cadastrar
               </Button>

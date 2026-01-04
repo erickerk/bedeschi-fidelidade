@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { mockClients, mockAppointments, mockReviews, type Review } from "./mock-data";
+import { mockClients, mockAppointments, mockReviews, mockFidelityRules, mockProfessionals, type Review, type FidelityRule, type Professional } from "./mock-data";
 import { importedServices, importedCategories } from "./services-data";
 import { formatCurrency } from "./utils";
 
@@ -84,6 +84,64 @@ export function exportAppointmentsToExcel() {
   });
 
   downloadExcel(headers, data, "atendimentos_bedeschi", "Atendimentos");
+}
+
+/**
+ * Exporta regras de fidelidade para Excel
+ */
+export function exportRulesToExcel(rules: FidelityRule[] = mockFidelityRules) {
+  const headers = ["ID", "Nome", "Descrição", "Tipo", "Categoria/Serviço", "Valor Mínimo", "Qtd Mínima", "Recompensa", "Validade (dias)", "Ativo"];
+  
+  const typeLabels: Record<string, string> = {
+    "VALUE_ACCUMULATION": "Acúmulo por Valor",
+    "QUANTITY_ACCUMULATION": "Acúmulo por Quantidade",
+    "POINTS_CONVERSION": "Conversão de Pontos",
+    "SERVICE_SPECIFIC": "Serviço Específico",
+    "COMBO_VALUE": "Combo por Valor",
+  };
+  
+  const data = rules.map((rule) => [
+    rule.id,
+    rule.name,
+    rule.description,
+    typeLabels[rule.type] || rule.type,
+    rule.categoryName || rule.serviceName || "Todos",
+    rule.thresholdValue ? formatCurrency(rule.thresholdValue) : "-",
+    rule.thresholdQuantity || "-",
+    rule.rewardServiceName || (rule.rewardValue ? formatCurrency(rule.rewardValue) : "-"),
+    rule.validityDays,
+    rule.isActive ? "Sim" : "Não",
+  ]);
+
+  downloadExcel(headers, data, "regras_fidelidade_bedeschi", "Regras");
+}
+
+/**
+ * Exporta profissionais para Excel
+ */
+export function exportProfessionalsToExcel(professionals: Professional[] = mockProfessionals) {
+  const headers = ["ID", "Nome", "Função", "Especialidade", "Email", "Telefone", "Avaliação", "Atendimentos", "Serviços", "Ativo"];
+  
+  const roleLabels: Record<string, string> = {
+    "profissional": "Profissional",
+    "recepcionista": "Recepcionista",
+    "medico": "Médico(a)",
+  };
+  
+  const data = professionals.map((prof) => [
+    prof.id,
+    prof.name,
+    roleLabels[prof.role] || prof.role,
+    prof.specialty || "-",
+    prof.email || "-",
+    prof.phone || "-",
+    prof.rating,
+    prof.totalAppointments,
+    prof.servicesIds.length > 0 ? prof.servicesIds.join(", ") : "-",
+    prof.isActive ? "Sim" : "Não",
+  ]);
+
+  downloadExcel(headers, data, "profissionais_bedeschi", "Profissionais");
 }
 
 /**

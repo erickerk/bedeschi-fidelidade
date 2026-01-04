@@ -10,6 +10,17 @@ export interface InputProps
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, label, error, id, ...props }, ref) => {
     const inputId = id || React.useId();
+    
+    // BUG-002 FIX: Auto-set autocomplete for password fields
+    const inputProps: React.InputHTMLAttributes<HTMLInputElement> = { ...props };
+
+    if (!inputProps.autoComplete) {
+      if (type === "password") {
+        inputProps.autoComplete = "current-password";
+      } else if (type === "email") {
+        inputProps.autoComplete = "email";
+      }
+    }
 
     return (
       <div className="w-full">
@@ -33,7 +44,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className
           )}
           ref={ref}
-          {...props}
+          {...inputProps}
         />
         {error && (
           <p className="mt-1.5 text-sm text-red-500">{error}</p>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signIn, getStaffProfile } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,26 +23,49 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
 
-    // Mock login - aceita qualquer credencial para demo
-    // Em produção, validaria com Supabase Auth
-    if (email.includes("@") && password.length >= 4) {
-      // Simula role baseado no email
-      const isAdmin = email.toLowerCase().includes("admin");
-      localStorage.setItem("user", JSON.stringify({
-        id: "user-1",
-        email,
-        name: isAdmin ? "Raul" : "Julia Atendente",
-        role: isAdmin ? "admin" : "attendant",
-      }));
-      
+    try {
+      const { user } = await signIn(email.trim().toLowerCase(), password);
+
+      if (!user) {
+        setError("Credenciais inválidas");
+        setLoading(false);
+        return;
+      }
+
+      const profile = await getStaffProfile(user.id);
+
+      if (!profile || !profile.active) {
+        setError("Usuário inativo ou sem permissão");
+        setLoading(false);
+        return;
+      }
+
+      const isAdmin = profile.roles?.code === "ADMIN";
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: user.id,
+          email: profile.email,
+          name: profile.full_name,
+          role: isAdmin ? "admin" : "attendant",
+          roleCode: profile.roles?.code,
+          permissions: profile.roles?.permissions || [],
+        })
+      );
+
       router.push(isAdmin ? "/admin/dashboard" : "/attendant/dashboard");
-    } else {
-      setError("Credenciais inválidas");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao fazer login";
+      if (errorMessage.includes("Invalid login")) {
+        setError("Email ou senha incorretos");
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
@@ -106,16 +130,6 @@ export default function LoginPage() {
               </span>
             </p>
           </form>
-        </div>
-
-        {/* Demo Info */}
-        <div className="mt-6 rounded-xl bg-white/10 p-4 text-sm text-slate-300">
-          <p className="font-medium text-gold-400 mb-2">🧪 Modo Demo</p>
-          <p>Use qualquer email/senha para testar:</p>
-          <ul className="mt-2 space-y-1 text-xs">
-            <li>• <code>admin@bedeschi.com</code> → Painel Admin</li>
-            <li>• <code>julia@bedeschi.com</code> → Painel Atendente</li>
-          </ul>
         </div>
 
         {/* Footer */}
