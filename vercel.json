@@ -1,7 +1,4 @@
 {
   "framework": "nextjs",
-  "public": true,
-  "projectId": "prj_bedeschi_fidelidade",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "public": true
 }
