@@ -241,7 +241,7 @@ export default function RecepcaoDashboard() {
       
       alert(`✅ Atendimento registrado com sucesso!\n\nCliente: ${client.name}\nProfissional: ${professional.name}\nTotal: R$ ${total.toFixed(2)}\nPontos ganhos: ${Math.floor(total)}`);
 
-      // Resetar formulário
+      // Resetar formulário COMPLETAMENTE
       setNewAppointment({
         clientId: "",
         professionalId: "",
@@ -251,6 +251,8 @@ export default function RecepcaoDashboard() {
       });
       setClientSearchTerm("");
       setProcedureSearchTerm("");
+      setShowClientDropdown(false);
+      setShowProcedureDropdown(false);
       setShowNewAppointment(false);
       
       console.log("✅ Formulário resetado e modal fechado");
@@ -922,22 +924,13 @@ export default function RecepcaoDashboard() {
                   />
                 </div>
                 {showProcedureDropdown && (
-                  <div className={`max-h-48 overflow-y-auto rounded-lg border mb-3 ${isDark ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-200"}`}>
+                  <div className={`max-h-64 overflow-y-auto rounded-lg border mb-3 ${isDark ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-200"}`}>
                     {services
                       .filter(service => {
-                        // Filtrar por profissional selecionado
-                        if (newAppointment.professionalId) {
-                          const prof = professionals.find(p => p.id === newAppointment.professionalId);
-                          if (prof && prof.specialty) {
-                            const specialties = prof.specialty.split(',').map(s => s.trim().toLowerCase());
-                            const serviceCategory = service.category_name?.toLowerCase() || '';
-                            const hasMatch = specialties.some(spec => serviceCategory.includes(spec) || spec.includes(serviceCategory));
-                            if (!hasMatch) return false;
-                          }
-                        }
-                        // Filtrar por termo de busca
-                        return procedureSearchTerm === "" || 
-                          service.name.toLowerCase().includes(procedureSearchTerm.toLowerCase());
+                        // Mostrar TODOS os serviços - apenas filtrar por termo de busca se digitado
+                        if (procedureSearchTerm === "") return true;
+                        return service.name.toLowerCase().includes(procedureSearchTerm.toLowerCase()) ||
+                               service.category_name?.toLowerCase().includes(procedureSearchTerm.toLowerCase());
                       })
                       .map(service => (
                         <label key={service.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer ${isDark ? "hover:bg-slate-700" : "hover:bg-slate-100"}`}>
@@ -963,10 +956,7 @@ export default function RecepcaoDashboard() {
                           <span className={`text-sm ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(service.price)}</span>
                         </label>
                       ))}
-                    {services.filter(service => 
-                      procedureSearchTerm === "" || 
-                      service.name.toLowerCase().includes(procedureSearchTerm.toLowerCase())
-                    ).length === 0 && (
+                    {services.length === 0 && (
                       <div className={`px-3 py-4 text-center ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                         Nenhum procedimento encontrado
                       </div>

@@ -534,6 +534,28 @@ export const mockFidelityRules: FidelityRule[] = [
     validityDays: 90,
     isActive: true,
   },
+  {
+    id: "rule-6",
+    name: "Bônus Primeiro Atendimento",
+    description: "Gastou R$ 300 em qualquer serviço = 10% de desconto no próximo",
+    type: "COMBO_VALUE",
+    thresholdValue: 300,
+    rewardType: "DISCOUNT_PERCENT",
+    rewardValue: 10,
+    validityDays: 30,
+    isActive: true,
+  },
+  {
+    id: "rule-7",
+    name: "Pontos Rápidos",
+    description: "200 pontos = R$ 20 de crédito",
+    type: "POINTS_CONVERSION",
+    thresholdValue: 200,
+    rewardType: "CREDIT",
+    rewardValue: 20,
+    validityDays: 60,
+    isActive: true,
+  },
 ];
 
 // ==================== PROGRESSO POR CATEGORIA ====================
