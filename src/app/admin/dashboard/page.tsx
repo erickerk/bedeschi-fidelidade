@@ -561,19 +561,18 @@ export default function AdminDashboard() {
     };
     addProfessional(professional);
 
-    // SALVAR USUÁRIO PERSISTENTE NO SUPABASE (recepcionistas)
-    if (
-      professional.role === "recepcionista" &&
-      professional.email &&
-      newProfessional.loginPassword
-    ) {
+    // SALVAR USUÁRIO PERSISTENTE NO SUPABASE (TODOS OS TIPOS)
+    if (professional.email && newProfessional.loginPassword) {
       try {
+        // Mapear role do formulário para role do Supabase
+        const supabaseRole = professional.role === "recepcionista" ? "recepcao" : professional.role;
+        
         // Salvar na tabela staff_users do Supabase (PERSISTENTE)
         await createStaffUser({
           email: professional.email,
           password: newProfessional.loginPassword,
           name: professional.name,
-          role: "recepcao",
+          role: supabaseRole as "admin" | "recepcao" | "profissional" | "medico",
           specialty: professional.specialty,
           created_by: user?.email || "admin",
         });
@@ -583,25 +582,13 @@ export default function AdminDashboard() {
         // Recarregar lista de usuários
         const updatedUsers = await getStaffUsers();
         setStaffUsers(updatedUsers);
-
-        // Também salvar no localStorage como backup
-        if (typeof window !== "undefined") {
-          const emailKey = professional.email.toLowerCase();
-          const raw = localStorage.getItem("extraStaffCredentials");
-          const extras = raw
-            ? (JSON.parse(raw) as Record<string, { password: string; role: string; name: string }>)
-            : {};
-          extras[emailKey] = {
-            password: newProfessional.loginPassword,
-            role: "recepcao",
-            name: professional.name,
-          };
-          localStorage.setItem("extraStaffCredentials", JSON.stringify(extras));
-        }
       } catch (error) {
         console.error("❌ Erro ao salvar usuário no Supabase:", error);
-        alert(`Erro ao salvar usuário permanentemente: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        alert(`Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       }
+    } else if (!professional.email || !newProfessional.loginPassword) {
+      alert("Email e senha são obrigatórios para salvar o usuário no sistema.");
+      return;
     }
 
     setNewProfessional({
@@ -1656,29 +1643,29 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* Resumo por função */}
+              {/* Resumo por função - Dados do Supabase */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{professionals.length}</p>
+                  <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{staffUsers.length}</p>
                   <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Total</p>
                 </div>
                 <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
                   <p className={`text-2xl font-bold ${isDark ? "text-blue-400" : "text-blue-600"}`}>
-                    {professionals.filter((p) => p.role === "medico").length}
+                    {staffUsers.filter((u) => u.role === "medico").length}
                   </p>
                   <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Médicos</p>
                 </div>
                 <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
                   <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
-                    {professionals.filter((p) => p.role === "profissional").length}
+                    {staffUsers.filter((u) => u.role === "profissional").length}
                   </p>
                   <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Profissionais</p>
                 </div>
                 <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
                   <p className={`text-2xl font-bold ${isDark ? "text-purple-400" : "text-purple-600"}`}>
-                    {professionals.filter((p) => p.role === "recepcionista").length}
+                    {staffUsers.filter((u) => u.role === "recepcao" || u.role === "admin").length}
                   </p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recepção</p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recepção/Admin</p>
                 </div>
               </div>
 
@@ -1873,7 +1860,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <button
-                    onClick={() => {/* TODO: Adicionar modal de criar usuário */}}
+                    onClick={() => setShowAddProfessional(true)}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 font-medium transition-colors"
                   >
                     <Plus className="h-4 w-4" />
@@ -1966,7 +1953,7 @@ export default function AdminDashboard() {
                       Adicione usuários do sistema para gerenciar a equipe
                     </p>
                     <button
-                      onClick={() => {/* TODO: Adicionar modal de criar usuário */}}
+                      onClick={() => setShowAddProfessional(true)}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 font-medium transition-colors"
                     >
                       <Plus className="h-4 w-4" />
