@@ -81,7 +81,7 @@ export default function ClientDashboard({ clientId, onLogout }: ClientDashboardP
     
     // Salva review no contexto global
     addReview({
-      id: `rev-${Date.now()}`,
+      id: `rev-${crypto.randomUUID()}`,
       clientId,
       appointmentId: pendingReview.id,
       rating,

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/app-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getServices, type Service } from "@/lib/services-api";
+import { getStaffUsers, type StaffUser } from "@/lib/staff-users-api";
 import {
   Sun, Moon, LogOut, Users, Calendar, Gift, Plus, Search, Send,
   Check, X, User, Phone, Mail, Clock, Star, ChevronDown
@@ -26,6 +27,7 @@ export default function RecepcaoDashboard() {
   const [tab, setTab] = useState<Tab>("atendimentos");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [services, setServices] = useState<Service[]>([]);
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [procedureSearchTerm, setProcedureSearchTerm] = useState("");
@@ -77,17 +79,21 @@ export default function RecepcaoDashboard() {
     setLoading(false);
   }, [router]);
 
-  // Carregar serviços
+  // Carregar serviços e profissionais do Supabase
   useEffect(() => {
-    const loadServices = async () => {
+    const loadData = async () => {
       try {
-        const data = await getServices();
-        setServices(data);
+        const [servicesData, staffData] = await Promise.all([
+          getServices(),
+          getStaffUsers()
+        ]);
+        setServices(servicesData);
+        setStaffUsers(staffData.filter(u => u.role === 'profissional' || u.role === 'medico'));
       } catch (error) {
-        console.error("Erro ao carregar serviços:", error);
+        console.error("Erro ao carregar dados:", error);
       }
     };
-    loadServices();
+    loadData();
   }, []);
 
   const handleLogout = () => {
@@ -101,11 +107,6 @@ export default function RecepcaoDashboard() {
     c.phone.includes(searchTerm)
   );
 
-  // Gerar PIN automático de 4 dígitos
-  const generatePin = () => {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-  };
-
   // Cadastrar novo cliente
   const handleAddClient = async () => {
     if (!newClient.name || !newClient.phone) {
@@ -114,10 +115,11 @@ export default function RecepcaoDashboard() {
     }
 
     const cleanPhone = newClient.phone.replace(/\D/g, "");
-    const generatedPin = generatePin();
+    // Gerar PIN de 4 dígitos
+    const generatedPin = String(Math.floor(1000 + Math.random() * 9000));
     
     const client = {
-      id: `client-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newClient.name,
       phone: cleanPhone,
       email: newClient.email || "",
@@ -146,14 +148,14 @@ export default function RecepcaoDashboard() {
       newAppointment.selectedServices.includes(s.id)
     );
     const total = selectedServicesData.reduce((sum, s) => sum + s.price, 0);
-    const professional = professionals.find(p => p.id === newAppointment.professionalId);
+    const professional = staffUsers.find(p => p.id === newAppointment.professionalId);
 
     const appointment = {
-      id: `apt-${Date.now()}`,
+      id: `apt-${crypto.randomUUID()}`,
       clientId: newAppointment.clientId,
       clientName: client?.name || "",
-      professionalId: newAppointment.professionalId || "prof-1",
-      professionalName: professional?.name || "Profissional",
+      professionalId: newAppointment.professionalId || staffUsers[0]?.id || "",
+      professionalName: professional?.name || staffUsers[0]?.name || "Profissional",
       date: newAppointment.date,
       time: newAppointment.time,
       services: selectedServicesData.map(s => ({ name: s.name, price: s.price })),
@@ -685,8 +687,8 @@ export default function RecepcaoDashboard() {
                   className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
                 >
                   <option value="">Selecione o profissional</option>
-                  {professionals.filter(p => p.role !== "recepcionista").map(p => (
-                    <option key={p.id} value={p.id}>{p.name} - {p.specialty}</option>
+                  {staffUsers.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} - {p.specialty || 'Sem especialidade'}</option>
                   ))}
                 </select>
               </div>
