@@ -1,0 +1,134 @@
+================================================================================
+                    RESUMO PARA DEPLOY NA VERCEL
+================================================================================
+
+PROJETO: Bedeschi Fidelidade
+URL: https://vercel.com/ericks-projects-a9788af3/bedeschi-fidelidade-app
+
+================================================================================
+                        VARIÁVEIS DE AMBIENTE
+================================================================================
+
+Adicione estas 4 variáveis no painel da Vercel:
+https://vercel.com/ericks-projects-a9788af3/bedeschi-fidelidade-app/settings/environment-variables
+
+---
+
+VARIÁVEL 1 (Pública)
+Nome: NEXT_PUBLIC_SUPABASE_URL
+Valor: https://lvqcualqeevdenghexjm.supabase.co
+Ambientes: Production, Preview, Development
+
+---
+
+VARIÁVEL 2 (Pública)
+Nome: NEXT_PUBLIC_SUPABASE_ANON_KEY
+Valor: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2cWN1YWxxZWV2ZGVuZ2hleGptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NzQ3MDgsImV4cCI6MjA4MzA1MDcwOH0.-x0z-y2ETLwKTOCqOXoCu1Kro7LSUQX5SrEWF2Owkdw
+Ambientes: Production, Preview, Development
+
+---
+
+VARIÁVEL 3 (Privada - Servidor)
+Nome: SUPABASE_SERVICE_ROLE_KEY
+Valor: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2cWN1YWxxZWV2ZGVuZ2hleGptIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzQ3NDcwOCwiZXhwIjoyMDgzMDUwNzA4fQ.S5xcYUHdYML67ujw57ye9-vnpL_gluH10WdoZL3SXHM
+Ambientes: Production APENAS
+
+---
+
+VARIÁVEL 4 (Pública)
+Nome: NEXT_PUBLIC_APP_URL
+Valor: https://bedeschi-fidelidade-app.vercel.app
+Ambientes: Production, Preview, Development
+
+================================================================================
+                        PASSO A PASSO
+================================================================================
+
+1. ACESSAR VERCEL
+   → https://vercel.com
+   → Faça login
+   → Clique em "bedeschi-fidelidade-app"
+
+2. IR PARA SETTINGS
+   → Clique em "Settings" (no menu lateral)
+   → Clique em "Environment Variables"
+
+3. ADICIONAR VARIÁVEIS
+   Para cada variável acima:
+   → Clique em "Add New"
+   → Cole o Nome
+   → Cole o Valor
+   → Selecione os Ambientes
+   → Clique em "Save"
+
+4. VERIFICAR
+   Você deve ver 4 variáveis listadas:
+   ✓ NEXT_PUBLIC_SUPABASE_URL
+   ✓ NEXT_PUBLIC_SUPABASE_ANON_KEY
+   ✓ SUPABASE_SERVICE_ROLE_KEY
+   ✓ NEXT_PUBLIC_APP_URL
+
+5. FAZER DEPLOY
+   No terminal, execute:
+   npx vercel --prod --yes
+
+6. MONITORAR
+   → https://vercel.com/ericks-projects-a9788af3/bedeschi-fidelidade-app/deployments
+   → Aguarde o status ficar "Ready" ✅
+
+================================================================================
+                        ARQUIVOS CRIADOS
+================================================================================
+
+✓ .env.vercel - Arquivo com as variáveis (referência)
+✓ GUIA_VERCEL_ENV.md - Guia detalhado em Markdown
+✓ DEPLOY_VERCEL_RESUMO.txt - Este arquivo (resumo rápido)
+
+================================================================================
+                        LINKS IMPORTANTES
+================================================================================
+
+Painel Principal:
+https://vercel.com/ericks-projects-a9788af3/bedeschi-fidelidade-app
+
+Environment Variables:
+https://vercel.com/ericks-projects-a9788af3/bedeschi-fidelidade-app/settings/environment-variables
+
+Deployments:
+https://vercel.com/ericks-projects-a9788af3/bedeschi-fidelidade-app/deployments
+
+Settings:
+https://vercel.com/ericks-projects-a9788af3/bedeschi-fidelidade-app/settings
+
+================================================================================
+                        DICAS IMPORTANTES
+================================================================================
+
+⚠️ SEGURANÇA
+- NUNCA compartilhe as chaves de API
+- NUNCA faça commit das chaves no Git
+- As variáveis com NEXT_PUBLIC_ são públicas
+- As variáveis sem NEXT_PUBLIC_ são privadas
+
+✅ VERIFICAÇÃO
+- Copie os valores EXATAMENTE como estão (sem espaços extras)
+- Certifique-se de que todas as 4 variáveis foram adicionadas
+- Verifique se o projeto está conectado ao GitHub
+- Verifique se o branch é "main"
+
+🚀 DEPLOY
+- Após adicionar as variáveis, aguarde 1-2 minutos
+- Depois execute: npx vercel --prod --yes
+- O build deve levar 2-3 minutos
+- Você receberá uma URL quando estiver pronto
+
+================================================================================
+                        SUCESSO!
+================================================================================
+
+Após seguir estes passos, seu aplicativo estará deployado na Vercel com
+todas as variáveis de ambiente configuradas corretamente!
+
+URL do App: https://bedeschi-fidelidade-app.vercel.app
+
+================================================================================
