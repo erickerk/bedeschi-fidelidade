@@ -14,7 +14,9 @@ const supabase = createClient(
 async function cleanTables() {
   console.log('🧹 Limpando tabelas de dados fake (preservando usuários criados)...\n');
   
-  // IMPORTANTE: NÃO deletar auth.users - usuários criados via Admin devem ser mantidos
+  // IMPORTANTE: NÃO deletar:
+  // - auth.users (usuários do Supabase Auth)
+  // - staff_users (usuários criados via Admin - PERSISTENTES)
   const tables = [
     'fidelity_reviews',
     'fidelity_appointment_services',
@@ -32,7 +34,9 @@ async function cleanTables() {
     }
   }
   
-  console.log('   ℹ️  Usuários do sistema (auth.users) foram preservados');
+  console.log('   ℹ️  Usuários do sistema preservados:');
+  console.log('      - auth.users (Supabase Auth)');
+  console.log('      - staff_users (Criados pelo Admin) ⭐');
 }
 
 async function seedClients() {

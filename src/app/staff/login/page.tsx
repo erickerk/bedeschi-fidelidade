@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sun, Moon } from "lucide-react";
+import { authenticateStaffUser } from "@/lib/staff-users-api";
 
 type UserRole = "admin" | "recepcao" | "qa";
 
@@ -12,6 +13,7 @@ interface StaffUser {
   name: string;
 }
 
+// Credenciais padrão do sistema (fallback)
 const STAFF_CREDENTIALS: Record<string, StaffUser> = {
   "raul.admin@bedeschi.com.br": { password: "Bed3sch1#Adm!n2026", role: "admin", name: "Raul Bedeschi" },
   "recepcao@bedeschi.com.br": { password: "R3c3pc@o#B3d2026!", role: "recepcao", name: "Recepção Bedeschi" },
@@ -43,8 +45,38 @@ export default function StaffLoginPage() {
 
     const lowerEmail = email.toLowerCase();
 
+    // 1. PRIORIDADE: Tentar autenticar via Supabase (staff_users)
+    try {
+      const supabaseUser = await authenticateStaffUser(lowerEmail, password);
+      
+      if (supabaseUser) {
+        console.log("✅ Login via Supabase:", supabaseUser.email);
+        
+        localStorage.setItem("staffSession", JSON.stringify({
+          email: supabaseUser.email,
+          role: supabaseUser.role,
+          name: supabaseUser.name,
+          loggedAt: new Date().toISOString(),
+        }));
+
+        // Redireciona baseado no perfil
+        if (supabaseUser.role === "admin") {
+          router.push("/admin/dashboard");
+        } else if (supabaseUser.role === "recepcao") {
+          router.push("/recepcao");
+        } else {
+          router.push("/admin/dashboard"); // Profissionais e médicos também para admin
+        }
+        return;
+      }
+    } catch (error) {
+      console.warn("Tentativa de login via Supabase falhou, tentando fallback:", error);
+    }
+
+    // 2. FALLBACK: Credenciais padrão do sistema
     let user: StaffUser | undefined = STAFF_CREDENTIALS[lowerEmail];
 
+    // 3. FALLBACK: localStorage (usuários antigos)
     if (!user && typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem("extraStaffCredentials");
@@ -53,14 +85,17 @@ export default function StaffLoginPage() {
           user = extras[lowerEmail];
         }
       } catch {
-        // ignore erro de parse e segue com credenciais padrão
+        // ignore erro de parse
       }
     }
+
     if (!user || user.password !== password) {
       setError("Email ou senha incorretos");
       setLoading(false);
       return;
     }
+
+    console.log("✅ Login via credenciais locais:", lowerEmail);
 
     localStorage.setItem("staffSession", JSON.stringify({
       email,
