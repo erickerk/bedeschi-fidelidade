@@ -1828,7 +1828,7 @@ export default function AdminDashboard() {
                   }`}
                 >
                   Use este formulário para cadastrar profissionais em geral, médicos
-                  e também recepcionistas (basta escolher o papel "Recepção").
+                  e também recepcionistas (basta escolher o papel &quot;Recepção&quot;).
                 </p>
               )}
               <form
@@ -2630,7 +2630,7 @@ export default function AdminDashboard() {
                     </li>
                     <li>
                       <span className="font-medium">Acúmulo por quantidade:</span> ideal
-                      para combos do tipo "a cada 10 sessões, ganhe 1 grátis".
+                      para combos do tipo &quot;a cada 10 sessões, ganhe 1 grátis&quot;.
                     </li>
                     <li>
                       <span className="font-medium">Tipo de recompensa:</span> escolha se

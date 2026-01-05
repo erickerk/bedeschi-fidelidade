@@ -9,7 +9,8 @@ export interface InputProps
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, label, error, id, ...props }, ref) => {
-    const inputId = id || React.useId();
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
     
     // BUG-002 FIX: Auto-set autocomplete for password fields
     const inputProps: React.InputHTMLAttributes<HTMLInputElement> = { ...props };
