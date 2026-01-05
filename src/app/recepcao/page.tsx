@@ -34,6 +34,10 @@ export default function RecepcaoDashboard() {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showProcedureDropdown, setShowProcedureDropdown] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // Filtro de cliente específico para bônus
+  const [bonusClientFilter, setBonusClientFilter] = useState<string>("");
+  const [showBonusClientDetails, setShowBonusClientDetails] = useState(false);
 
   // Estados para modais
   const [showNewClient, setShowNewClient] = useState(false);
@@ -524,9 +528,195 @@ export default function RecepcaoDashboard() {
         {/* Aba Bônus */}
         {tab === "bonus" && (
           <div className="space-y-6">
-            <h2 className={`text-xl font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
-              Gestão de Bônus
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className={`text-xl font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                Gestão de Bônus
+              </h2>
+            </div>
+
+            {/* Filtro de Cliente */}
+            <div className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                🔍 Buscar Cliente Específico
+              </label>
+              <div className="flex gap-3">
+                <select
+                  value={bonusClientFilter}
+                  onChange={(e) => {
+                    setBonusClientFilter(e.target.value);
+                    setShowBonusClientDetails(!!e.target.value);
+                  }}
+                  title="Selecionar cliente para ver detalhes de bônus"
+                  className={`flex-1 px-3 py-2 rounded-lg border ${
+                    isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"
+                  }`}
+                >
+                  <option value="">Selecione um cliente para ver detalhes</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} - {c.phone} ({c.pointsBalance} pts)
+                    </option>
+                  ))}
+                </select>
+                {bonusClientFilter && (
+                  <button
+                    onClick={() => {
+                      setBonusClientFilter("");
+                      setShowBonusClientDetails(false);
+                    }}
+                    className={`px-4 py-2 rounded-lg ${
+                      isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Detalhes do Cliente Selecionado */}
+            {showBonusClientDetails && bonusClientFilter && (() => {
+              const selectedClient = clients.find(c => c.id === bonusClientFilter);
+              if (!selectedClient) return null;
+
+              const availableRewards = getClientRewards(bonusClientFilter);
+              const allRewards = rewards.filter(r => r.clientId === bonusClientFilter);
+              const redeemedRewards = allRewards.filter(r => r.status === "redeemed");
+              
+              // Calcular progresso para próximo bônus (baseado em R$ 300 = 10% desconto)
+              const proximoBonus = 300;
+              const gastoAtual = selectedClient.totalSpent;
+              const progressoAtual = gastoAtual % proximoBonus;
+              const faltaParaProximo = proximoBonus - progressoAtual;
+              const percentualProgresso = (progressoAtual / proximoBonus) * 100;
+
+              return (
+                <div className={`rounded-xl p-6 ${isDark ? "bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/20" : "bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200"}`}>
+                  <div className="flex items-start justify-between mb-6">
+                    <div>
+                      <h3 className={`text-xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+                        {selectedClient.name}
+                      </h3>
+                      <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                        {selectedClient.phone} • {selectedClient.email || "Sem email"}
+                      </p>
+                    </div>
+                    <div className={`px-4 py-2 rounded-lg ${isDark ? "bg-amber-500/20" : "bg-amber-100"}`}>
+                      <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-700"}`}>
+                        {selectedClient.pointsBalance}
+                      </p>
+                      <p className={`text-xs ${isDark ? "text-amber-300" : "text-amber-600"}`}>pontos</p>
+                    </div>
+                  </div>
+
+                  {/* Grid de Informações */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className={`p-4 rounded-lg ${isDark ? "bg-slate-800/50" : "bg-white/70"}`}>
+                      <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Total Gasto</p>
+                      <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+                        {formatCurrency(selectedClient.totalSpent)}
+                      </p>
+                    </div>
+                    <div className={`p-4 rounded-lg ${isDark ? "bg-slate-800/50" : "bg-white/70"}`}>
+                      <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Atendimentos</p>
+                      <p className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+                        {selectedClient.totalAppointments}
+                      </p>
+                    </div>
+                    <div className={`p-4 rounded-lg ${isDark ? "bg-emerald-500/10" : "bg-emerald-50"}`}>
+                      <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Bônus Disponíveis</p>
+                      <p className={`text-lg font-bold ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
+                        {availableRewards.length}
+                      </p>
+                    </div>
+                    <div className={`p-4 rounded-lg ${isDark ? "bg-blue-500/10" : "bg-blue-50"}`}>
+                      <p className={`text-xs ${isDark ? "text-blue-400" : "text-blue-600"}`}>Bônus Utilizados</p>
+                      <p className={`text-lg font-bold ${isDark ? "text-blue-300" : "text-blue-700"}`}>
+                        {redeemedRewards.length}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progresso para Próximo Bônus */}
+                  <div className={`p-4 rounded-lg ${isDark ? "bg-slate-800/50" : "bg-white/70"}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                        🎯 Progresso para Próximo Bônus (10% OFF)
+                      </p>
+                      <p className={`text-sm font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                        {percentualProgresso.toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className={`h-3 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
+                      <div 
+                        className="h-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-300"
+                        style={{ width: `${percentualProgresso}%` }}
+                      />
+                    </div>
+                    <p className={`text-xs mt-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      Faltam <span className="font-bold">{formatCurrency(faltaParaProximo)}</span> para ganhar 10% de desconto
+                    </p>
+                  </div>
+
+                  {/* Bônus Disponíveis */}
+                  {availableRewards.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className={`text-sm font-semibold mb-3 ${isDark ? "text-white" : "text-slate-800"}`}>
+                        🎁 Bônus Disponíveis
+                      </h4>
+                      <div className="space-y-2">
+                        {availableRewards.map(reward => (
+                          <div key={reward.id} className={`p-3 rounded-lg flex items-center justify-between ${isDark ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
+                            <div>
+                              <p className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-800"}`}>
+                                {reward.title}
+                              </p>
+                              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                                Válido até {formatDate(reward.expiresAt)}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleOpenRedeem(selectedClient.id)}
+                              className="px-3 py-1 rounded bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600"
+                            >
+                              Resgatar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bônus Utilizados */}
+                  {redeemedRewards.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className={`text-sm font-semibold mb-3 ${isDark ? "text-white" : "text-slate-800"}`}>
+                        ✅ Bônus Já Utilizados
+                      </h4>
+                      <div className="space-y-2">
+                        {redeemedRewards.map(reward => (
+                          <div key={reward.id} className={`p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-100"}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className={`font-medium text-sm ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                                  {reward.title}
+                                </p>
+                                <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                                  {reward.description}
+                                </p>
+                              </div>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${isDark ? "bg-blue-500/20 text-blue-300" : "bg-blue-100 text-blue-700"}`}>
+                                Resgatado
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
               <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
