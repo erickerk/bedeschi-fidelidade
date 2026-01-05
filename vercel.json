@@ -1,13 +1,14 @@
 {
   "framework": "nextjs",
   "public": true,
+  "buildCommand": "next build",
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
+          "value": "no-cache, no-store, must-revalidate, max-age=0"
         },
         {
           "key": "Pragma",
@@ -16,6 +17,27 @@
         {
           "key": "Expires",
           "value": "0"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/c/:tenant",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-cache"
         }
       ]
     },

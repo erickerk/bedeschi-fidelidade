@@ -310,7 +310,7 @@ export default function ClientAccessPage() {
       {/* Versão para debug */}
       <div className="absolute bottom-2 left-2 z-50">
         <span className={`text-[8px] opacity-30 ${isDark ? "text-white" : "text-slate-600"}`}>
-          v1.1.1-CACHE-FIX
+          v1.2.1-PREMIUM-{Date.now()}
         </span>
       </div>
     </main>
