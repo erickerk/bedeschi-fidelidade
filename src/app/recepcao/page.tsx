@@ -647,10 +647,13 @@ export default function RecepcaoDashboard() {
                         {percentualProgresso.toFixed(0)}%
                       </p>
                     </div>
-                    <div className={`h-3 rounded-full overflow-hidden relative ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
+                    <div 
+                      className={`h-3 rounded-full overflow-hidden relative ${isDark ? "bg-slate-700" : "bg-slate-200"}`}
+                      style={{ '--progress-width': `${Math.min(percentualProgresso, 100)}%` } as React.CSSProperties}
+                    >
                       <div 
                         className={`absolute inset-y-0 left-0 bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-300`}
-                        style={{ width: `${Math.min(percentualProgresso, 100)}%` }}
+                        style={{ width: 'var(--progress-width)' }}
                         aria-label={`Progresso: ${percentualProgresso.toFixed(0)}%`}
                       />
                     </div>
