@@ -160,7 +160,7 @@ export default function ClientAccessPage() {
             <div className="my-5 flex justify-center">
               <div className={`rounded-xl p-3 shadow-lg ${isDark ? "bg-white shadow-amber-500/10" : "bg-white shadow-amber-200"}`}>
                 <QRCodeSVG 
-                  value="https://institutobedeschi.com.br"
+                  value="https://bedeschi-fidelidade-app.vercel.app"
                   size={96}
                   level="H"
                   includeMargin={false}
