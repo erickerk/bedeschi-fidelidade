@@ -648,9 +648,10 @@ export default function RecepcaoDashboard() {
                       </p>
                     </div>
                     <div className={`h-3 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
+                      {/* eslint-disable-next-line react/style-prop-object */}
                       <div 
-                        className="h-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-300"
-                        style={{ width: `${percentualProgresso}%` }}
+                        className={`h-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-300`}
+                        style={{ width: `${Math.min(percentualProgresso, 100)}%` }}
                       />
                     </div>
                     <p className={`text-xs mt-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
