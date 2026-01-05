@@ -27,6 +27,10 @@ export default function RecepcaoDashboard() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [services, setServices] = useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [procedureSearchTerm, setProcedureSearchTerm] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [showProcedureDropdown, setShowProcedureDropdown] = useState(false);
 
   // Estados para modais
   const [showNewClient, setShowNewClient] = useState(false);
@@ -37,7 +41,7 @@ export default function RecepcaoDashboard() {
 
   // Formulário novo cliente
   const [newClient, setNewClient] = useState({
-    name: "", phone: "", email: "", pin: ""
+    name: "", phone: "", email: ""
   });
 
   // Formulário novo atendimento
@@ -97,20 +101,27 @@ export default function RecepcaoDashboard() {
     c.phone.includes(searchTerm)
   );
 
+  // Gerar PIN automático de 4 dígitos
+  const generatePin = () => {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  };
+
   // Cadastrar novo cliente
   const handleAddClient = async () => {
-    if (!newClient.name || !newClient.phone || !newClient.pin) {
-      alert("Preencha nome, telefone e PIN");
+    if (!newClient.name || !newClient.phone) {
+      alert("Preencha nome e telefone");
       return;
     }
 
     const cleanPhone = newClient.phone.replace(/\D/g, "");
+    const generatedPin = generatePin();
+    
     const client = {
       id: `client-${Date.now()}`,
       name: newClient.name,
       phone: cleanPhone,
       email: newClient.email || "",
-      pin: newClient.pin,
+      pin: generatedPin,
       pointsBalance: 0,
       totalSpent: 0,
       totalAppointments: 0,
@@ -118,7 +129,8 @@ export default function RecepcaoDashboard() {
     };
 
     addClient(client);
-    setNewClient({ name: "", phone: "", email: "", pin: "" });
+    alert(`Cliente cadastrado com sucesso!\n\nPIN de acesso: ${generatedPin}\n\nAnote este PIN para o cliente.`);
+    setNewClient({ name: "", phone: "", email: "" });
     setShowNewClient(false);
   };
 
@@ -355,6 +367,7 @@ export default function RecepcaoDashboard() {
                   <tr className={isDark ? "text-slate-400" : "text-slate-500"}>
                     <th className="text-left p-4 text-sm font-medium">Cliente</th>
                     <th className="text-left p-4 text-sm font-medium">Telefone</th>
+                    <th className="text-left p-4 text-sm font-medium">PIN</th>
                     <th className="text-left p-4 text-sm font-medium">Pontos</th>
                     <th className="text-left p-4 text-sm font-medium">Visitas</th>
                     <th className="text-right p-4 text-sm font-medium">Ações</th>
@@ -370,6 +383,11 @@ export default function RecepcaoDashboard() {
                           <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>{client.email || "-"}</p>
                         </td>
                         <td className={`p-4 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.phone}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700"}`}>
+                            🔑 {client.pin}
+                          </span>
+                        </td>
                         <td className={`p-4 ${isDark ? "text-amber-400" : "text-amber-600"}`}>{client.pointsBalance}</td>
                         <td className={`p-4 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.totalAppointments}</td>
                         <td className="p-4">
@@ -550,18 +568,10 @@ export default function RecepcaoDashboard() {
                 />
               </div>
 
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-                  PIN de acesso (4 dígitos) *
-                </label>
-                <input
-                  type="text"
-                  maxLength={4}
-                  value={newClient.pin}
-                  onChange={(e) => setNewClient({ ...newClient, pin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
-                  placeholder="1234"
-                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
-                />
+              <div className={`p-3 rounded-lg ${isDark ? "bg-blue-500/10 border border-blue-500/30" : "bg-blue-50 border border-blue-200"}`}>
+                <p className={`text-sm ${isDark ? "text-blue-300" : "text-blue-700"}`}>
+                  ℹ️ O PIN de 4 dígitos será gerado automaticamente após o cadastro.
+                </p>
               </div>
             </div>
 
@@ -597,25 +607,67 @@ export default function RecepcaoDashboard() {
             </div>
 
             <div className="space-y-4">
-              <div>
+              <div className="relative">
                 <label
                   htmlFor="new-appointment-client"
                   className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}
                 >
-                  Cliente *
+                  Cliente * (busque por nome ou telefone)
                 </label>
-                <select
-                  id="new-appointment-client"
-                  value={newAppointment.clientId}
-                  onChange={(e) => setNewAppointment({ ...newAppointment, clientId: e.target.value })}
-                  title="Cliente do atendimento"
-                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
-                >
-                  <option value="">Selecione o cliente</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name} - {c.phone}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+                  <input
+                    id="new-appointment-client"
+                    type="text"
+                    value={clientSearchTerm}
+                    onChange={(e) => {
+                      setClientSearchTerm(e.target.value);
+                      setShowClientDropdown(true);
+                    }}
+                    onFocus={() => setShowClientDropdown(true)}
+                    placeholder="Digite o nome ou telefone do cliente..."
+                    className={`w-full pl-10 pr-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                  />
+                </div>
+                {showClientDropdown && clientSearchTerm && (
+                  <div className={`absolute z-50 w-full mt-1 max-h-48 overflow-y-auto rounded-lg border shadow-lg ${isDark ? "bg-slate-700 border-slate-600" : "bg-white border-slate-200"}`}>
+                    {clients
+                      .filter(c => 
+                        c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+                        c.phone.includes(clientSearchTerm)
+                      )
+                      .map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setNewAppointment({ ...newAppointment, clientId: c.id });
+                            setClientSearchTerm(`${c.name} - ${c.phone}`);
+                            setShowClientDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 ${isDark ? "hover:bg-slate-600" : "hover:bg-slate-50"} border-b last:border-b-0 ${isDark ? "border-slate-600" : "border-slate-100"}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{c.name}</p>
+                              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{c.phone}</p>
+                            </div>
+                            <div className={`text-xs px-2 py-1 rounded ${isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700"}`}>
+                              PIN: {c.pin}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    {clients.filter(c => 
+                      c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+                      c.phone.includes(clientSearchTerm)
+                    ).length === 0 && (
+                      <div className={`px-3 py-4 text-center ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                        Nenhum cliente encontrado
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -651,8 +703,9 @@ export default function RecepcaoDashboard() {
                     id="new-appointment-date"
                     type="date"
                     value={newAppointment.date}
+                    max={new Date().toISOString().split("T")[0]}
                     onChange={(e) => setNewAppointment({ ...newAppointment, date: e.target.value })}
-                    title="Data do atendimento"
+                    title="Data do atendimento - máximo hoje"
                     className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
                   />
                 </div>
@@ -674,40 +727,85 @@ export default function RecepcaoDashboard() {
                 </div>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className={`block text-sm font-medium mb-2 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-                  Procedimentos realizados *
+                  Procedimentos realizados * (busque pelo nome)
                 </label>
-                <div className={`max-h-48 overflow-y-auto rounded-lg border p-2 ${isDark ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-200"}`}>
-                  {services.map(service => (
-                    <label key={service.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer ${isDark ? "hover:bg-slate-700" : "hover:bg-slate-100"}`}>
-                      <input
-                        type="checkbox"
-                        checked={newAppointment.selectedServices.includes(service.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewAppointment({
-                              ...newAppointment,
-                              selectedServices: [...newAppointment.selectedServices, service.id]
-                            });
-                          } else {
-                            setNewAppointment({
-                              ...newAppointment,
-                              selectedServices: newAppointment.selectedServices.filter(id => id !== service.id)
-                            });
-                          }
-                        }}
-                        className="rounded border-slate-400"
-                      />
-                      <span className={`flex-1 ${isDark ? "text-slate-200" : "text-slate-700"}`}>{service.name}</span>
-                      <span className={`text-sm ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(service.price)}</span>
-                    </label>
-                  ))}
+                <div className="relative mb-2">
+                  <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+                  <input
+                    type="text"
+                    value={procedureSearchTerm}
+                    onChange={(e) => {
+                      setProcedureSearchTerm(e.target.value);
+                      setShowProcedureDropdown(true);
+                    }}
+                    onFocus={() => setShowProcedureDropdown(true)}
+                    placeholder="Digite o nome do procedimento..."
+                    className={`w-full pl-10 pr-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                  />
                 </div>
+                {showProcedureDropdown && (
+                  <div className={`max-h-48 overflow-y-auto rounded-lg border mb-3 ${isDark ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-200"}`}>
+                    {services
+                      .filter(service => {
+                        // Filtrar por profissional selecionado
+                        if (newAppointment.professionalId) {
+                          const prof = professionals.find(p => p.id === newAppointment.professionalId);
+                          if (prof && prof.specialty) {
+                            const specialties = prof.specialty.split(',').map(s => s.trim().toLowerCase());
+                            const serviceCategory = service.category_name?.toLowerCase() || '';
+                            const hasMatch = specialties.some(spec => serviceCategory.includes(spec) || spec.includes(serviceCategory));
+                            if (!hasMatch) return false;
+                          }
+                        }
+                        // Filtrar por termo de busca
+                        return procedureSearchTerm === "" || 
+                          service.name.toLowerCase().includes(procedureSearchTerm.toLowerCase());
+                      })
+                      .map(service => (
+                        <label key={service.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer ${isDark ? "hover:bg-slate-700" : "hover:bg-slate-100"}`}>
+                          <input
+                            type="checkbox"
+                            checked={newAppointment.selectedServices.includes(service.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewAppointment({
+                                  ...newAppointment,
+                                  selectedServices: [...newAppointment.selectedServices, service.id]
+                                });
+                              } else {
+                                setNewAppointment({
+                                  ...newAppointment,
+                                  selectedServices: newAppointment.selectedServices.filter(id => id !== service.id)
+                                });
+                              }
+                            }}
+                            className="rounded border-slate-400"
+                          />
+                          <span className={`flex-1 ${isDark ? "text-slate-200" : "text-slate-700"}`}>{service.name}</span>
+                          <span className={`text-sm ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(service.price)}</span>
+                        </label>
+                      ))}
+                    {services.filter(service => 
+                      procedureSearchTerm === "" || 
+                      service.name.toLowerCase().includes(procedureSearchTerm.toLowerCase())
+                    ).length === 0 && (
+                      <div className={`px-3 py-4 text-center ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                        Nenhum procedimento encontrado
+                      </div>
+                    )}
+                  </div>
+                )}
                 {newAppointment.selectedServices.length > 0 && (
-                  <p className={`text-sm mt-2 ${isDark ? "text-amber-400" : "text-amber-600"}`}>
-                    Total: {formatCurrency(services.filter(s => newAppointment.selectedServices.includes(s.id)).reduce((sum, s) => sum + s.price, 0))}
-                  </p>
+                  <div className={`p-3 rounded-lg ${isDark ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-emerald-50 border border-emerald-200"}`}>
+                    <p className={`text-sm font-medium ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
+                      ✓ {newAppointment.selectedServices.length} procedimento(s) selecionado(s)
+                    </p>
+                    <p className={`text-lg font-bold mt-1 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                      Total: {formatCurrency(services.filter(s => newAppointment.selectedServices.includes(s.id)).reduce((sum, s) => sum + s.price, 0))}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -721,9 +819,9 @@ export default function RecepcaoDashboard() {
               </button>
               <button
                 onClick={handleAddAppointment}
-                disabled={!newAppointment.clientId || newAppointment.selectedServices.length === 0}
+                disabled={!newAppointment.clientId || !newAppointment.professionalId || newAppointment.selectedServices.length === 0}
                 className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
-                  newAppointment.clientId && newAppointment.selectedServices.length > 0
+                  newAppointment.clientId && newAppointment.professionalId && newAppointment.selectedServices.length > 0
                     ? "bg-amber-500 text-slate-900 hover:bg-amber-400"
                     : isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-slate-200 text-slate-400 cursor-not-allowed"
                 }`}

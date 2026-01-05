@@ -277,14 +277,32 @@ export default function AdminDashboard() {
             }),
           );
 
+    // Filtrar por mês atual e anterior considerando filtro de categoria
     const thisMonth = appointments.filter((a) => {
       const d = new Date(a.date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      const isThisMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      if (!isThisMonth) return false;
+      
+      // Aplicar filtro de categoria se selecionado
+      if (analyticsCategoryFilter === "all") return true;
+      return a.services.some((s) => {
+        const serviceData = services.find((srv) => srv.name === s.name);
+        return serviceData?.categoryId === analyticsCategoryFilter;
+      });
     });
+    
     const lastMonth = appointments.filter((a) => {
       const d = new Date(a.date);
       const lastM = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      return d.getMonth() === lastM.getMonth() && d.getFullYear() === lastM.getFullYear();
+      const isLastMonth = d.getMonth() === lastM.getMonth() && d.getFullYear() === lastM.getFullYear();
+      if (!isLastMonth) return false;
+      
+      // Aplicar filtro de categoria se selecionado
+      if (analyticsCategoryFilter === "all") return true;
+      return a.services.some((s) => {
+        const serviceData = services.find((srv) => srv.name === s.name);
+        return serviceData?.categoryId === analyticsCategoryFilter;
+      });
     });
 
     const revenueThisMonth = thisMonth.reduce((sum, a) => sum + a.total, 0);
@@ -316,10 +334,11 @@ export default function AdminDashboard() {
         appointmentsInPeriod: filteredApts.filter((a) => a.clientId === c.id).length,
       }));
 
-    // Performance da equipe
+    // Performance da equipe - considerar TODOS os atendimentos para avaliações
     const professionalPerformance = professionals
       .map((p) => {
         const profAppointments = filteredApts.filter((a) => a.professionalId === p.id);
+        // Buscar avaliações de TODOS os atendimentos (não apenas filtrados)
         const profReviews = reviews.filter((r) => {
           const apt = appointments.find((a) => a.id === r.appointmentId);
           return apt?.professionalId === p.id;
@@ -340,9 +359,9 @@ export default function AdminDashboard() {
       })
       .sort((a, b) => b.revenue - a.revenue);
 
-    // Profissionais mais bem avaliados
+    // Profissionais mais bem avaliados - mostrar apenas quem tem avaliações
     const topRatedProfessionals = [...professionalPerformance]
-      .filter((p) => p.avgRating !== "N/A")
+      .filter((p) => p.avgRating !== "N/A" && p.reviewsCount > 0)
       .sort(
         (a, b) => parseFloat(b.avgRating as string) - parseFloat(a.avgRating as string),
       )
@@ -353,9 +372,9 @@ export default function AdminDashboard() {
       .sort((a, b) => b.appointmentsCount - a.appointmentsCount)
       .slice(0, 5);
 
-    // Piores profissionais por avaliação
+    // Piores profissionais por avaliação - mostrar apenas quem tem avaliações
     const worstProfessionals = [...professionalPerformance]
-      .filter((p) => p.avgRating !== "N/A")
+      .filter((p) => p.avgRating !== "N/A" && p.reviewsCount > 0)
       .sort((a, b) => parseFloat(a.avgRating as string) - parseFloat(b.avgRating as string))
       .slice(0, 5);
 
@@ -388,6 +407,20 @@ export default function AdminDashboard() {
       dailyRevenue.push({ date: dateStr, revenue: dayRevenue });
     }
 
+    // Avaliações do período filtrado
+    const reviewsInPeriod = reviews.filter(r => {
+      const reviewDate = new Date(r.createdAt);
+      return filteredApts.some(a => a.id === r.appointmentId);
+    });
+    
+    const avgRatingPeriod = reviewsInPeriod.length > 0
+      ? (reviewsInPeriod.reduce((sum, r) => sum + r.rating, 0) / reviewsInPeriod.length).toFixed(1)
+      : "0.0";
+    
+    const avgTicketPeriod = filteredApts.length > 0
+      ? filteredApts.reduce((sum, a) => sum + a.total, 0) / filteredApts.length
+      : 0;
+
     return {
       totalRevenue: clients.reduce((sum, c) => sum + c.totalSpent, 0),
       revenueThisMonth,
@@ -399,6 +432,9 @@ export default function AdminDashboard() {
         filteredApts.length > 0
           ? filteredApts.reduce((sum, a) => sum + a.total, 0) / filteredApts.length
           : 0,
+      avgTicketPeriod,
+      avgRatingPeriod,
+      reviewsInPeriod: reviewsInPeriod.length,
       topServices,
       topClients,
       professionalPerformance,
@@ -867,12 +903,12 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* KPIs Principais */}
+            {/* KPIs Principais - SINCRONIZADOS COM FILTROS */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard title="Total de Clientes" value={clients.length} icon={Users} isDark={isDark} trend={`+${analytics.clientsThisMonth} este mês`} />
-              <StatCard title="Receita Total" value={formatCurrency(analytics.totalRevenue)} icon={DollarSign} isDark={isDark} trend={analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : undefined} trendUp={Number(analytics.revenueGrowth) > 0} />
-              <StatCard title="Ticket Médio" value={formatCurrency(analytics.avgTicket)} icon={Target} isDark={isDark} />
-              <StatCard title="Avaliação Média" value={`${analytics.avgRating} ⭐`} icon={Star} isDark={isDark} trend={`${analytics.totalReviews} avaliações`} />
+              <StatCard title="Receita Total" value={formatCurrency(analytics.revenuePeriod)} icon={DollarSign} isDark={isDark} trend={analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : undefined} trendUp={Number(analytics.revenueGrowth) > 0} />
+              <StatCard title="Ticket Médio" value={formatCurrency(analytics.avgTicketPeriod)} icon={Target} isDark={isDark} trend={`${analytics.appointmentsPeriod} atendimentos`} />
+              <StatCard title="Avaliação Média" value={`${analytics.avgRatingPeriod} ⭐`} icon={Star} isDark={isDark} trend={`${analytics.reviewsInPeriod} avaliações`} />
             </div>
 
             {/* Gráficos em Grid */}
@@ -898,64 +934,99 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 {analytics.dailyRevenue.some((d) => d.revenue > 0) ? (
-                  <div className="relative h-56 w-full">
-                    <svg className="w-full h-full" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="revenueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="rgb(251 191 36 / 0.2)" />
-                          <stop offset="100%" stopColor="rgb(251 191 36 / 0)" />
-                        </linearGradient>
-                      </defs>
+                  <div className="relative h-64 w-full flex gap-3">
+                    {/* Eixo Y - Valores */}
+                    <div className="flex flex-col justify-between text-right py-4">
                       {(() => {
                         const maxRevenue = Math.max(...analytics.dailyRevenue.map((d) => d.revenue), 1);
-                        const width = 100;
-                        const height = 100;
-                        const padding = 5;
-                        const points = analytics.dailyRevenue.map((day, i) => {
-                          const x = (i / (analytics.dailyRevenue.length - 1)) * (width - 2 * padding) + padding;
-                          const y = height - ((day.revenue / maxRevenue) * (height - 2 * padding) + padding);
-                          return `${x},${y}`;
-                        }).join(' ');
-                        const areaPoints = `${padding},${height} ${points} ${width - padding},${height}`;
-                        return (
-                          <>
-                            <polygon points={areaPoints} fill="url(#revenueGradient)" vectorEffect="non-scaling-stroke" />
-                            <polyline
-                              points={points}
-                              fill="none"
-                              className={isDark ? "stroke-amber-400" : "stroke-amber-500"}
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              vectorEffect="non-scaling-stroke"
-                            />
-                            {analytics.dailyRevenue.map((day, i) => {
-                              const x = (i / (analytics.dailyRevenue.length - 1)) * (width - 2 * padding) + padding;
-                              const y = height - ((day.revenue / maxRevenue) * (height - 2 * padding) + padding);
-                              return day.revenue > 0 ? (
-                                <circle
-                                  key={day.date}
-                                  cx={`${x}%`}
-                                  cy={`${y}%`}
-                                  r="3"
-                                  className={isDark ? "fill-amber-400" : "fill-amber-500"}
-                                  vectorEffect="non-scaling-stroke"
-                                />
-                              ) : null;
-                            })}
-                          </>
-                        );
+                        const steps = 5;
+                        return Array.from({ length: steps }, (_, i) => {
+                          const value = maxRevenue * (1 - i / (steps - 1));
+                          return (
+                            <span key={i} className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                              {formatCurrency(value)}
+                            </span>
+                          );
+                        });
                       })()}
-                    </svg>
-                    <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 mt-2">
-                      {analytics.dailyRevenue.filter((_, i) => {
-                        const step = Math.ceil(analytics.dailyRevenue.length / 7);
-                        return i % step === 0 || i === analytics.dailyRevenue.length - 1;
-                      }).map((day) => (
-                        <span key={day.date} className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                          {new Date(day.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                        </span>
-                      ))}
+                    </div>
+                    
+                    {/* Gráfico */}
+                    <div className="flex-1 relative">
+                      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="revenueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="rgb(251 191 36 / 0.3)" />
+                            <stop offset="100%" stopColor="rgb(251 191 36 / 0)" />
+                          </linearGradient>
+                        </defs>
+                        
+                        {/* Grid horizontal */}
+                        {[0, 25, 50, 75, 100].map((y) => (
+                          <line
+                            key={y}
+                            x1="0"
+                            y1={y}
+                            x2="100"
+                            y2={y}
+                            className={isDark ? "stroke-slate-700" : "stroke-slate-200"}
+                            strokeWidth="0.3"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        ))}
+                        
+                        {(() => {
+                          const maxRevenue = Math.max(...analytics.dailyRevenue.map((d) => d.revenue), 1);
+                          const padding = 2;
+                          const points = analytics.dailyRevenue.map((day, i) => {
+                            const x = (i / Math.max(analytics.dailyRevenue.length - 1, 1)) * (100 - 2 * padding) + padding;
+                            const y = 100 - ((day.revenue / maxRevenue) * (100 - 2 * padding) + padding);
+                            return `${x},${y}`;
+                          }).join(' ');
+                          const areaPoints = `${padding},100 ${points} ${100 - padding},100`;
+                          
+                          return (
+                            <>
+                              <polygon points={areaPoints} fill="url(#revenueGradient)" />
+                              <polyline
+                                points={points}
+                                fill="none"
+                                className={isDark ? "stroke-amber-400" : "stroke-amber-500"}
+                                strokeWidth="0.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                vectorEffect="non-scaling-stroke"
+                              />
+                              {analytics.dailyRevenue.map((day, i) => {
+                                const x = (i / Math.max(analytics.dailyRevenue.length - 1, 1)) * (100 - 2 * padding) + padding;
+                                const y = 100 - ((day.revenue / maxRevenue) * (100 - 2 * padding) + padding);
+                                return day.revenue > 0 ? (
+                                  <circle
+                                    key={day.date}
+                                    cx={x}
+                                    cy={y}
+                                    r="1.2"
+                                    className={isDark ? "fill-amber-400" : "fill-amber-500"}
+                                    vectorEffect="non-scaling-stroke"
+                                  />
+                                ) : null;
+                              })}
+                            </>
+                          );
+                        })()}
+                      </svg>
+                      
+                      {/* Eixo X - Datas */}
+                      <div className="absolute -bottom-6 left-0 right-0 flex justify-between px-1">
+                        {analytics.dailyRevenue.filter((_, i) => {
+                          const step = Math.ceil(analytics.dailyRevenue.length / 6);
+                          return i % step === 0 || i === analytics.dailyRevenue.length - 1;
+                        }).map((day) => (
+                          <span key={day.date} className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                            {new Date(day.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1115,17 +1186,20 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-              {/* Piores Avaliações */}
+              {/* Maior Receita */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
                 <h3
                   className={`text-lg font-semibold mb-4 ${
                     isDark ? "text-white" : "text-slate-800"
                   }`}
                 >
-                  ⚠️ Piores Avaliações
+                  💰 Maior Receita
                 </h3>
                 <div className="space-y-3">
-                  {analytics.worstProfessionals.map((prof, i) => (
+                  {analytics.professionalPerformance
+                    .sort((a, b) => b.revenue - a.revenue)
+                    .slice(0, 5)
+                    .map((prof, i) => (
                     <div
                       key={prof.id}
                       className={`flex items-center justify-between p-2 rounded-lg ${
@@ -1133,7 +1207,7 @@ export default function AdminDashboard() {
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-red-400">{i + 1}º</span>
+                        <span className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
                         <span
                           className={`text-sm ${
                             isDark ? "text-white" : "text-slate-800"
@@ -1143,13 +1217,12 @@ export default function AdminDashboard() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-red-400 fill-red-400" />
                         <span
                           className={`text-sm font-medium ${
-                            isDark ? "text-red-400" : "text-red-600"
+                            isDark ? "text-emerald-400" : "text-emerald-600"
                           }`}
                         >
-                          {prof.avgRating}
+                          {formatCurrency(prof.revenue)}
                         </span>
                       </div>
                     </div>
@@ -1456,6 +1529,7 @@ export default function AdminDashboard() {
                   <tr className={isDark ? "text-slate-400" : "text-slate-500"}>
                     <th className="text-left p-3 text-sm font-medium">Nome</th>
                     <th className="text-left p-3 text-sm font-medium">Telefone</th>
+                    <th className="text-left p-3 text-sm font-medium">PIN</th>
                     <th className="text-left p-3 text-sm font-medium">Email</th>
                     <th className="text-left p-3 text-sm font-medium">Pontos</th>
                     <th className="text-left p-3 text-sm font-medium">Total Gasto</th>
@@ -1469,6 +1543,11 @@ export default function AdminDashboard() {
                     <tr key={client.id} className={`border-t ${isDark ? "border-slate-700" : "border-slate-100"}`}>
                       <td className={`p-3 font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{client.name}</td>
                       <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.phone}</td>
+                      <td className="p-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700"}`}>
+                          🔑 {client.pin}
+                        </span>
+                      </td>
                       <td className={`p-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{client.email || "-"}</td>
                       <td className={`p-3 ${isDark ? "text-amber-400" : "text-amber-600"}`}>{client.pointsBalance.toLocaleString()}</td>
                       <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{formatCurrency(client.totalSpent)}</td>
@@ -1844,10 +1923,10 @@ export default function AdminDashboard() {
                       }`}
                     >
                       Especialidades
+                      <span className={`text-xs ml-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                        Separe por vírgulas
+                      </span>
                     </label>
-                    <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                      Separe por vírgulas
-                    </p>
                     <input
                       type="text"
                       value={
@@ -1869,10 +1948,10 @@ export default function AdminDashboard() {
                       }
                       className={`w-full rounded-lg border px-3 py-2 text-sm ${
                         isDark
-                          ? "bg-slate-800 border-slate-600 text-slate-50"
-                          : "bg-white border-slate-300 text-slate-900"
+                          ? "bg-slate-800 border-slate-600 text-slate-50 placeholder:text-slate-500"
+                          : "bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
                       }`}
-                      placeholder="Ex: Esteticista, Médico Dermatologista"
+                      placeholder="Ex: Esteticista, Médico Dermatol..."
                     />
                   </div>
                 </div>

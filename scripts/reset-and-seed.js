@@ -12,8 +12,9 @@ const supabase = createClient(
 );
 
 async function cleanTables() {
-  console.log('🧹 Limpando tabelas...\n');
+  console.log('🧹 Limpando tabelas de dados fake (preservando usuários criados)...\n');
   
+  // IMPORTANTE: NÃO deletar auth.users - usuários criados via Admin devem ser mantidos
   const tables = [
     'fidelity_reviews',
     'fidelity_appointment_services',
@@ -30,6 +31,8 @@ async function cleanTables() {
       console.log(`   ✅ ${table} limpa`);
     }
   }
+  
+  console.log('   ℹ️  Usuários do sistema (auth.users) foram preservados');
 }
 
 async function seedClients() {
@@ -40,7 +43,10 @@ async function seedClients() {
     { name: 'Ana Santos', phone: '11988776655', pin: '6655', email: 'ana.santos@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 },
     { name: 'Carla Oliveira', phone: '11977665544', pin: '5544', email: 'carla.oliveira@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 },
     { name: 'Juliana Costa', phone: '11966554433', pin: '4433', email: 'juliana.costa@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 },
-    { name: 'Patricia Lima', phone: '11955443322', pin: '3322', email: 'patricia.lima@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 }
+    { name: 'Patricia Lima', phone: '11955443322', pin: '3322', email: 'patricia.lima@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 },
+    { name: 'Fernanda Souza', phone: '11944332211', pin: '2211', email: 'fernanda.souza@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 },
+    { name: 'Beatriz Martins', phone: '11933221100', pin: '1100', email: 'beatriz.martins@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 },
+    { name: 'Renata Almeida', phone: '11922110099', pin: '0099', email: 'renata.almeida@email.com', points_balance: 0, total_spent: 0, total_appointments: 0 }
   ];
   
   const inserted = [];
@@ -77,11 +83,11 @@ async function seedAppointments(clients) {
     { name: 'Hidratação Capilar', price: 120, category: 'Tratamentos' }
   ];
   
-  // Gerar atendimentos nos últimos 90 dias
+  // Gerar atendimentos nos últimos 90 dias (mais dados)
   const appointments = [];
   const today = new Date();
   
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 50; i++) {
     const daysAgo = Math.floor(Math.random() * 90);
     const date = new Date(today);
     date.setDate(date.getDate() - daysAgo);
@@ -100,7 +106,16 @@ async function seedAppointments(clients) {
     }
     
     const total = selectedServices.reduce((sum, s) => sum + s.price, 0);
-    const hasReview = Math.random() > 0.3;
+    const hasReview = Math.random() > 0.2; // 80% com avaliação
+    
+    // Variar avaliações: 10% ruins (1-2), 20% médias (3), 70% boas (4-5)
+    let rating = 5;
+    if (hasReview) {
+      const rand = Math.random();
+      if (rand < 0.10) rating = Math.random() < 0.5 ? 1 : 2; // 10% ruins
+      else if (rand < 0.30) rating = 3; // 20% médias
+      else rating = Math.random() < 0.6 ? 4 : 5; // 70% boas
+    }
     
     appointments.push({
       client_id: client.id,
@@ -112,7 +127,7 @@ async function seedAppointments(clients) {
       total,
       points_earned: total,
       has_review: hasReview,
-      review_rating: hasReview ? 4 + Math.floor(Math.random() * 2) : null,
+      review_rating: hasReview ? rating : null,
       review_comment: hasReview ? 'Ótimo atendimento!' : null,
       services: selectedServices
     });
@@ -174,24 +189,52 @@ async function updateClientStats(clients, appointments) {
 async function seedReviews(appointments) {
   console.log('\n⭐ Inserindo avaliações...\n');
   
-  // Avaliar 70% dos atendimentos
+  // Avaliar 80% dos atendimentos
   const toReview = appointments.filter(a => a.has_review);
   
   for (const apt of toReview) {
-    const rating = apt.review_rating || (4 + Math.floor(Math.random() * 2)); // 4 ou 5 estrelas
+    const rating = apt.review_rating || 5;
     
-    const comments = [
-      'Excelente atendimento! Profissional muito atenciosa.',
-      'Adorei o resultado, voltarei com certeza!',
-      'Ambiente agradável e equipe muito educada.',
-      'Serviço impecável, recomendo!',
-      'Muito satisfeita com o procedimento.',
-      'Ótima experiência, profissional muito competente.',
-      'Atendimento maravilhoso, superou expectativas!',
-      'Ambiente aconchegante e resultado perfeito.',
-      'Profissional dedicada e cuidadosa.',
-      'Adorei! Com certeza voltarei mais vezes.'
-    ];
+    // Comentários baseados na nota
+    const commentsByRating = {
+      1: [
+        'Péssimo atendimento, muito insatisfeita.',
+        'Não gostei do resultado, não volto mais.',
+        'Profissional despreparada, experiência terrível.'
+      ],
+      2: [
+        'Deixou a desejar, esperava mais.',
+        'Atendimento fraco, não recomendo.',
+        'Resultado abaixo das expectativas.'
+      ],
+      3: [
+        'Atendimento ok, nada de especial.',
+        'Esperava um pouco mais pela qualidade.',
+        'Razoável, mas já vi melhor.'
+      ],
+      4: [
+        'Bom atendimento, satisfeita com o resultado.',
+        'Gostei, profissional competente.',
+        'Atendimento agradável e bom resultado.',
+        'Muito bom, voltarei mais vezes.'
+      ],
+      5: [
+        'Excelente atendimento! Profissional muito atenciosa.',
+        'Adorei o resultado, voltarei com certeza!',
+        'Ambiente agradável e equipe muito educada.',
+        'Serviço impecável, recomendo!',
+        'Muito satisfeita com o procedimento.',
+        'Ótima experiência, profissional muito competente.',
+        'Atendimento maravilhoso, superou expectativas!',
+        'Ambiente aconchegante e resultado perfeito.',
+        'Profissional dedicada e cuidadosa.',
+        'Adorei! Com certeza voltarei mais vezes.',
+        'Perfeito! Melhor experiência que já tive.',
+        'Impecável do início ao fim!'
+      ]
+    };
+    
+    const comments = commentsByRating[rating] || commentsByRating[5];
     
     const { error } = await supabase.from('fidelity_reviews').insert({
       appointment_id: apt.id,
