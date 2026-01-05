@@ -4,6 +4,7 @@ export interface FidelityReview {
   id: string;
   client_id: string;
   appointment_id: string;
+  staff_id: string | null; // ID do profissional avaliado
   rating: number;
   comment: string | null;
   created_at: string;
@@ -31,6 +32,7 @@ export async function getReviews(): Promise<FidelityReview[]> {
 export async function createReview(review: {
   client_id: string;
   appointment_id: string;
+  staff_id?: string; // Profissional avaliado
   rating: number;
   comment?: string;
 }): Promise<FidelityReview | null> {
@@ -40,6 +42,7 @@ export async function createReview(review: {
       .insert({
         client_id: review.client_id,
         appointment_id: review.appointment_id,
+        staff_id: review.staff_id || null,
         rating: review.rating,
         comment: review.comment || null,
       })

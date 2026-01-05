@@ -62,7 +62,8 @@ export default function ClientDashboard({ clientId, onLogout }: ClientDashboardP
   const professionals = getProfessionals().filter(p => p.role !== "recepcionista");
 
   const [tab, setTab] = useState<Tab>("inicio");
-  const [showReview, setShowReview] = useState(!!pendingReview);
+  // Forçar avaliação obrigatória - sempre mostrar se houver pendingReview
+  const [showReview, setShowReview] = useState(true); // Sempre true inicialmente
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [selectedProfessional, setSelectedProfessional] = useState("");
@@ -79,13 +80,14 @@ export default function ClientDashboard({ clientId, onLogout }: ClientDashboardP
   const handleSubmitReview = () => {
     if (rating === 0 || !pendingReview) return;
     
-    // Salva review no contexto global
+    // Salva review no contexto global com profissional selecionado
     addReview({
       id: `rev-${crypto.randomUUID()}`,
       clientId,
       appointmentId: pendingReview.id,
       rating,
       comment: comment || undefined,
+      professionalId: selectedProfessional || pendingReview.professionalId,
       createdAt: new Date().toISOString().split("T")[0],
     });
 
@@ -100,8 +102,12 @@ export default function ClientDashboard({ clientId, onLogout }: ClientDashboardP
     setTimeout(() => setShowReview(false), 2000);
   };
 
+  // Remover opção de pular avaliação - OBRIGATÓRIO avaliar
   const handleSkipReview = () => {
-    setShowReview(false);
+    // NÃO permitir pular - apenas fechar se já avaliou
+    if (reviewSubmitted) {
+      setShowReview(false);
+    }
   };
 
   // Modal de avaliação pendente - Premium
@@ -160,20 +166,17 @@ export default function ClientDashboard({ clientId, onLogout }: ClientDashboardP
               className="w-full h-24 rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none resize-none mb-6"
             />
 
-            {/* Botões */}
+            {/* Botão - AVALIAÇÃO OBRIGATÓRIA */}
             <button
               onClick={handleSubmitReview}
               disabled={rating === 0}
-              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 font-medium text-slate-900 disabled:opacity-50 mb-3"
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 font-medium text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Enviar Avaliação
+              {rating === 0 ? 'Selecione as estrelas para continuar' : 'Enviar Avaliação'}
             </button>
-            <button
-              onClick={handleSkipReview}
-              className="w-full py-3 text-sm text-slate-500 hover:text-white transition-colors"
-            >
-              Avaliar depois
-            </button>
+            <p className="text-center text-xs text-slate-500 mt-3">
+              ⚠️ Avaliação obrigatória para acessar seus benefícios
+            </p>
           </div>
         </div>
       </main>

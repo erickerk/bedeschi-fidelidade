@@ -414,6 +414,7 @@ export interface Review {
   id: string;
   clientId: string;
   appointmentId: string;
+  professionalId?: string; // ID do profissional avaliado
   rating: number;
   comment?: string;
   createdAt: string;

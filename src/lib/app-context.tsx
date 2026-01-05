@@ -589,6 +589,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setReviews((prev) => [...prev, review]);
     
+    // Persistir avaliação no Supabase com staff_id
+    ReviewsAPI.createReview({
+      client_id: review.clientId,
+      appointment_id: review.appointmentId,
+      staff_id: review.professionalId,
+      rating: review.rating,
+      comment: review.comment,
+    }).catch((err) => console.error("[AppContext] Erro ao criar avaliação no Supabase:", err));
+    
     // Marca atendimento como avaliado
     if (apt) {
       updateAppointment({
