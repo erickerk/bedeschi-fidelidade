@@ -33,6 +33,7 @@ export default function RecepcaoDashboard() {
   const [procedureSearchTerm, setProcedureSearchTerm] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showProcedureDropdown, setShowProcedureDropdown] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Estados para modais
   const [showNewClient, setShowNewClient] = useState(false);
@@ -53,7 +54,7 @@ export default function RecepcaoDashboard() {
     clientId: "",
     professionalId: "",
     selectedServices: [] as string[],
-    date: new Date().toISOString().split("T")[0],
+    date: "",
     time: "09:00"
   });
 
@@ -64,6 +65,15 @@ export default function RecepcaoDashboard() {
 
   const isDark = theme === "dark";
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+
+  // Marcar como mounted e definir data atual
+  useEffect(() => {
+    setMounted(true);
+    setNewAppointment(prev => ({
+      ...prev,
+      date: new Date().toISOString().split("T")[0]
+    }));
+  }, []);
 
   // Verificar autenticação
   useEffect(() => {
@@ -683,11 +693,13 @@ export default function RecepcaoDashboard() {
                 />
               </div>
 
-              <div className={`p-3 rounded-lg ${isDark ? "bg-amber-500/10 border border-amber-500/30" : "bg-amber-50 border border-amber-200"}`}>
-                <p className={`text-sm ${isDark ? "text-amber-300" : "text-amber-700"}`}>
-                  🔑 PIN atual: <span className="font-bold">{editingClient.pin}</span>
-                </p>
-              </div>
+              {editingClient && (
+                <div className={`p-3 rounded-lg ${isDark ? "bg-amber-500/10 border border-amber-500/30" : "bg-amber-50 border border-amber-200"}`}>
+                  <p className={`text-sm ${isDark ? "text-amber-300" : "text-amber-700"}`}>
+                    🔑 PIN atual: <span className="font-bold">{editingClient.pin || "N/A"}</span>
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">
