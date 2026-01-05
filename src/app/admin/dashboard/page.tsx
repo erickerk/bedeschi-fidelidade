@@ -1856,74 +1856,122 @@ export default function AdminDashboard() {
                 })}
               </div>
 
-              {/* Usuários do Sistema (Persistentes no Supabase) */}
-              <div className={`mt-8 rounded-xl p-6 border-2 ${isDark ? "bg-slate-900/50 border-amber-500/30" : "bg-amber-50/50 border-amber-200"}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <h4 className={`text-lg font-semibold ${isDark ? "text-amber-400" : "text-amber-700"}`}>
-                      🔐 Usuários do Sistema (Supabase)
-                    </h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "bg-amber-500/20 text-amber-300" : "bg-amber-200 text-amber-800"}`}>
-                      Permanentes
-                    </span>
+              {/* Usuários do Sistema */}
+              <div className={`mt-8 rounded-xl p-6 ${isDark ? "bg-slate-900/50 border border-slate-700" : "bg-slate-50 border border-slate-200"}`}>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${isDark ? "bg-amber-500/10" : "bg-amber-100"}`}>
+                      <Users className={`h-5 w-5 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
+                    </div>
+                    <div>
+                      <h4 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                        Usuários do Sistema
+                      </h4>
+                      <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                        {staffUsers.length} usuário{staffUsers.length !== 1 ? 's' : ''} cadastrado{staffUsers.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
                   </div>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                    {staffUsers.length} usuário(s) cadastrado(s)
-                  </p>
+                  <button
+                    onClick={() => {/* TODO: Adicionar modal de criar usuário */}}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 font-medium transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Novo Usuário
+                  </button>
                 </div>
 
                 {staffUsers.length > 0 ? (
-                  <div className="space-y-2">
-                    {staffUsers.map((user) => (
-                      <div
-                        key={user.id}
-                        className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-800/50" : "bg-white"}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            user.role === "admin" ? "bg-purple-500/20 text-purple-400" :
-                            user.role === "recepcao" ? "bg-blue-500/20 text-blue-400" :
-                            "bg-green-500/20 text-green-400"
-                          }`}>
-                            <Users className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
-                              {user.name}
-                            </p>
-                            <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                              {user.email}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            user.role === "admin" ? "bg-purple-500/20 text-purple-400" :
-                            user.role === "recepcao" ? "bg-blue-500/20 text-blue-400" :
-                            user.role === "profissional" ? "bg-green-500/20 text-green-400" :
-                            "bg-cyan-500/20 text-cyan-400"
-                          }`}>
-                            {user.role === "admin" ? "Admin" :
-                             user.role === "recepcao" ? "Recepção" :
-                             user.role === "profissional" ? "Profissional" :
-                             "Médico"}
-                          </span>
-                          <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                            {new Date(user.created_at).toLocaleDateString("pt-BR")}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className={`border-b ${isDark ? "border-slate-700" : "border-slate-200"}`}>
+                          <th className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                            Usuário
+                          </th>
+                          <th className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                            Função
+                          </th>
+                          <th className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                            Cadastrado em
+                          </th>
+                          <th className={`text-right py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {staffUsers.map((user) => (
+                          <tr
+                            key={user.id}
+                            className={`border-b ${isDark ? "border-slate-800" : "border-slate-100"} hover:${isDark ? "bg-slate-800/50" : "bg-slate-50"} transition-colors`}
+                          >
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                  user.role === "admin" ? "bg-purple-500/20 text-purple-400" :
+                                  user.role === "recepcao" ? "bg-blue-500/20 text-blue-400" :
+                                  user.role === "profissional" ? "bg-green-500/20 text-green-400" :
+                                  "bg-cyan-500/20 text-cyan-400"
+                                }`}>
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
+                                    {user.name}
+                                  </p>
+                                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                                    {user.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                user.role === "admin" ? "bg-purple-500/20 text-purple-400" :
+                                user.role === "recepcao" ? "bg-blue-500/20 text-blue-400" :
+                                user.role === "profissional" ? "bg-green-500/20 text-green-400" :
+                                "bg-cyan-500/20 text-cyan-400"
+                              }`}>
+                                {user.role === "admin" ? "Administrador" :
+                                 user.role === "recepcao" ? "Recepção" :
+                                 user.role === "profissional" ? "Profissional" :
+                                 "Médico"}
+                              </span>
+                            </td>
+                            <td className={`py-4 px-4 text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                              {new Date(user.created_at).toLocaleDateString("pt-BR", {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                                Ativo
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
-                  <div className={`text-center py-8 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                    <p className="mb-2">⚠️ Nenhum usuário encontrado no Supabase</p>
-                    <p className="text-sm">
-                      Execute o SQL da tabela staff_users no Supabase SQL Editor
+                  <div className={`text-center py-12 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                    <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${isDark ? "bg-slate-800" : "bg-slate-100"}`}>
+                      <Users className="h-8 w-8" />
+                    </div>
+                    <p className="text-lg font-medium mb-2">Nenhum usuário cadastrado</p>
+                    <p className="text-sm mb-4">
+                      Adicione usuários do sistema para gerenciar a equipe
                     </p>
-                    <p className="text-xs mt-2">
-                      Arquivo: <code className="px-2 py-1 rounded bg-slate-700 text-amber-400">SQL_CREATE_STAFF_USERS.sql</code>
-                    </p>
+                    <button
+                      onClick={() => {/* TODO: Adicionar modal de criar usuário */}}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 font-medium transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Adicionar Primeiro Usuário
+                    </button>
                   </div>
                 )}
               </div>

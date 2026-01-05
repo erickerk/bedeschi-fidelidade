@@ -134,75 +134,108 @@ export default function ClientAccessPage() {
         
         {/* Tela de Login Premium */}
         {step === "login" && (
-          <div className="w-full max-w-xs text-center">
-            {/* Logo */}
-            <div className="mx-auto mb-4">
+          <div className="w-full max-w-md text-center">
+            {/* Logo Premium - Maior e mais destaque */}
+            <div className="mx-auto mb-8 relative">
+              {/* Efeito de brilho circular */}
+              <div className={`absolute inset-0 blur-3xl opacity-20 ${isDark ? "bg-amber-500" : "bg-amber-400"}`} />
               <img
                 src="/Logo.png"
                 alt="Instituto Bedeschi"
-                className={`h-16 w-auto mx-auto object-contain ${
+                className={`h-32 w-auto mx-auto object-contain relative z-10 ${
                   isDark
-                    ? "drop-shadow-[0_0_28px_rgba(251,191,36,0.5)]"
-                    : "drop-shadow-[0_0_22px_rgba(148,163,184,0.6)]"
+                    ? "drop-shadow-[0_0_40px_rgba(251,191,36,0.6)]"
+                    : "drop-shadow-[0_0_35px_rgba(217,119,6,0.4)]"
                 }`}
               />
             </div>
             
-            {/* Título */}
-            <h1 className={`text-xl font-light ${isDark ? "text-white" : "text-slate-800"}`}>
-              Instituto <span className="font-semibold text-amber-500">Bedeschi</span>
-            </h1>
-            <p className={`text-[10px] uppercase tracking-[0.2em] mt-1 ${isDark ? "text-amber-500/60" : "text-amber-600/80"}`}>
-              Programa de Fidelidade
-            </p>
+            {/* Título Premium */}
+            <div className="mb-8">
+              <h1 className={`text-2xl font-light mb-2 ${isDark ? "text-white" : "text-slate-800"}`}>
+                Instituto <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">Bedeschi</span>
+              </h1>
+              <div className={`h-px w-32 mx-auto mb-3 ${isDark ? "bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" : "bg-gradient-to-r from-transparent via-amber-400/50 to-transparent"}`} />
+              <p className={`text-xs uppercase tracking-[0.25em] font-light ${isDark ? "text-amber-400/70" : "text-amber-700/80"}`}>
+                Programa de Fidelidade
+              </p>
+            </div>
 
-            {/* QR Code */}
-            <div className="my-5 flex justify-center">
-              <div className={`rounded-xl p-3 shadow-lg ${isDark ? "bg-white shadow-amber-500/10" : "bg-white shadow-amber-200"}`}>
-                <QRCodeSVG 
-                  value="https://bedeschi-fidelidade-app.vercel.app"
-                  size={96}
-                  level="H"
-                  includeMargin={false}
-                  fgColor="#1e293b"
-                  bgColor="#ffffff"
-                />
+            {/* QR Code Premium */}
+            <div className="my-6 flex justify-center">
+              <div className="relative">
+                {/* Border dourado animado */}
+                <div className={`absolute -inset-1 rounded-2xl blur-sm ${isDark ? "bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500" : "bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400"} opacity-50`} />
+                <div className={`relative rounded-2xl p-4 ${isDark ? "bg-slate-900 shadow-2xl" : "bg-white shadow-xl"}  border ${isDark ? "border-slate-800" : "border-amber-100"}`}>
+                  <QRCodeSVG 
+                    value="https://bedeschi-fidelidade-app.vercel.app"
+                    size={120}
+                    level="H"
+                    includeMargin={false}
+                    fgColor="#1e293b"
+                    bgColor="#ffffff"
+                  />
+                </div>
               </div>
             </div>
-            <p className={`text-[10px] mb-4 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
-              Escaneie ou digite seu celular
+            <p className={`text-xs mb-6 font-light ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+              <span className="inline-block mr-2">📱</span>
+              Escaneie o QR Code ou digite seu celular
             </p>
 
-            {/* Form Login */}
-            <form onSubmit={handlePhoneSubmit} className="space-y-3">
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(formatPhone(e.target.value))}
-                placeholder="(11) 99999-9999"
-                autoFocus
-                className={`w-full rounded-xl border px-4 py-3 text-center focus:outline-none transition-colors ${
-                  isDark 
-                    ? "border-slate-700 bg-slate-800/80 text-white placeholder:text-slate-500 focus:border-amber-500" 
-                    : "border-amber-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-amber-500 shadow-sm"
-                }`}
-              />
+            {/* Form Login Premium */}
+            <form onSubmit={handlePhoneSubmit} className="space-y-4">
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  placeholder="(11) 99999-9999"
+                  autoFocus
+                  className={`w-full rounded-2xl border-2 px-6 py-4 text-center text-lg font-light focus:outline-none transition-all duration-300 ${
+                    isDark 
+                      ? "border-slate-700 bg-slate-800/60 backdrop-blur-sm text-white placeholder:text-slate-500 focus:border-amber-500 focus:bg-slate-800/80 focus:shadow-lg focus:shadow-amber-500/20" 
+                      : "border-amber-200 bg-white/80 backdrop-blur-sm text-slate-800 placeholder:text-slate-400 focus:border-amber-500 focus:shadow-xl focus:shadow-amber-200/50"
+                  }`}
+                />
+              </div>
               
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              {error && (
+                <div className="flex items-center justify-center gap-2 text-red-500">
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm font-medium">{error}</p>
+                </div>
+              )}
 
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-semibold text-white shadow-lg shadow-amber-500/30 disabled:opacity-50 hover:from-amber-600 hover:to-amber-700 transition-all"
+                className="relative w-full rounded-2xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 py-4 font-semibold text-white shadow-2xl shadow-amber-500/40 disabled:opacity-50 hover:shadow-amber-500/60 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] overflow-hidden group"
               >
-                {loading ? "..." : "Acessar Meus Pontos"}
+                <span className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <span className="relative flex items-center justify-center gap-2">
+                  {loading ? (
+                    <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Acessar Meus Pontos
+                    </>
+                  )}
+                </span>
               </button>
             </form>
 
-            {/* Footer */}
-            <p className={`mt-4 text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>
-              © 2026 Instituto Bedeschi
-            </p>
+            {/* Footer Premium */}
+            <div className={`mt-8 pt-6 border-t ${isDark ? "border-slate-800" : "border-slate-200"}`}>
+              <p className={`text-xs font-light ${isDark ? "text-slate-600" : "text-slate-500"}`}>
+                © 2026 Instituto Bedeschi • Todos os direitos reservados
+              </p>
+            </div>
           </div>
         )}
 
