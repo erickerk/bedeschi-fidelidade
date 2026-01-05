@@ -15,5 +15,9 @@
   ],
   "files.associations": {
     "*.css": "tailwindcss"
-  }
+  },
+  "html.validate.styles": false,
+  "css.lint.validProperties": [],
+  "javascript.validate.enable": true,
+  "typescript.validate.enable": true
 }
