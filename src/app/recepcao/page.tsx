@@ -8,7 +8,7 @@ import { getServices, type Service } from "@/lib/services-api";
 import { getStaffUsers, type StaffUser } from "@/lib/staff-users-api";
 import {
   Sun, Moon, LogOut, Users, Calendar, Gift, Plus, Search, Send,
-  Check, X, User, Phone, Mail, Clock, Star, ChevronDown
+  Check, X, User, Phone, Mail, Clock, Star, ChevronDown, Edit2
 } from "lucide-react";
 
 interface StaffSession {
@@ -36,10 +36,12 @@ export default function RecepcaoDashboard() {
 
   // Estados para modais
   const [showNewClient, setShowNewClient] = useState(false);
+  const [showEditClient, setShowEditClient] = useState(false);
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
+  const [editingClient, setEditingClient] = useState<any>(null);
 
   // Formulário novo cliente
   const [newClient, setNewClient] = useState({
@@ -57,7 +59,7 @@ export default function RecepcaoDashboard() {
 
   const {
     clients, appointments, rewards, professionals,
-    addClient, addAppointment, getClientRewards, redeemReward
+    addClient, addAppointment, getClientRewards, redeemReward, updateClient
   } = useApp();
 
   const isDark = theme === "dark";
@@ -134,6 +136,29 @@ export default function RecepcaoDashboard() {
     alert(`Cliente cadastrado com sucesso!\n\nPIN de acesso: ${generatedPin}\n\nAnote este PIN para o cliente.`);
     setNewClient({ name: "", phone: "", email: "" });
     setShowNewClient(false);
+  };
+
+  // Abrir modal de edição
+  const handleEditClient = (client: any) => {
+    setEditingClient(client);
+    setShowEditClient(true);
+  };
+
+  // Salvar edição de cliente
+  const handleSaveEditClient = () => {
+    if (!editingClient.name || !editingClient.phone) {
+      alert("Preencha nome e telefone");
+      return;
+    }
+
+    const cleanPhone = editingClient.phone.replace(/\D/g, "");
+    updateClient({
+      ...editingClient,
+      phone: cleanPhone,
+    });
+
+    setShowEditClient(false);
+    setEditingClient(null);
   };
 
   // Registrar atendimento
@@ -228,9 +253,9 @@ export default function RecepcaoDashboard() {
   }
 
   return (
-    <div className={`min-h-screen ${isDark ? "bg-slate-900" : "bg-amber-50"}`}>
+    <div className={`min-h-screen ${isDark ? "bg-slate-900" : "bg-gradient-to-br from-slate-50 via-amber-50/30 to-slate-100"}`}>
       {/* Header */}
-      <header className={`border-b ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-amber-100"}`}>
+      <header className={`border-b ${isDark ? "bg-slate-800 border-slate-700" : "bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm"}`}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/Logo.png" alt="Instituto Bedeschi" className="h-10 w-auto" />
@@ -363,7 +388,7 @@ export default function RecepcaoDashboard() {
             </div>
 
             {/* Lista de clientes */}
-            <div className={`rounded-xl overflow-hidden ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div className={`rounded-xl overflow-hidden ${isDark ? "bg-slate-800" : "bg-white shadow-md border border-slate-200"}`}>
               <table className="w-full">
                 <thead>
                   <tr className={isDark ? "text-slate-400" : "text-slate-500"}>
@@ -394,6 +419,16 @@ export default function RecepcaoDashboard() {
                         <td className={`p-4 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.totalAppointments}</td>
                         <td className="p-4">
                           <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => handleEditClient(client)}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
+                                isDark ? "bg-blue-500/10 text-blue-300" : "bg-blue-50 text-blue-700"
+                              }`}
+                              title="Editar dados do cliente"
+                            >
+                              <Edit2 className="h-3 w-3 inline mr-1" />
+                              Editar
+                            </button>
                             {availableRewards.length > 0 && (
                               <button
                                 onClick={() => handleOpenRedeem(client.id)}
@@ -589,6 +624,84 @@ export default function RecepcaoDashboard() {
                 className="flex-1 py-2 rounded-lg font-medium bg-amber-500 text-slate-900 hover:bg-amber-400"
               >
                 Cadastrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Cliente */}
+      {showEditClient && editingClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className={`w-full max-w-md rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                Editar Cliente
+              </h3>
+              <button onClick={() => { setShowEditClient(false); setEditingClient(null); }} className={isDark ? "text-slate-400" : "text-slate-500"} aria-label="Fechar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                  Nome completo *
+                </label>
+                <input
+                  type="text"
+                  value={editingClient.name}
+                  onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                  placeholder="Nome completo do cliente"
+                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                  Telefone *
+                </label>
+                <input
+                  type="tel"
+                  value={editingClient.phone}
+                  onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
+                  placeholder="11999887766"
+                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editingClient.email || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                  placeholder="email@cliente.com"
+                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                />
+              </div>
+
+              <div className={`p-3 rounded-lg ${isDark ? "bg-amber-500/10 border border-amber-500/30" : "bg-amber-50 border border-amber-200"}`}>
+                <p className={`text-sm ${isDark ? "text-amber-300" : "text-amber-700"}`}>
+                  🔑 PIN atual: <span className="font-bold">{editingClient.pin}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowEditClient(false); setEditingClient(null); }}
+                className={`flex-1 py-2 rounded-lg font-medium ${isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-700"}`}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEditClient}
+                className="flex-1 py-2 rounded-lg font-medium bg-blue-500 text-white hover:bg-blue-600"
+              >
+                Salvar Alterações
               </button>
             </div>
           </div>
