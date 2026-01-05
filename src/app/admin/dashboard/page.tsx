@@ -372,9 +372,14 @@ export default function AdminDashboard() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6);
 
-    // Receita diária dos últimos 7 dias (respeitando filtros)
+    // Receita diária baseada no período filtrado
     const dailyRevenue: { date: string; revenue: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
+    let daysToShow = 7;
+    if (analyticsPeriodFilter === "30d") daysToShow = 30;
+    else if (analyticsPeriodFilter === "90d") daysToShow = 90;
+    else if (analyticsPeriodFilter === "all") daysToShow = 90; // Limitar a 90 dias para visualização
+    
+    for (let i = daysToShow - 1; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split("T")[0];
       const dayRevenue = filteredApts
@@ -872,146 +877,118 @@ export default function AdminDashboard() {
 
             {/* Gráficos em Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico de Receita Diária */}
+              {/* Gráfico de Receita Premium - Linha */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
                       📈 Receita no período ({PERIOD_LABEL[analyticsPeriodFilter]})
                     </h3>
                     <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                      Valores já filtrados por período e tipo de procedimento selecionados.
+                      Valores filtrados por período e tipo de procedimento
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                      {formatCurrency(analytics.revenuePeriod)}
+                    </p>
+                    <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                      {analytics.appointmentsPeriod} atendimentos
                     </p>
                   </div>
                 </div>
                 {analytics.dailyRevenue.some((d) => d.revenue > 0) ? (
-                  <div className="flex items-end justify-between h-44 gap-3 rounded-2xl chart-grid-y px-3 pb-3">
-                    {analytics.dailyRevenue.map((day) => {
-                      const maxRevenue = Math.max(
-                        ...analytics.dailyRevenue.map((d) => d.revenue),
-                        1,
-                      );
-                      const heightPercent = (day.revenue / maxRevenue) * 100;
-                      return (
-                        <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                          <span
-                            className={`text-[10px] md:text-xs ${
-                              isDark ? "text-slate-400" : "text-slate-500"
-                            }`}
-                          >
-                            {formatCurrency(day.revenue)}
-                          </span>
-                          <div
-                            className={`w-full rounded-t-xl bg-gradient-to-t from-amber-500 via-amber-400 to-emerald-400 shadow-sm transition-all chart-bar-vertical`}
-                            data-chart-height={`${Math.max(heightPercent, 5)}%`}
-                          />
-                          <span
-                            className={`text-[10px] md:text-xs ${
-                              isDark ? "text-slate-500" : "text-slate-400"
-                            }`}
-                          >
-                            {new Date(day.date)
-                              .toLocaleDateString(
-                                "pt-BR",
-                                analyticsPeriodFilter === "7d"
-                                  ? { weekday: "short" }
-                                  : { day: "2-digit", month: "2-digit" },
-                              )
-                              .slice(0, 5)}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  <div className="relative h-56 w-full">
+                    <svg className="w-full h-full" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="revenueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="rgb(251 191 36 / 0.2)" />
+                          <stop offset="100%" stopColor="rgb(251 191 36 / 0)" />
+                        </linearGradient>
+                      </defs>
+                      {(() => {
+                        const maxRevenue = Math.max(...analytics.dailyRevenue.map((d) => d.revenue), 1);
+                        const width = 100;
+                        const height = 100;
+                        const padding = 5;
+                        const points = analytics.dailyRevenue.map((day, i) => {
+                          const x = (i / (analytics.dailyRevenue.length - 1)) * (width - 2 * padding) + padding;
+                          const y = height - ((day.revenue / maxRevenue) * (height - 2 * padding) + padding);
+                          return `${x},${y}`;
+                        }).join(' ');
+                        const areaPoints = `${padding},${height} ${points} ${width - padding},${height}`;
+                        return (
+                          <>
+                            <polygon points={areaPoints} fill="url(#revenueGradient)" vectorEffect="non-scaling-stroke" />
+                            <polyline
+                              points={points}
+                              fill="none"
+                              className={isDark ? "stroke-amber-400" : "stroke-amber-500"}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                            {analytics.dailyRevenue.map((day, i) => {
+                              const x = (i / (analytics.dailyRevenue.length - 1)) * (width - 2 * padding) + padding;
+                              const y = height - ((day.revenue / maxRevenue) * (height - 2 * padding) + padding);
+                              return day.revenue > 0 ? (
+                                <circle
+                                  key={day.date}
+                                  cx={`${x}%`}
+                                  cy={`${y}%`}
+                                  r="3"
+                                  className={isDark ? "fill-amber-400" : "fill-amber-500"}
+                                  vectorEffect="non-scaling-stroke"
+                                />
+                              ) : null;
+                            })}
+                          </>
+                        );
+                      })()}
+                    </svg>
+                    <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 mt-2">
+                      {analytics.dailyRevenue.filter((_, i) => {
+                        const step = Math.ceil(analytics.dailyRevenue.length / 7);
+                        return i % step === 0 || i === analytics.dailyRevenue.length - 1;
+                      }).map((day) => (
+                        <span key={day.date} className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                          {new Date(day.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  <div
-                    className={`flex h-40 items-center justify-center rounded-2xl border text-xs ${
-                      isDark
-                        ? "border-slate-700 text-slate-400 bg-slate-900/40"
-                        : "border-slate-200 text-slate-500 bg-slate-50"
-                    }`}
-                  >
-                    Nenhum dado de receita para o período e filtros selecionados.
+                  <div className={`h-56 flex items-center justify-center ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                    Nenhuma receita no período selecionado
                   </div>
                 )}
               </div>
 
-              {/* Top 5 Serviços */}
+              {/* Top 5 Procedimentos */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
                 <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
                   🏆 Top 5 Procedimentos
                 </h3>
                 <div className="space-y-3">
                   {analytics.topServices.slice(0, 5).map((service, i) => {
-                    const maxCount = analytics.topServices[0]?.count || 1;
-                    const widthPercent = (service.count / maxCount) * 100;
+                    const maxRevenue = analytics.topServices[0]?.revenue || 1;
+                    const widthPercent = (service.revenue / maxRevenue) * 100;
                     return (
                       <div key={service.name} className="space-y-1">
                         <div className="flex items-center justify-between">
                           <span className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
                             {i + 1}. {service.name}
                           </span>
-                          <span className={`text-sm ${isDark ? "text-amber-400" : "text-amber-600"}`}>
-                            {service.count}x • {formatCurrency(service.revenue)}
-                          </span>
+                          <div className="text-right">
+                            <span className={`text-sm font-semibold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(service.revenue)}</span>
+                            <span className={`text-xs ml-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>({service.count}x)</span>
+                          </div>
                         </div>
-                        <div className={`h-2 rounded-full ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
+                        <div className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
                           <div 
-                            className={`h-2 rounded-full ${CHART_COLORS[i]} chart-bar-horizontal`}
+                            className="h-2 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-500 chart-bar-horizontal"
                             data-chart-width={`${widthPercent}%`}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Top 5 Clientes */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
-                  👑 Top Clientes por Gasto
-                </h3>
-                <div className="space-y-3">
-                  {analytics.topClients.slice(0, 5).map((client, i) => (
-                    <div key={client.id} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-amber-500 text-white" : i === 1 ? "bg-slate-400 text-white" : i === 2 ? "bg-amber-700 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
-                          {i + 1}
-                        </div>
-                        <div>
-                          <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{client.name}</p>
-                          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{client.totalAppointments} visitas</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(client.totalSpent)}</p>
-                        <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>{client.pointsBalance.toLocaleString()} pts</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Receita por Categoria */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
-                  📊 Receita por Categoria
-                </h3>
-                <div className="space-y-3">
-                  {analytics.revenueByCategory.map(([category, revenue], i) => {
-                    const total = analytics.revenueByCategory.reduce((sum, [, r]) => sum + r, 0);
-                    const percent = total > 0 ? ((revenue / total) * 100).toFixed(1) : "0";
-                    return (
-                      <div key={category} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{category}</span>
-                          <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{formatCurrency(revenue)} ({percent}%)</span>
-                        </div>
-                        <div className={`h-3 rounded-full ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
-                          <div 
-                            className={`h-3 rounded-full ${CHART_COLORS[i]} chart-bar-horizontal`}
-                            data-chart-width={`${percent}%`}
                           />
                         </div>
                       </div>
@@ -1021,29 +998,77 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Profissionais - Grid de 3 colunas */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Top Avaliados */}
+            {/* Avaliações dos Profissionais */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Mais Bem Avaliados */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}>
                   ⭐ Mais Bem Avaliados
                 </h3>
-                <div className="space-y-3">
-                  {analytics.topRatedProfessionals.map((prof, i) => (
-                    <div key={prof.id} className={`flex items-center justify-between p-2 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
-                        <span className={`text-sm ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</span>
+                {analytics.topRatedProfessionals.length > 0 ? (
+                  <div className="space-y-3">
+                    {analytics.topRatedProfessionals.map((prof, i) => (
+                      <div key={prof.id} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            i === 0 ? "bg-amber-500 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"
+                          }`}>
+                            {i + 1}
+                          </div>
+                          <div>
+                            <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</p>
+                            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.reviewsCount} avaliações</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                          <span className={`text-lg font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                        <span className={`text-sm font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`text-center py-8 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                    Nenhuma avaliação registrada ainda
+                  </div>
+                )}
               </div>
 
+              {/* Piores Avaliações */}
+              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}>
+                  ⚠️ Piores Avaliações
+                </h3>
+                {analytics.worstProfessionals.length > 0 ? (
+                  <div className="space-y-3">
+                    {analytics.worstProfessionals.map((prof, i) => (
+                      <div key={prof.id} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
+                            {i + 1}
+                          </div>
+                          <div>
+                            <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</p>
+                            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.reviewsCount} avaliações</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                          <span className={`text-lg font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`text-center py-8 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                    Nenhuma avaliação registrada ainda
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Profissionais - Grid de 3 colunas */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Mais Atendimentos */}
               <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
                 <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
@@ -1138,6 +1163,47 @@ export default function AdminDashboard() {
         {/* Analytics - Análises Avançadas */}
         {tab === "analytics" && (
           <div className="space-y-6">
+            {/* Comparativo Mensal - MOVIDO PARA O TOPO */}
+            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                📊 Comparativo Mensal
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Atual</p>
+                  <p className={`text-3xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(analytics.revenueThisMonth)}</p>
+                  <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+                </div>
+                <div className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Anterior</p>
+                  <p className={`text-3xl font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{formatCurrency(analytics.revenueLastMonth)}</p>
+                  <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+                </div>
+                <div className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Variação (Crescimento)</p>
+                  <div className="flex items-center gap-2">
+                    {Number(analytics.revenueGrowth) > 0 ? (
+                      <ArrowUp className="h-6 w-6 text-green-500" />
+                    ) : Number(analytics.revenueGrowth) < 0 ? (
+                      <ArrowDown className="h-6 w-6 text-red-500" />
+                    ) : null}
+                    <p className={`text-3xl font-bold ${
+                      Number(analytics.revenueGrowth) > 0 
+                        ? "text-green-500" 
+                        : Number(analytics.revenueGrowth) < 0 
+                          ? "text-red-500" 
+                          : isDark ? "text-slate-400" : "text-slate-500"
+                    }`}>
+                      {analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : "Sem dados"}
+                    </p>
+                  </div>
+                  {analytics.revenueGrowth === "N/A" && (
+                    <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Mês anterior sem receita</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Filtros de Período */}
             <div className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
               <div className="flex flex-wrap items-center gap-4">
@@ -1245,57 +1311,71 @@ export default function AdminDashboard() {
                     <TrendingUp className={`h-6 w-6 ${isDark ? "text-purple-400" : "text-purple-600"}`} />
                   </div>
                   <div>
-                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Crescimento</p>
-                    <p className={`text-2xl font-bold ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : Number(analytics.revenueGrowth) < 0 ? "text-red-500" : isDark ? "text-slate-300" : "text-slate-600"}`}>
-                      {analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : "N/A"}
+                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Crescimento Mensal</p>
+                    <p className={`text-2xl font-bold ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : Number(analytics.revenueGrowth) < 0 ? "text-red-500" : isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      {analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : "Sem dados"}
                     </p>
+                    {analytics.revenueGrowth === "N/A" && (
+                      <p className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Mês anterior sem receita</p>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Gráficos Detalhados */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Top 10 Serviços */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
-                  📊 Top 10 Procedimentos por Receita
-                </h3>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {analytics.topServices.map((service, i) => {
-                    const maxRevenue = analytics.topServices[0]?.revenue || 1;
-                    const widthPercent = (service.revenue / maxRevenue) * 100;
-                    return (
-                      <div key={service.name} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-sm ${isDark ? "text-white" : "text-slate-800"}`}>
-                            <span className={`font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>#{i + 1}</span> {service.name}
-                          </span>
-                          <div className="text-right">
-                            <span className={`text-sm font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(service.revenue)}</span>
-                            <span className={`text-xs ml-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>({service.count}x)</span>
+            {/* Gráfico Principal - AUMENTADO E MELHORADO */}
+            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                📊 Top 10 Procedimentos por Receita
+              </h3>
+              <div className="space-y-4">
+                {analytics.topServices.map((service, i) => {
+                  const maxRevenue = analytics.topServices[0]?.revenue || 1;
+                  const widthPercent = (service.revenue / maxRevenue) * 100;
+                  return (
+                    <div key={service.name} className={`p-4 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${
+                            i === 0 ? "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg" 
+                            : i === 1 ? "bg-gradient-to-br from-slate-400 to-slate-500 text-white shadow-md" 
+                            : i === 2 ? "bg-gradient-to-br from-orange-600 to-orange-700 text-white shadow-md"
+                            : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"
+                          }`}>
+                            #{i + 1}
                           </div>
+                          <span className={`text-base font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{service.name}</span>
                         </div>
-                        <div className={`h-2 rounded-full ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
-                          <div 
-                            className={`h-2 rounded-full ${CHART_COLORS[i % CHART_COLORS.length]} chart-bar-horizontal`}
-                            data-chart-width={`${widthPercent}%`}
-                          />
+                        <div className="text-right">
+                          <span className={`text-lg font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(service.revenue)}</span>
+                          <span className={`text-sm ml-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>({service.count}x)</span>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className={`h-3 rounded-full overflow-hidden ${isDark ? "bg-slate-600" : "bg-slate-200"}`}>
+                        <div 
+                          className={`h-3 rounded-full transition-all duration-700 chart-bar-horizontal ${
+                            i === 0 ? "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400"
+                            : i === 1 ? "bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400"
+                            : i === 2 ? "bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400"
+                            : "bg-gradient-to-r from-purple-500 via-purple-400 to-pink-400"
+                          }`}
+                          data-chart-width={`${widthPercent}%`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Performance Detalhada da Equipe */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
-                  👥 Performance Detalhada da Equipe
-                </h3>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {filteredProfessionalPerformance.map((prof, i) => (
-                    <div key={prof.id} className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+            {/* Performance da Equipe - MELHORADO */}
+            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+                👥 Performance Detalhada da Equipe
+              </h3>
+              <div className="space-y-4">
+                {filteredProfessionalPerformance.map((prof, i) => (
+                  <div key={prof.id} className={`p-5 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-amber-500 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
@@ -1317,46 +1397,15 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       </div>
-                      <div className={`h-1.5 rounded-full ${isDark ? "bg-slate-600" : "bg-slate-200"}`}>
+                      <div className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-slate-600" : "bg-slate-200"}`}>
                         <div
-                          className="h-1.5 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 chart-bar-horizontal"
+                          className="h-2 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700 chart-bar-horizontal"
                           data-chart-width={`${(prof.revenue / (analytics.professionalPerformance[0]?.revenue || 1)) * 100}%`}
                         />
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-
-            {/* Comparativo Mensal */}
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
-                📈 Comparativo Mensal
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Atual</p>
-                  <p className={`text-2xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{formatCurrency(analytics.revenueThisMonth)}</p>
-                </div>
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Anterior</p>
-                  <p className={`text-2xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{formatCurrency(analytics.revenueLastMonth)}</p>
-                </div>
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Variação</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {Number(analytics.revenueGrowth) > 0 ? (
-                      <ArrowUp className="h-5 w-5 text-green-500" />
-                    ) : Number(analytics.revenueGrowth) < 0 ? (
-                      <ArrowDown className="h-5 w-5 text-red-500" />
-                    ) : null}
-                    <p className={`text-2xl font-bold ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : Number(analytics.revenueGrowth) < 0 ? "text-red-500" : isDark ? "text-slate-300" : "text-slate-600"}`}>
-                      {analytics.revenueGrowth !== "N/A" ? `${analytics.revenueGrowth}%` : "N/A"}
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -1794,15 +1843,11 @@ export default function AdminDashboard() {
                         isDark ? "text-slate-200" : "text-slate-700"
                       }`}
                     >
-                      <span>Especialidades</span>
-                      <span
-                        className={`block text-xs font-normal ${
-                          isDark ? "text-slate-400" : "text-slate-500"
-                        }`}
-                      >
-                        Separe por vírgulas
-                      </span>
+                      Especialidades
                     </label>
+                    <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      Separe por vírgulas
+                    </p>
                     <input
                       type="text"
                       value={
@@ -1838,7 +1883,7 @@ export default function AdminDashboard() {
                         isDark ? "text-slate-200" : "text-slate-700"
                       }`}
                     >
-                      Email (opcional)
+                      Email *
                     </label>
                     <input
                       type="email"
@@ -1859,6 +1904,7 @@ export default function AdminDashboard() {
                           : "bg-white border-slate-300 text-slate-900"
                       }`}
                       placeholder="contato@clinica.com"
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -1898,7 +1944,7 @@ export default function AdminDashboard() {
                         isDark ? "text-slate-200" : "text-slate-700"
                       }`}
                     >
-                      Senha de acesso da recepção
+                      Senha de acesso da recepção *
                     </label>
                     <input
                       type="text"
@@ -3273,6 +3319,95 @@ export default function AdminDashboard() {
                   >
                     Brindes e status de resgate
                   </p>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const availableRewards = rewards.filter(r => r.status === "available");
+                    const redeemedRewards = rewards.filter(r => r.status === "redeemed");
+                    const expiredRewards = rewards.filter(r => r.status === "expired");
+                    
+                    const getTipoRecompensa = (type: string) => {
+                      if (type === "FREE_SERVICE") return "Serviço Grátis";
+                      if (type === "DISCOUNT_FIXED") return "Desconto Fixo";
+                      if (type === "DISCOUNT_PERCENT") return "Desconto %";
+                      if (type === "CREDIT") return "Crédito";
+                      return type;
+                    };
+                    
+                    const getValorRecompensa = (r: typeof rewards[0]) => {
+                      if (r.type === "FREE_SERVICE") return r.serviceName || "Serviço";
+                      if (r.type === "DISCOUNT_PERCENT") return `${r.value || 0}%`;
+                      if (r.type === "DISCOUNT_FIXED" || r.type === "CREDIT") return `R$ ${r.value || 0}`;
+                      return "";
+                    };
+                    
+                    const reportData = [
+                      ...availableRewards.map((r) => ({
+                        Status: "DISPONÍVEL",
+                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
+                        Telefone: clients.find((c) => c.id === r.clientId)?.phone || "",
+                        Recompensa: r.title,
+                        Tipo: getTipoRecompensa(r.type),
+                        Valor: getValorRecompensa(r),
+                        Expira: r.expiresAt,
+                        DiasRestantes: Math.ceil((new Date(r.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
+                      })),
+                      ...redeemedRewards.map((r) => ({
+                        Status: "RESGATADO",
+                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
+                        Telefone: clients.find((c) => c.id === r.clientId)?.phone || "",
+                        Recompensa: r.title,
+                        Tipo: getTipoRecompensa(r.type),
+                        Valor: getValorRecompensa(r),
+                        Expira: r.expiresAt,
+                        DiasRestantes: "Já utilizado",
+                      })),
+                      ...expiredRewards.map((r) => ({
+                        Status: "EXPIRADO",
+                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
+                        Telefone: clients.find((c) => c.id === r.clientId)?.phone || "",
+                        Recompensa: r.title,
+                        Tipo: getTipoRecompensa(r.type),
+                        Valor: getValorRecompensa(r),
+                        Expira: r.expiresAt,
+                        DiasRestantes: "Expirado",
+                      })),
+                    ];
+                    
+                    exportToCSV(reportData, "itens-fidelidade-detalhado");
+                  }}
+                  className={`p-4 rounded-xl text-left ${
+                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                  }`}
+                >
+                  <Award
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Itens de Fidelidade
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Utilizados e disponíveis
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-green-500/20 text-green-400" : "bg-green-100 text-green-700"}`}>
+                      {rewards.filter(r => r.status === "available").length} disponíveis
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-700"}`}>
+                      {rewards.filter(r => r.status === "redeemed").length} resgatados
+                    </span>
+                  </div>
                 </button>
 
                 <button

@@ -61,4 +61,15 @@ CREATE POLICY "apt_services_read_all" ON public.fidelity_appointment_services
 CREATE POLICY "apt_services_write_all" ON public.fidelity_appointment_services 
   FOR ALL USING (true) WITH CHECK (true);
 
+-- AVALIAÇÕES: leitura pública
+DROP POLICY IF EXISTS "fidelity_reviews_select" ON public.fidelity_reviews;
+DROP POLICY IF EXISTS "reviews_read_all" ON public.fidelity_reviews;
+DROP POLICY IF EXISTS "reviews_write_all" ON public.fidelity_reviews;
+
+CREATE POLICY "reviews_read_all" ON public.fidelity_reviews 
+  FOR SELECT USING (true);
+
+CREATE POLICY "reviews_write_all" ON public.fidelity_reviews 
+  FOR ALL USING (true) WITH CHECK (true);
+
 SELECT 'Políticas RLS corrigidas com sucesso!' AS status;

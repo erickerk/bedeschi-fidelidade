@@ -69,11 +69,11 @@ export default function StaffLoginPage() {
       loggedAt: new Date().toISOString(),
     }));
 
-    // Redireciona para o painel administrativo
+    // Redireciona baseado no perfil
     if (user.role === "admin" || user.role === "qa") {
       router.push("/admin/dashboard");
-    } else {
-      router.push("/admin/dashboard"); // Recepção também vai para o admin por enquanto
+    } else if (user.role === "recepcao") {
+      router.push("/recepcao");
     }
   };
 

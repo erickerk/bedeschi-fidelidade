@@ -22,6 +22,7 @@ import * as ClientsAPI from "./clients-api";
 import * as AppointmentsAPI from "./appointments-api";
 import * as RewardsAPI from "./rewards-api";
 import * as RulesAPI from "./rules-api";
+import * as ReviewsAPI from "./reviews-api";
 
 const serviceNameToCategoryId: Record<string, string> = {};
 const serviceNameToId: Record<string, string> = {};
@@ -215,6 +216,7 @@ interface AppContextType {
   getClientById: (id: string) => Client | undefined;
   getClientByPhone: (phone: string) => Client | undefined;
   updateClient: (client: Client) => void;
+  addClient: (client: Client) => void;
 
   // Ações de Recompensas
   getClientRewards: (clientId: string) => Reward[];
@@ -375,6 +377,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.log("[AppContext] Nenhuma regra no Supabase, usando mocks");
         }
 
+        // Carregar avaliações
+        const supaReviews = await ReviewsAPI.getReviews();
+        if (supaReviews.length > 0) {
+          const mappedReviews = supaReviews.map((sr) => ({
+            id: sr.id,
+            clientId: sr.client_id,
+            appointmentId: sr.appointment_id,
+            rating: sr.rating,
+            comment: sr.comment || "",
+            createdAt: sr.created_at,
+          }));
+          setReviews(mappedReviews);
+          console.log(`[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`);
+        } else {
+          console.log("[AppContext] Nenhuma avaliação no Supabase, usando mocks");
+        }
+
         setSupabaseLoaded(true);
         console.log("[AppContext] Dados carregados com sucesso do Supabase Bedeschi!");
       } catch (error) {
@@ -411,6 +430,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       total_appointments: client.totalAppointments,
       last_visit: client.lastVisit,
     }).catch((err) => console.error("[AppContext] Erro ao atualizar cliente no Supabase:", err));
+  }, []);
+
+  const addClient = useCallback((client: Client) => {
+    setClients((prev) => [...prev, client]);
+    
+    // Persistir no Supabase
+    ClientsAPI.createClient({
+      name: client.name,
+      phone: client.phone,
+      pin: client.pin,
+      email: client.email,
+      birth_date: client.birthDate,
+    }).then((created) => {
+      if (created) {
+        // Atualizar o ID local com o ID real do Supabase
+        setClients((prev) => prev.map((c) => c.id === client.id ? { ...c, id: created.id } : c));
+        console.log(`[AppContext] Cliente ${client.name} criado no Supabase`);
+      }
+    }).catch((err) => console.error("[AppContext] Erro ao criar cliente no Supabase:", err));
   }, []);
 
   // Recompensas
@@ -653,11 +691,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       console.log("[AppContext] Recarregando dados do Supabase...");
       
-      const [supaClients, supaAppointments, supaRewards, supaRules] = await Promise.all([
+      const [supaClients, supaAppointments, supaRewards, supaRules, supaReviews] = await Promise.all([
         ClientsAPI.getClients(),
         AppointmentsAPI.getAppointmentsWithServices(),
         RewardsAPI.getRewards(),
         RulesAPI.getRules(),
+        ReviewsAPI.getReviews(),
       ]);
 
       if (supaClients.length > 0) {
@@ -684,9 +723,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setRules([...initialRules]);
       }
 
-      // Profissionais e reviews ainda em mock
+      // Profissionais em mock
       setProfessionals([...initialProfessionals]);
-      setReviews([...initialReviews]);
+      
+      // Reviews do Supabase
+      if (supaReviews.length > 0) {
+        const mappedReviews = supaReviews.map((sr) => ({
+          id: sr.id,
+          clientId: sr.client_id,
+          appointmentId: sr.appointment_id,
+          rating: sr.rating,
+          comment: sr.comment || "",
+          createdAt: sr.created_at,
+        }));
+        setReviews(mappedReviews);
+        console.log(`[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`);
+      } else {
+        setReviews([...initialReviews]);
+      }
       
       console.log("[AppContext] Dados recarregados com sucesso!");
     } catch (error) {
@@ -710,6 +764,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getClientById,
     getClientByPhone,
     updateClient,
+    addClient,
     getClientRewards,
     redeemReward,
     addReward,
