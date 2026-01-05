@@ -561,33 +561,52 @@ export default function AdminDashboard() {
     };
     addProfessional(professional);
 
-    // SALVAR USUÁRIO PERSISTENTE NO SUPABASE (TODOS OS TIPOS)
-    if (professional.email && newProfessional.loginPassword) {
-      try {
-        // Mapear role do formulário para role do Supabase
-        const supabaseRole = professional.role === "recepcionista" ? "recepcao" : professional.role;
-        
-        // Salvar na tabela staff_users do Supabase (PERSISTENTE)
-        await createStaffUser({
-          email: professional.email,
-          password: newProfessional.loginPassword,
-          name: professional.name,
-          role: supabaseRole as "admin" | "recepcao" | "profissional" | "medico",
-          specialty: professional.specialty,
-          created_by: user?.email || "admin",
-        });
-        
-        console.log("✅ Usuário salvo permanentemente no Supabase:", professional.email);
-
-        // Recarregar lista de usuários
-        const updatedUsers = await getStaffUsers();
-        setStaffUsers(updatedUsers);
-      } catch (error) {
-        console.error("❌ Erro ao salvar usuário no Supabase:", error);
-        alert(`Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    // SALVAR USUÁRIO PERSISTENTE NO SUPABASE
+    // APENAS RECEPCIONISTAS TÊM LOGIN - Profissionais/Médicos são cadastros para seleção/avaliação
+    const isReceptionist = professional.role === "recepcionista";
+    
+    if (isReceptionist) {
+      // Recepcionista PRECISA de email e senha
+      if (!professional.email || !newProfessional.loginPassword) {
+        alert("Email e senha são obrigatórios para cadastrar recepcionistas.");
+        return;
       }
-    } else if (!professional.email || !newProfessional.loginPassword) {
-      alert("Email e senha são obrigatórios para salvar o usuário no sistema.");
+    } else {
+      // Profissionais/Médicos NÃO precisam de email/senha (apenas prestadores de serviço)
+      // Gerar email fictício e senha padrão para o Supabase
+      if (!professional.email) {
+        const nameSlug = professional.name.toLowerCase().replace(/\s+/g, '.');
+        professional.email = `${nameSlug}@prestador.bedeschi.local`;
+      }
+      if (!newProfessional.loginPassword) {
+        newProfessional.loginPassword = 'prestador123'; // Senha padrão (não usada)
+      }
+    }
+
+    try {
+      // Mapear role do formulário para role do Supabase
+      const supabaseRole = professional.role === "recepcionista" ? "recepcao" : professional.role;
+      
+      // Salvar na tabela staff_users do Supabase (PERSISTENTE)
+      await createStaffUser({
+        email: professional.email,
+        password: newProfessional.loginPassword,
+        name: professional.name,
+        role: supabaseRole as "admin" | "recepcao" | "profissional" | "medico",
+        specialty: professional.specialty,
+        created_by: user?.email || "admin",
+      });
+      
+      const roleLabel = isReceptionist ? "Recepcionista" : "Prestador(a)";
+      alert(`${roleLabel} cadastrado(a) com sucesso!`);
+      console.log("✅ Usuário salvo permanentemente no Supabase:", professional.email);
+
+      // Recarregar lista de usuários
+      const updatedUsers = await getStaffUsers();
+      setStaffUsers(updatedUsers);
+    } catch (error) {
+      console.error("❌ Erro ao salvar usuário no Supabase:", error);
+      alert(`Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       return;
     }
 
@@ -1887,17 +1906,16 @@ export default function AdminDashboard() {
                   </div>
                   <div className="space-y-2">
                     <label
+                      htmlFor="specialty-select"
                       className={`text-sm font-medium ${
                         isDark ? "text-slate-200" : "text-slate-700"
                       }`}
                     >
-                      Especialidades
-                      <span className={`text-xs ml-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                        Separe por vírgulas
-                      </span>
+                      Especialidade
                     </label>
-                    <input
-                      type="text"
+                    <select
+                      id="specialty-select"
+                      title="Selecione a especialidade do profissional"
                       value={
                         editingProfessional
                           ? editingProfessional.specialty || ""
@@ -1917,11 +1935,46 @@ export default function AdminDashboard() {
                       }
                       className={`w-full rounded-lg border px-3 py-2 text-sm ${
                         isDark
-                          ? "bg-slate-800 border-slate-600 text-slate-50 placeholder:text-slate-500"
-                          : "bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                          ? "bg-slate-800 border-slate-600 text-slate-50"
+                          : "bg-white border-slate-300 text-slate-900"
                       }`}
-                      placeholder="Ex: Esteticista, Médico Dermatol..."
-                    />
+                    >
+                      <option value="">Selecione uma especialidade</option>
+                      <option value="Massagem e Estética Corporal">Massagem e Estética Corporal</option>
+                      <option value="Estética Facial">Estética Facial</option>
+                      <option value="Depilação">Depilação</option>
+                      <option value="Design de Sobrancelhas">Design de Sobrancelhas</option>
+                      <option value="Micropigmentação">Micropigmentação</option>
+                      <option value="Alongamento de Cílios">Alongamento de Cílios</option>
+                      <option value="Manicure e Pedicure">Manicure e Pedicure</option>
+                      <option value="Dermatologia Estética">Dermatologia Estética</option>
+                      <option value="Harmonização Facial">Harmonização Facial</option>
+                      <option value="Fisioterapia Dermato-Funcional">Fisioterapia Dermato-Funcional</option>
+                      <option value="Nutrição Estética">Nutrição Estética</option>
+                      <option value="Cosmetologia">Cosmetologia</option>
+                      <option value="Outra">Outra (digite abaixo)</option>
+                    </select>
+                    {(editingProfessional?.specialty === "Outra" || newProfessional.specialty === "Outra") && (
+                      <input
+                        type="text"
+                        placeholder="Digite a especialidade"
+                        className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                          isDark
+                            ? "bg-slate-800 border-slate-600 text-slate-50"
+                            : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                        onChange={(e) =>
+                          editingProfessional
+                            ? setEditingProfessional((prev) =>
+                                prev ? { ...prev, specialty: e.target.value } : prev
+                              )
+                            : setNewProfessional({
+                                ...newProfessional,
+                                specialty: e.target.value,
+                              })
+                        }
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1931,7 +1984,7 @@ export default function AdminDashboard() {
                         isDark ? "text-slate-200" : "text-slate-700"
                       }`}
                     >
-                      Email *
+                      Email {(editingProfessional?.role === "recepcionista" || newProfessional.role === "recepcionista") ? "*" : "(opcional)"}
                     </label>
                     <input
                       type="email"
