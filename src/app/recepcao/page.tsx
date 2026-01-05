@@ -173,24 +173,58 @@ export default function RecepcaoDashboard() {
 
   // Registrar atendimento
   const handleAddAppointment = async () => {
-    if (!newAppointment.clientId || newAppointment.selectedServices.length === 0) {
-      alert("Selecione cliente e pelo menos um serviço");
+    console.log("📝 Iniciando criação de atendimento...", newAppointment);
+
+    // Validações detalhadas
+    if (!newAppointment.clientId) {
+      alert("❌ Selecione um cliente");
+      return;
+    }
+
+    if (!newAppointment.professionalId) {
+      alert("❌ Selecione um profissional");
+      return;
+    }
+
+    if (newAppointment.selectedServices.length === 0) {
+      alert("❌ Selecione pelo menos um procedimento");
+      return;
+    }
+
+    if (!newAppointment.date) {
+      alert("❌ Selecione a data do atendimento");
       return;
     }
 
     const client = clients.find(c => c.id === newAppointment.clientId);
+    if (!client) {
+      alert("❌ Cliente não encontrado");
+      return;
+    }
+
     const selectedServicesData = services.filter(s => 
       newAppointment.selectedServices.includes(s.id)
     );
+    
+    if (selectedServicesData.length === 0) {
+      alert("❌ Serviços selecionados não encontrados");
+      return;
+    }
+
     const total = selectedServicesData.reduce((sum, s) => sum + s.price, 0);
     const professional = staffUsers.find(p => p.id === newAppointment.professionalId);
 
+    if (!professional) {
+      alert("❌ Profissional não encontrado");
+      return;
+    }
+
     const appointment = {
-      id: `apt-${crypto.randomUUID()}`,
+      id: crypto.randomUUID(),
       clientId: newAppointment.clientId,
-      clientName: client?.name || "",
-      professionalId: newAppointment.professionalId || staffUsers[0]?.id || "",
-      professionalName: professional?.name || staffUsers[0]?.name || "Profissional",
+      clientName: client.name,
+      professionalId: newAppointment.professionalId,
+      professionalName: professional.name,
       date: newAppointment.date,
       time: newAppointment.time,
       services: selectedServicesData.map(s => ({ name: s.name, price: s.price })),
@@ -200,15 +234,30 @@ export default function RecepcaoDashboard() {
       hasReview: false
     };
 
-    addAppointment(appointment);
-    setNewAppointment({
-      clientId: "",
-      professionalId: "",
-      selectedServices: [],
-      date: new Date().toISOString().split("T")[0],
-      time: "09:00"
-    });
-    setShowNewAppointment(false);
+    console.log("✅ Atendimento criado:", appointment);
+
+    try {
+      addAppointment(appointment);
+      
+      alert(`✅ Atendimento registrado com sucesso!\n\nCliente: ${client.name}\nProfissional: ${professional.name}\nTotal: R$ ${total.toFixed(2)}\nPontos ganhos: ${Math.floor(total)}`);
+
+      // Resetar formulário
+      setNewAppointment({
+        clientId: "",
+        professionalId: "",
+        selectedServices: [],
+        date: new Date().toISOString().split("T")[0],
+        time: "09:00"
+      });
+      setClientSearchTerm("");
+      setProcedureSearchTerm("");
+      setShowNewAppointment(false);
+      
+      console.log("✅ Formulário resetado e modal fechado");
+    } catch (error) {
+      console.error("❌ Erro ao salvar atendimento:", error);
+      alert("❌ Erro ao salvar atendimento. Veja o console para detalhes.");
+    }
   };
 
   // Abrir modal de resgate
