@@ -3,11 +3,22 @@
  * Usa o Personal Access Token para executar SQL
  */
 
-const PROJECT_ID = "lvqcualqeevdenghexjm";
-const ACCESS_TOKEN = "sbp_fbf88a127de883ddbc531dd002d652e730504570";
-const SERVICE_ROLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2cWN1YWxxZWV2ZGVuZ2hleGptIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzQ3NDcwOCwiZXhwIjoyMDgzMDUwNzA4fQ.S5xcYUHdYML67ujw57ye9-vnpL_gluH10WdoZL3SXHM";
-const SUPABASE_URL = "https://lvqcualqeevdenghexjm.supabase.co";
+require('dotenv').config({ path: '.env.local' });
+
+const PROJECT_ID = process.env.SUPABASE_PROJECT_ID;
+const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+if (!PROJECT_ID || !ACCESS_TOKEN || !SERVICE_ROLE_KEY || !SUPABASE_URL) {
+  console.error('❌ Erro: Variáveis de ambiente não configuradas.');
+  console.error('Configure no arquivo .env.local:');
+  console.error('  - SUPABASE_PROJECT_ID');
+  console.error('  - SUPABASE_ACCESS_TOKEN');
+  console.error('  - SUPABASE_SERVICE_ROLE_KEY');
+  console.error('  - NEXT_PUBLIC_SUPABASE_URL');
+  process.exit(1);
+}
 
 async function runQuery(sql) {
   const response = await fetch(
