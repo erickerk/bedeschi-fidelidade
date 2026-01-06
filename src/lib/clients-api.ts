@@ -3,7 +3,7 @@
  * Projeto: Bedeschi Fidelidade/Estética
  */
 
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export interface FidelityClient {
   id: string;
@@ -48,12 +48,12 @@ export interface UpdateClientInput {
 // Buscar todos os clientes
 export async function getClients(): Promise<FidelityClient[]> {
   const { data, error } = await supabase
-    .from('fidelity_clients')
-    .select('*')
-    .order('name');
+    .from("fidelity_clients")
+    .select("*")
+    .order("name");
 
   if (error) {
-    console.error('Erro ao buscar clientes:', error);
+    console.error("Erro ao buscar clientes:", error);
     return [];
   }
 
@@ -61,15 +61,17 @@ export async function getClients(): Promise<FidelityClient[]> {
 }
 
 // Buscar cliente por ID
-export async function getClientById(id: string): Promise<FidelityClient | null> {
+export async function getClientById(
+  id: string,
+): Promise<FidelityClient | null> {
   const { data, error } = await supabase
-    .from('fidelity_clients')
-    .select('*')
-    .eq('id', id)
+    .from("fidelity_clients")
+    .select("*")
+    .eq("id", id)
     .single();
 
   if (error) {
-    console.error('Erro ao buscar cliente por ID:', error);
+    console.error("Erro ao buscar cliente por ID:", error);
     return null;
   }
 
@@ -77,18 +79,21 @@ export async function getClientById(id: string): Promise<FidelityClient | null> 
 }
 
 // Buscar cliente por telefone
-export async function getClientByPhone(phone: string): Promise<FidelityClient | null> {
-  const cleanPhone = phone.replace(/\D/g, '');
-  
+export async function getClientByPhone(
+  phone: string,
+): Promise<FidelityClient | null> {
+  const cleanPhone = phone.replace(/\D/g, "");
+
   const { data, error } = await supabase
-    .from('fidelity_clients')
-    .select('*')
-    .eq('phone', cleanPhone)
+    .from("fidelity_clients")
+    .select("*")
+    .eq("phone", cleanPhone)
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Erro ao buscar cliente por telefone:', error);
+    if (error.code !== "PGRST116") {
+      // PGRST116 = no rows returned
+      console.error("Erro ao buscar cliente por telefone:", error);
     }
     return null;
   }
@@ -97,20 +102,23 @@ export async function getClientByPhone(phone: string): Promise<FidelityClient | 
 }
 
 // Validar login do cliente (telefone + PIN)
-export async function validateClientLogin(phone: string, pin: string): Promise<FidelityClient | null> {
-  const cleanPhone = phone.replace(/\D/g, '');
-  
+export async function validateClientLogin(
+  phone: string,
+  pin: string,
+): Promise<FidelityClient | null> {
+  const cleanPhone = phone.replace(/\D/g, "");
+
   const { data, error } = await supabase
-    .from('fidelity_clients')
-    .select('*')
-    .eq('phone', cleanPhone)
-    .eq('pin', pin)
-    .eq('is_active', true)
+    .from("fidelity_clients")
+    .select("*")
+    .eq("phone", cleanPhone)
+    .eq("pin", pin)
+    .eq("is_active", true)
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') {
-      console.error('Erro ao validar login do cliente:', error);
+    if (error.code !== "PGRST116") {
+      console.error("Erro ao validar login do cliente:", error);
     }
     return null;
   }
@@ -119,11 +127,13 @@ export async function validateClientLogin(phone: string, pin: string): Promise<F
 }
 
 // Criar cliente
-export async function createClient(input: CreateClientInput): Promise<FidelityClient | null> {
-  const cleanPhone = input.phone.replace(/\D/g, '');
-  
+export async function createClient(
+  input: CreateClientInput,
+): Promise<FidelityClient | null> {
+  const cleanPhone = input.phone.replace(/\D/g, "");
+
   const { data, error } = await supabase
-    .from('fidelity_clients')
+    .from("fidelity_clients")
     .insert({
       ...input,
       phone: cleanPhone,
@@ -135,7 +145,7 @@ export async function createClient(input: CreateClientInput): Promise<FidelityCl
     .single();
 
   if (error) {
-    console.error('Erro ao criar cliente:', error);
+    console.error("Erro ao criar cliente:", error);
     return null;
   }
 
@@ -143,22 +153,25 @@ export async function createClient(input: CreateClientInput): Promise<FidelityCl
 }
 
 // Atualizar cliente
-export async function updateClient(id: string, input: UpdateClientInput): Promise<FidelityClient | null> {
+export async function updateClient(
+  id: string,
+  input: UpdateClientInput,
+): Promise<FidelityClient | null> {
   const updateData: UpdateClientInput = { ...input };
-  
+
   if (updateData.phone) {
-    updateData.phone = updateData.phone.replace(/\D/g, '');
+    updateData.phone = updateData.phone.replace(/\D/g, "");
   }
 
   const { data, error } = await supabase
-    .from('fidelity_clients')
+    .from("fidelity_clients")
     .update(updateData)
-    .eq('id', id)
+    .eq("id", id)
     .select()
     .single();
 
   if (error) {
-    console.error('Erro ao atualizar cliente:', error);
+    console.error("Erro ao atualizar cliente:", error);
     return null;
   }
 
@@ -170,7 +183,7 @@ export async function updateClientStats(
   id: string,
   pointsToAdd: number,
   spentToAdd: number,
-  lastVisit: string
+  lastVisit: string,
 ): Promise<FidelityClient | null> {
   // Primeiro busca o cliente atual
   const client = await getClientById(id);
@@ -187,12 +200,12 @@ export async function updateClientStats(
 // Desativar cliente
 export async function deactivateClient(id: string): Promise<boolean> {
   const { error } = await supabase
-    .from('fidelity_clients')
+    .from("fidelity_clients")
     .update({ is_active: false })
-    .eq('id', id);
+    .eq("id", id);
 
   if (error) {
-    console.error('Erro ao desativar cliente:', error);
+    console.error("Erro ao desativar cliente:", error);
     return false;
   }
 
@@ -202,15 +215,15 @@ export async function deactivateClient(id: string): Promise<boolean> {
 // Buscar clientes por termo (nome ou telefone)
 export async function searchClients(query: string): Promise<FidelityClient[]> {
   const { data, error } = await supabase
-    .from('fidelity_clients')
-    .select('*')
+    .from("fidelity_clients")
+    .select("*")
     .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
-    .eq('is_active', true)
-    .order('name')
+    .eq("is_active", true)
+    .order("name")
     .limit(20);
 
   if (error) {
-    console.error('Erro ao buscar clientes:', error);
+    console.error("Erro ao buscar clientes:", error);
     return [];
   }
 

@@ -2,7 +2,7 @@
 
 **Data:** 03/01/2026  
 **Versão:** 1.0  
-**Testador:** QA Automatizado  
+**Testador:** QA Automatizado
 
 ---
 
@@ -10,16 +10,16 @@
 
 ### Status Geral: ✅ APROVADO COM OBSERVAÇÕES
 
-| Área | Status | Observação |
-|------|--------|------------|
-| Autenticação | ✅ OK | Login/Logout funcionando com Supabase Auth |
-| Dashboard Admin | ✅ OK | Todas as funcionalidades operacionais |
-| Dashboard Recepção | ✅ OK | Interface responsiva e funcional |
-| Analytics | ✅ OK | Gráficos e filtros funcionando |
-| Serviços | ✅ OK | 303 serviços carregados corretamente |
-| Equipe | ✅ OK | Listagem de profissionais OK |
-| Relatórios | ✅ OK | Exportação disponível |
-| RLS (Segurança) | ✅ OK | Controle de acesso por papel |
+| Área               | Status | Observação                                 |
+| ------------------ | ------ | ------------------------------------------ |
+| Autenticação       | ✅ OK  | Login/Logout funcionando com Supabase Auth |
+| Dashboard Admin    | ✅ OK  | Todas as funcionalidades operacionais      |
+| Dashboard Recepção | ✅ OK  | Interface responsiva e funcional           |
+| Analytics          | ✅ OK  | Gráficos e filtros funcionando             |
+| Serviços           | ✅ OK  | 303 serviços carregados corretamente       |
+| Equipe             | ✅ OK  | Listagem de profissionais OK               |
+| Relatórios         | ✅ OK  | Exportação disponível                      |
+| RLS (Segurança)    | ✅ OK  | Controle de acesso por papel               |
 
 ---
 
@@ -27,11 +27,11 @@
 
 ### 2.1 Credenciais Testadas
 
-| Usuário | Email | Papel | Status Login |
-|---------|-------|-------|--------------|
-| Raul (Admin) | raul.admin@bedeschi.com.br | ADMIN | ✅ OK |
-| Recepção | recepcao@bedeschi.com.br | RECEPCAO | ✅ OK |
-| QA | qa.teste@bedeschi.com.br | QA | ✅ OK |
+| Usuário      | Email                      | Papel    | Status Login |
+| ------------ | -------------------------- | -------- | ------------ |
+| Raul (Admin) | raul.admin@bedeschi.com.br | ADMIN    | ✅ OK        |
+| Recepção     | recepcao@bedeschi.com.br   | RECEPCAO | ✅ OK        |
+| QA           | qa.teste@bedeschi.com.br   | QA       | ✅ OK        |
 
 ### 2.2 Fluxos Testados
 
@@ -54,62 +54,62 @@
 
 ### 3.1 Dashboard Administrativo
 
-| Componente | Status | Observação |
-|------------|--------|------------|
-| Header | ✅ OK | Nome do usuário exibido corretamente |
-| Navegação | ✅ OK | Todas as abas funcionando |
-| Cards de métricas | ✅ OK | 3 clientes, 303 serviços, 27 categorias |
-| Botões de exportação | ✅ OK | 4 opções disponíveis |
-| Atividade recente | ✅ OK | Lista de atividades visível |
+| Componente           | Status | Observação                              |
+| -------------------- | ------ | --------------------------------------- |
+| Header               | ✅ OK  | Nome do usuário exibido corretamente    |
+| Navegação            | ✅ OK  | Todas as abas funcionando               |
+| Cards de métricas    | ✅ OK  | 3 clientes, 303 serviços, 27 categorias |
+| Botões de exportação | ✅ OK  | 4 opções disponíveis                    |
+| Atividade recente    | ✅ OK  | Lista de atividades visível             |
 
 ### 3.2 Analytics
 
-| Componente | Status | Observação |
-|------------|--------|------------|
-| Filtros | ✅ OK | Período, Profissional, Procedimento |
-| Gráfico Faturamento | ✅ OK | Linha temporal funcionando |
-| Gráfico Avaliações | ✅ OK | Barras horizontais |
-| Top Clientes | ✅ OK | Ranking por faturamento |
-| Top Profissionais | ✅ OK | Ranking por avaliação |
-| Insights | ✅ OK | 3 cards de insights |
+| Componente          | Status | Observação                          |
+| ------------------- | ------ | ----------------------------------- |
+| Filtros             | ✅ OK  | Período, Profissional, Procedimento |
+| Gráfico Faturamento | ✅ OK  | Linha temporal funcionando          |
+| Gráfico Avaliações  | ✅ OK  | Barras horizontais                  |
+| Top Clientes        | ✅ OK  | Ranking por faturamento             |
+| Top Profissionais   | ✅ OK  | Ranking por avaliação               |
+| Insights            | ✅ OK  | 3 cards de insights                 |
 
 ### 3.3 Serviços
 
-| Componente | Status | Observação |
-|------------|--------|------------|
-| Listagem | ✅ OK | 303 serviços |
-| Filtros por categoria | ✅ OK | 27 categorias |
-| Busca | ✅ OK | Campo de busca presente |
-| Tabela | ✅ OK | Código, Nome, Categoria, Preço, Tempo, Ações |
-| Paginação | ⚠️ PARCIAL | Mostra 20 de 303, sem controle de página visível |
+| Componente            | Status     | Observação                                       |
+| --------------------- | ---------- | ------------------------------------------------ |
+| Listagem              | ✅ OK      | 303 serviços                                     |
+| Filtros por categoria | ✅ OK      | 27 categorias                                    |
+| Busca                 | ✅ OK      | Campo de busca presente                          |
+| Tabela                | ✅ OK      | Código, Nome, Categoria, Preço, Tempo, Ações     |
+| Paginação             | ⚠️ PARCIAL | Mostra 20 de 303, sem controle de página visível |
 
 ### 3.4 Equipe
 
-| Componente | Status | Observação |
-|------------|--------|------------|
-| Recepcionistas | ✅ OK | 1 recepcionista listada |
-| Profissionais | ✅ OK | 4 profissionais com avaliações |
-| Botões de ação | ✅ OK | Editar, Desativar |
+| Componente     | Status | Observação                     |
+| -------------- | ------ | ------------------------------ |
+| Recepcionistas | ✅ OK  | 1 recepcionista listada        |
+| Profissionais  | ✅ OK  | 4 profissionais com avaliações |
+| Botões de ação | ✅ OK  | Editar, Desativar              |
 
 ### 3.5 Relatórios
 
-| Componente | Status | Observação |
-|------------|--------|------------|
-| Cards de exportação | ✅ OK | Clientes, Serviços, Avaliações, Atendimentos |
-| Relatório Completo | ✅ OK | Botão disponível |
-| Faturamento por categoria | ✅ OK | 5 categorias exibidas |
-| Recompensas | ✅ OK | Emitidas, Resgatadas, Expiradas |
+| Componente                | Status | Observação                                   |
+| ------------------------- | ------ | -------------------------------------------- |
+| Cards de exportação       | ✅ OK  | Clientes, Serviços, Avaliações, Atendimentos |
+| Relatório Completo        | ✅ OK  | Botão disponível                             |
+| Faturamento por categoria | ✅ OK  | 5 categorias exibidas                        |
+| Recompensas               | ✅ OK  | Emitidas, Resgatadas, Expiradas              |
 
 ### 3.6 Dashboard Recepção
 
-| Componente | Status | Observação |
-|------------|--------|------------|
-| Barra de busca | ✅ OK | Busca por nome ou celular |
-| Métricas | ✅ OK | 3 clientes, 303 serviços |
-| Ações rápidas | ✅ OK | Novo Cliente, Novo Atendimento |
-| Clientes recentes | ✅ OK | Lista com pontos e última visita |
-| Categorias | ✅ OK | 27 categorias |
-| Navegação inferior | ✅ OK | Início, +, Admin |
+| Componente         | Status | Observação                       |
+| ------------------ | ------ | -------------------------------- |
+| Barra de busca     | ✅ OK  | Busca por nome ou celular        |
+| Métricas           | ✅ OK  | 3 clientes, 303 serviços         |
+| Ações rápidas      | ✅ OK  | Novo Cliente, Novo Atendimento   |
+| Clientes recentes  | ✅ OK  | Lista com pontos e última visita |
+| Categorias         | ✅ OK  | 27 categorias                    |
+| Navegação inferior | ✅ OK  | Início, +, Admin                 |
 
 ---
 
@@ -117,24 +117,24 @@
 
 ### 4.1 Severidade Alta
 
-| ID | Descrição | Status |
-|----|-----------|--------|
+| ID      | Descrição                                      | Status       |
+| ------- | ---------------------------------------------- | ------------ |
 | BUG-001 | Modo Demo expondo credenciais na tela de login | ✅ CORRIGIDO |
-| BUG-002 | Autenticação não usava Supabase Auth | ✅ CORRIGIDO |
+| BUG-002 | Autenticação não usava Supabase Auth           | ✅ CORRIGIDO |
 
 ### 4.2 Severidade Média
 
-| ID | Descrição | Status | Sugestão |
-|----|-----------|--------|----------|
+| ID      | Descrição                                          | Status      | Sugestão                |
+| ------- | -------------------------------------------------- | ----------- | ----------------------- |
 | BUG-003 | Campo de senha sem autocomplete="current-password" | 🔶 PENDENTE | Adicionar atributo HTML |
-| BUG-004 | Falta favicon (404 no console) | 🔶 PENDENTE | Adicionar /favicon.ico |
+| BUG-004 | Falta favicon (404 no console)                     | 🔶 PENDENTE | Adicionar /favicon.ico  |
 
 ### 4.3 Severidade Baixa
 
-| ID | Descrição | Status | Sugestão |
-|----|-----------|--------|----------|
-| BUG-005 | Paginação de serviços não tem controles visuais | 🔶 PENDENTE | Adicionar botões Anterior/Próximo |
-| BUG-006 | Alguns emojis aparecem como "�" em certas fontes | 🔶 PENDENTE | Usar ícones Lucide ou SVG |
+| ID      | Descrição                                        | Status      | Sugestão                          |
+| ------- | ------------------------------------------------ | ----------- | --------------------------------- |
+| BUG-005 | Paginação de serviços não tem controles visuais  | 🔶 PENDENTE | Adicionar botões Anterior/Próximo |
+| BUG-006 | Alguns emojis aparecem como "�" em certas fontes | 🔶 PENDENTE | Usar ícones Lucide ou SVG         |
 
 ---
 
@@ -142,12 +142,12 @@
 
 ### 5.1 RLS (Row Level Security)
 
-| Teste | Resultado |
-|-------|-----------|
-| Admin vê todos os perfis | ✅ OK (3 perfis) |
+| Teste                             | Resultado        |
+| --------------------------------- | ---------------- |
+| Admin vê todos os perfis          | ✅ OK (3 perfis) |
 | Recepção vê apenas próprio perfil | ✅ OK (1 perfil) |
-| QA vê apenas próprio perfil | ✅ OK (1 perfil) |
-| Função is_admin() | ✅ OK |
+| QA vê apenas próprio perfil       | ✅ OK (1 perfil) |
+| Função is_admin()                 | ✅ OK            |
 
 ### 5.2 Credenciais
 
@@ -160,11 +160,11 @@
 
 ## 6. Performance
 
-| Métrica | Valor | Status |
-|---------|-------|--------|
-| Tempo de carregamento inicial | ~5s (dev) | ⚠️ Esperado em dev |
-| Compilação de páginas | ~15s (primeira vez) | ⚠️ Esperado em dev |
-| Navegação entre abas | <100ms | ✅ OK |
+| Métrica                       | Valor               | Status             |
+| ----------------------------- | ------------------- | ------------------ |
+| Tempo de carregamento inicial | ~5s (dev)           | ⚠️ Esperado em dev |
+| Compilação de páginas         | ~15s (primeira vez) | ⚠️ Esperado em dev |
+| Navegação entre abas          | <100ms              | ✅ OK              |
 
 ---
 
@@ -172,9 +172,9 @@
 
 ### 7.1 Navegadores Testados
 
-| Navegador | Status |
-|-----------|--------|
-| Chrome (Playwright) | ✅ OK |
+| Navegador           | Status |
+| ------------------- | ------ |
+| Chrome (Playwright) | ✅ OK  |
 
 ### 7.2 Responsividade
 
@@ -238,4 +238,4 @@ A aplicação Bedeschi Fidelidade está **funcional e segura** após as correç�
 
 ---
 
-*Relatório gerado automaticamente em 03/01/2026*
+_Relatório gerado automaticamente em 03/01/2026_

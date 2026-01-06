@@ -43,14 +43,14 @@ export function StarRating({
             "transition-all duration-200",
             !readonly && "hover:scale-110 cursor-pointer",
             readonly && "cursor-default",
-            "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 rounded-full"
+            "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 rounded-full",
           )}
           aria-label={`${star} estrela${star > 1 ? "s" : ""}`}
         >
           <span
             className={cn(
               star <= displayValue ? "text-gold-500" : "text-slate-300",
-              "transition-colors duration-150"
+              "transition-colors duration-150",
             )}
           >
             ★

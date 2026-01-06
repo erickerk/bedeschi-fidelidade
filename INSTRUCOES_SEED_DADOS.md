@@ -6,6 +6,7 @@
 
 **Antes:** Todos precisavam de email e senha
 **Agora:**
+
 - ✅ **Recepcionistas:** Precisam de email e senha (acesso ao sistema)
 - ✅ **Profissionais/Médicos:** Não precisam de email/senha (apenas prestadores de serviço)
   - Email gerado automaticamente: `nome.profissional@prestador.bedeschi.local`
@@ -18,6 +19,7 @@
 **Campo:** Especialidade (select dropdown)
 
 **Opções disponíveis:**
+
 - Massagem e Estética Corporal
 - Estética Facial
 - Depilação
@@ -39,6 +41,7 @@
 Criado: `supabase/migrations/seed_clientes_avaliacoes.sql`
 
 **Dados incluídos:**
+
 - 10 clientes com nomes, telefones, emails e PINs
 - Pontos, gastos e número de atendimentos
 - Atendimentos vinculados a profissionais
@@ -71,6 +74,7 @@ Criado: `supabase/migrations/seed_clientes_avaliacoes.sql`
 Aguarde a mensagem: **Success. No rows returned**
 
 Se houver erro, leia a mensagem. Possíveis causas:
+
 - Tabelas já existem: OK, prossiga
 - Conflito de dados: Execute apenas a seção de INSERT
 
@@ -83,9 +87,9 @@ Se houver erro, leia a mensagem. Possíveis causas:
 **SQL de verificação:**
 
 ```sql
-SELECT name, phone, pin, points_balance, total_appointments 
-FROM public.customers 
-ORDER BY created_at DESC 
+SELECT name, phone, pin, points_balance, total_appointments
+FROM public.customers
+ORDER BY created_at DESC
 LIMIT 10;
 ```
 
@@ -96,7 +100,7 @@ LIMIT 10;
 **SQL de verificação:**
 
 ```sql
-SELECT 
+SELECT
   a.appointment_date,
   a.staff_name,
   c.name as customer_name,
@@ -115,7 +119,7 @@ LIMIT 5;
 **SQL de verificação:**
 
 ```sql
-SELECT 
+SELECT
   r.rating,
   r.comment,
   c.name as customer_name,
@@ -196,13 +200,13 @@ ORDER BY r.created_at DESC;
 
 ## 📊 Clientes de Teste Disponíveis
 
-| Nome | Telefone | PIN | Pontos | Atendimentos |
-|------|----------|-----|--------|--------------|
-| Maria Silva Santos | 11987654321 | 1234 | 450 | 5 |
-| Ana Paula Oliveira | 11976543210 | 5678 | 320 | 4 |
-| Juliana Costa Lima | 11965432109 | 9012 | 580 | 7 |
-| Carla Mendes Souza | 11954321098 | 3456 | 210 | 3 |
-| Patricia Alves Rocha | 11943210987 | 7890 | 890 | 10 |
+| Nome                 | Telefone    | PIN  | Pontos | Atendimentos |
+| -------------------- | ----------- | ---- | ------ | ------------ |
+| Maria Silva Santos   | 11987654321 | 1234 | 450    | 5            |
+| Ana Paula Oliveira   | 11976543210 | 5678 | 320    | 4            |
+| Juliana Costa Lima   | 11965432109 | 9012 | 580    | 7            |
+| Carla Mendes Souza   | 11954321098 | 3456 | 210    | 3            |
+| Patricia Alves Rocha | 11943210987 | 7890 | 890    | 10           |
 
 ---
 
@@ -216,12 +220,14 @@ ORDER BY r.created_at DESC;
 - ✅ Deploy concluído
 
 **Próximos passos:**
+
 1. Execute o SQL no Supabase
 2. Valide os dados conforme instruções acima
 3. Teste o fluxo completo
 4. Reporte qualquer problema encontrado
 
 **URLs:**
+
 - Local: [http://localhost:3001](http://localhost:3001)
 - Produção: [https://bedeschi-fidelidade-app.vercel.app](https://bedeschi-fidelidade-app.vercel.app)
 - Supabase: [https://supabase.com/dashboard/project/lvqcualqeevdenghexjm](https://supabase.com/dashboard/project/lvqcualqeevdenghexjm)

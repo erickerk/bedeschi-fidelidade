@@ -1,5 +1,14 @@
 import ExcelJS from "exceljs";
-import { mockClients, mockAppointments, mockReviews, mockFidelityRules, mockProfessionals, type Review, type FidelityRule, type Professional } from "./mock-data";
+import {
+  mockClients,
+  mockAppointments,
+  mockReviews,
+  mockFidelityRules,
+  mockProfessionals,
+  type Review,
+  type FidelityRule,
+  type Professional,
+} from "./mock-data";
 import { importedServices, importedCategories } from "./services-data";
 import { formatCurrency } from "./utils";
 
@@ -7,7 +16,18 @@ import { formatCurrency } from "./utils";
  * Exporta dados de clientes para Excel
  */
 export function exportClientsToExcel() {
-  const headers = ["ID", "Nome", "Telefone", "Email", "Data Nascimento", "Pontos", "Total Gasto", "Total Atendimentos", "Última Visita", "Data Cadastro"];
+  const headers = [
+    "ID",
+    "Nome",
+    "Telefone",
+    "Email",
+    "Data Nascimento",
+    "Pontos",
+    "Total Gasto",
+    "Total Atendimentos",
+    "Última Visita",
+    "Data Cadastro",
+  ];
   const data = mockClients.map((client) => [
     client.id,
     client.name,
@@ -28,11 +48,21 @@ export function exportClientsToExcel() {
  * Exporta avaliações para Excel
  */
 export function exportReviewsToExcel() {
-  const headers = ["ID", "Cliente", "Telefone", "Data", "Nota", "Comentário", "Serviço"];
+  const headers = [
+    "ID",
+    "Cliente",
+    "Telefone",
+    "Data",
+    "Nota",
+    "Comentário",
+    "Serviço",
+  ];
   const data = mockReviews.map((review: Review) => {
     const client = mockClients.find((c) => c.id === review.clientId);
-    const appointment = mockAppointments.find((a) => a.id === review.appointmentId);
-    
+    const appointment = mockAppointments.find(
+      (a) => a.id === review.appointmentId,
+    );
+
     return [
       review.id,
       client?.name || "-",
@@ -51,7 +81,14 @@ export function exportReviewsToExcel() {
  * Exporta serviços para Excel
  */
 export function exportServicesToExcel() {
-  const headers = ["Código", "Nome", "Categoria", "Preço", "Duração (min)", "Ativo"];
+  const headers = [
+    "Código",
+    "Nome",
+    "Categoria",
+    "Preço",
+    "Duração (min)",
+    "Ativo",
+  ];
   const data = importedServices.map((service) => [
     service.externalCode,
     service.name,
@@ -68,10 +105,18 @@ export function exportServicesToExcel() {
  * Exporta atendimentos para Excel
  */
 export function exportAppointmentsToExcel() {
-  const headers = ["ID", "Cliente", "Data", "Serviços", "Total", "Pontos Ganhos", "Status"];
+  const headers = [
+    "ID",
+    "Cliente",
+    "Data",
+    "Serviços",
+    "Total",
+    "Pontos Ganhos",
+    "Status",
+  ];
   const data = mockAppointments.map((apt) => {
     const client = mockClients.find((c) => c.id === apt.clientId);
-    
+
     return [
       apt.id,
       client?.name || "-",
@@ -90,16 +135,27 @@ export function exportAppointmentsToExcel() {
  * Exporta regras de fidelidade para Excel
  */
 export function exportRulesToExcel(rules: FidelityRule[] = mockFidelityRules) {
-  const headers = ["ID", "Nome", "Descrição", "Tipo", "Categoria/Serviço", "Valor Mínimo", "Qtd Mínima", "Recompensa", "Validade (dias)", "Ativo"];
-  
+  const headers = [
+    "ID",
+    "Nome",
+    "Descrição",
+    "Tipo",
+    "Categoria/Serviço",
+    "Valor Mínimo",
+    "Qtd Mínima",
+    "Recompensa",
+    "Validade (dias)",
+    "Ativo",
+  ];
+
   const typeLabels: Record<string, string> = {
-    "VALUE_ACCUMULATION": "Acúmulo por Valor",
-    "QUANTITY_ACCUMULATION": "Acúmulo por Quantidade",
-    "POINTS_CONVERSION": "Conversão de Pontos",
-    "SERVICE_SPECIFIC": "Serviço Específico",
-    "COMBO_VALUE": "Combo por Valor",
+    VALUE_ACCUMULATION: "Acúmulo por Valor",
+    QUANTITY_ACCUMULATION: "Acúmulo por Quantidade",
+    POINTS_CONVERSION: "Conversão de Pontos",
+    SERVICE_SPECIFIC: "Serviço Específico",
+    COMBO_VALUE: "Combo por Valor",
   };
-  
+
   const data = rules.map((rule) => [
     rule.id,
     rule.name,
@@ -108,7 +164,8 @@ export function exportRulesToExcel(rules: FidelityRule[] = mockFidelityRules) {
     rule.categoryName || rule.serviceName || "Todos",
     rule.thresholdValue ? formatCurrency(rule.thresholdValue) : "-",
     rule.thresholdQuantity || "-",
-    rule.rewardServiceName || (rule.rewardValue ? formatCurrency(rule.rewardValue) : "-"),
+    rule.rewardServiceName ||
+      (rule.rewardValue ? formatCurrency(rule.rewardValue) : "-"),
     rule.validityDays,
     rule.isActive ? "Sim" : "Não",
   ]);
@@ -119,15 +176,28 @@ export function exportRulesToExcel(rules: FidelityRule[] = mockFidelityRules) {
 /**
  * Exporta profissionais para Excel
  */
-export function exportProfessionalsToExcel(professionals: Professional[] = mockProfessionals) {
-  const headers = ["ID", "Nome", "Função", "Especialidade", "Email", "Telefone", "Avaliação", "Atendimentos", "Serviços", "Ativo"];
-  
+export function exportProfessionalsToExcel(
+  professionals: Professional[] = mockProfessionals,
+) {
+  const headers = [
+    "ID",
+    "Nome",
+    "Função",
+    "Especialidade",
+    "Email",
+    "Telefone",
+    "Avaliação",
+    "Atendimentos",
+    "Serviços",
+    "Ativo",
+  ];
+
   const roleLabels: Record<string, string> = {
-    "profissional": "Profissional",
-    "recepcionista": "Recepcionista",
-    "medico": "Médico(a)",
+    profissional: "Profissional",
+    recepcionista: "Recepcionista",
+    medico: "Médico(a)",
   };
-  
+
   const data = professionals.map((prof) => [
     prof.id,
     prof.name,
@@ -154,7 +224,12 @@ export async function exportFullReport() {
   const wsClients = workbook.addWorksheet("Clientes");
   wsClients.addRow(["Nome", "Telefone", "Pontos", "Total Gasto"]);
   mockClients.forEach((client) => {
-    wsClients.addRow([client.name, client.phone, client.pointsBalance, client.totalSpent]);
+    wsClients.addRow([
+      client.name,
+      client.phone,
+      client.pointsBalance,
+      client.totalSpent,
+    ]);
   });
 
   // Aba de Avaliações
@@ -162,7 +237,12 @@ export async function exportFullReport() {
   wsReviews.addRow(["Cliente", "Nota", "Comentário", "Data"]);
   mockReviews.forEach((review: Review) => {
     const client = mockClients.find((c) => c.id === review.clientId);
-    wsReviews.addRow([client?.name || "-", review.rating, review.comment || "-", review.createdAt]);
+    wsReviews.addRow([
+      client?.name || "-",
+      review.rating,
+      review.comment || "-",
+      review.createdAt,
+    ]);
   });
 
   // Aba de Categorias
@@ -181,10 +261,15 @@ export async function exportFullReport() {
 /**
  * Função utilitária para download de Excel
  */
-async function downloadExcel(headers: string[], data: unknown[][], filename: string, sheetName: string) {
+async function downloadExcel(
+  headers: string[],
+  data: unknown[][],
+  filename: string,
+  sheetName: string,
+) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(sheetName);
-  
+
   worksheet.addRow(headers);
   data.forEach((row) => worksheet.addRow(row));
 
@@ -202,7 +287,9 @@ async function downloadExcel(headers: string[], data: unknown[][], filename: str
  * Função para download do buffer como arquivo
  */
 function downloadBuffer(buffer: ArrayBuffer, filename: string) {
-  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

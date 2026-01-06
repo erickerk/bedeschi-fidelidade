@@ -1,6 +1,6 @@
 /**
  * Parser de arquivos XLSX para importação de serviços
- * 
+ *
  * Formato esperado da planilha:
  * | Código | Descrição | Categoria | Valor | Tempo (min) | CNAE |
  */
@@ -35,19 +35,30 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
   name: ["descrição", "descricao", "nome", "name", "servico", "serviço"],
   category: ["categoria", "category", "cat", "tipo"],
   price: ["valor", "preço", "preco", "price", "vlr"],
-  durationMinutes: ["tempo", "duração", "duracao", "duration", "min", "minutos"],
+  durationMinutes: [
+    "tempo",
+    "duração",
+    "duracao",
+    "duration",
+    "min",
+    "minutos",
+  ],
   cnae: ["cnae", "cnae_code"],
 };
 
 function normalizeHeader(header: string): string {
-  return header.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return header
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function findColumnMapping(header: string): string | null {
   const normalized = normalizeHeader(header);
-  
+
   for (const [field, aliases] of Object.entries(COLUMN_MAPPINGS)) {
-    if (aliases.some(alias => normalized.includes(alias))) {
+    if (aliases.some((alias) => normalized.includes(alias))) {
       return field;
     }
   }
@@ -95,7 +106,9 @@ export async function parseXLSX(buffer: ArrayBuffer): Promise<ImportResult> {
         success: false,
         totalRows: 0,
         validRows: 0,
-        errors: [{ row: 0, field: "file", message: "Arquivo vazio ou sem dados" }],
+        errors: [
+          { row: 0, field: "file", message: "Arquivo vazio ou sem dados" },
+        ],
         services: [],
       };
     }
@@ -122,7 +135,13 @@ export async function parseXLSX(buffer: ArrayBuffer): Promise<ImportResult> {
         success: false,
         totalRows: worksheet.rowCount - 1,
         validRows: 0,
-        errors: [{ row: 0, field: "headers", message: "Coluna de nome/descrição não encontrada" }],
+        errors: [
+          {
+            row: 0,
+            field: "headers",
+            message: "Coluna de nome/descrição não encontrada",
+          },
+        ],
         services: [],
       };
     }
@@ -130,25 +149,43 @@ export async function parseXLSX(buffer: ArrayBuffer): Promise<ImportResult> {
     // Processar linhas de dados (a partir da linha 2)
     for (let rowNum = 2; rowNum <= worksheet.rowCount; rowNum++) {
       const row = worksheet.getRow(rowNum);
-      
-      const name = String(getCellValue(row.getCell(columnMap.name)) || "").trim();
-      
+
+      const name = String(
+        getCellValue(row.getCell(columnMap.name)) || "",
+      ).trim();
+
       if (!name) {
-        errors.push({ row: rowNum, field: "name", message: "Nome do serviço vazio" });
+        errors.push({
+          row: rowNum,
+          field: "name",
+          message: "Nome do serviço vazio",
+        });
         continue;
       }
 
       const service: ServiceImportRow = {
-        code: String(getCellValue(row.getCell(columnMap.code)) || `AUTO-${rowNum - 1}`).trim(),
+        code: String(
+          getCellValue(row.getCell(columnMap.code)) || `AUTO-${rowNum - 1}`,
+        ).trim(),
         name,
-        category: String(getCellValue(row.getCell(columnMap.category)) || "Geral").trim(),
+        category: String(
+          getCellValue(row.getCell(columnMap.category)) || "Geral",
+        ).trim(),
         price: parsePrice(getCellValue(row.getCell(columnMap.price))),
-        durationMinutes: parseDuration(getCellValue(row.getCell(columnMap.durationMinutes))),
-        cnae: columnMap.cnae ? String(getCellValue(row.getCell(columnMap.cnae)) || "").trim() : undefined,
+        durationMinutes: parseDuration(
+          getCellValue(row.getCell(columnMap.durationMinutes)),
+        ),
+        cnae: columnMap.cnae
+          ? String(getCellValue(row.getCell(columnMap.cnae)) || "").trim()
+          : undefined,
       };
 
       if (service.price <= 0) {
-        errors.push({ row: rowNum, field: "price", message: `Preço inválido: ${getCellValue(row.getCell(columnMap.price))}` });
+        errors.push({
+          row: rowNum,
+          field: "price",
+          message: `Preço inválido: ${getCellValue(row.getCell(columnMap.price))}`,
+        });
       }
 
       services.push(service);
@@ -166,23 +203,30 @@ export async function parseXLSX(buffer: ArrayBuffer): Promise<ImportResult> {
       success: false,
       totalRows: 0,
       validRows: 0,
-      errors: [{ 
-        row: 0, 
-        field: "file", 
-        message: `Erro ao processar arquivo: ${error instanceof Error ? error.message : "Desconhecido"}` 
-      }],
+      errors: [
+        {
+          row: 0,
+          field: "file",
+          message: `Erro ao processar arquivo: ${error instanceof Error ? error.message : "Desconhecido"}`,
+        },
+      ],
       services: [],
     };
   }
 }
 
-export function groupByCategory(services: ServiceImportRow[]): Record<string, ServiceImportRow[]> {
-  return services.reduce((acc, service) => {
-    const cat = service.category;
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(service);
-    return acc;
-  }, {} as Record<string, ServiceImportRow[]>);
+export function groupByCategory(
+  services: ServiceImportRow[],
+): Record<string, ServiceImportRow[]> {
+  return services.reduce(
+    (acc, service) => {
+      const cat = service.category;
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(service);
+      return acc;
+    },
+    {} as Record<string, ServiceImportRow[]>,
+  );
 }
 
 export function generateImportSummary(result: ImportResult): string {
@@ -197,7 +241,7 @@ export function generateImportSummary(result: ImportResult): string {
   if (result.services.length > 0) {
     const byCategory = groupByCategory(result.services);
     lines.push(``, `📁 Por categoria:`);
-    
+
     for (const [cat, svcs] of Object.entries(byCategory)) {
       lines.push(`  • ${cat}: ${svcs.length} serviços`);
     }

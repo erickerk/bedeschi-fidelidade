@@ -15,9 +15,21 @@ interface StaffUser {
 
 // Credenciais padrão do sistema (fallback)
 const STAFF_CREDENTIALS: Record<string, StaffUser> = {
-  "raul.admin@bedeschi.com.br": { password: "Bed3sch1#Adm!n2026", role: "admin", name: "Raul Bedeschi" },
-  "recepcao@bedeschi.com.br": { password: "R3c3pc@o#B3d2026!", role: "recepcao", name: "Recepção Bedeschi" },
-  "qa.teste@bedeschi.com.br": { password: "QaT3st3#S3gur0!2026", role: "qa", name: "QA Tester" },
+  "raul.admin@bedeschi.com.br": {
+    password: "Bed3sch1#Adm!n2026",
+    role: "admin",
+    name: "Raul Bedeschi",
+  },
+  "recepcao@bedeschi.com.br": {
+    password: "R3c3pc@o#B3d2026!",
+    role: "recepcao",
+    name: "Recepção Bedeschi",
+  },
+  "qa.teste@bedeschi.com.br": {
+    password: "QaT3st3#S3gur0!2026",
+    role: "qa",
+    name: "QA Tester",
+  },
 };
 
 export default function StaffLoginPage() {
@@ -29,7 +41,8 @@ export default function StaffLoginPage() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   const isDark = theme === "dark";
-  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,16 +61,19 @@ export default function StaffLoginPage() {
     // 1. PRIORIDADE: Tentar autenticar via Supabase (staff_users)
     try {
       const supabaseUser = await authenticateStaffUser(lowerEmail, password);
-      
+
       if (supabaseUser) {
         console.log("✅ Login via Supabase:", supabaseUser.email);
-        
-        localStorage.setItem("staffSession", JSON.stringify({
-          email: supabaseUser.email,
-          role: supabaseUser.role,
-          name: supabaseUser.name,
-          loggedAt: new Date().toISOString(),
-        }));
+
+        localStorage.setItem(
+          "staffSession",
+          JSON.stringify({
+            email: supabaseUser.email,
+            role: supabaseUser.role,
+            name: supabaseUser.name,
+            loggedAt: new Date().toISOString(),
+          }),
+        );
 
         // Redireciona baseado no perfil
         if (supabaseUser.role === "admin") {
@@ -70,7 +86,10 @@ export default function StaffLoginPage() {
         return;
       }
     } catch (error) {
-      console.warn("Tentativa de login via Supabase falhou, tentando fallback:", error);
+      console.warn(
+        "Tentativa de login via Supabase falhou, tentando fallback:",
+        error,
+      );
     }
 
     // 2. FALLBACK: Credenciais padrão do sistema
@@ -97,12 +116,15 @@ export default function StaffLoginPage() {
 
     console.log("✅ Login via credenciais locais:", lowerEmail);
 
-    localStorage.setItem("staffSession", JSON.stringify({
-      email,
-      role: user.role,
-      name: user.name,
-      loggedAt: new Date().toISOString(),
-    }));
+    localStorage.setItem(
+      "staffSession",
+      JSON.stringify({
+        email,
+        role: user.role,
+        name: user.name,
+        loggedAt: new Date().toISOString(),
+      }),
+    );
 
     // Redireciona baseado no perfil
     if (user.role === "admin" || user.role === "qa") {
@@ -132,7 +154,11 @@ export default function StaffLoginPage() {
                 : "bg-amber-100 text-amber-600 hover:bg-amber-200"
             }`}
           >
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDark ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
           </button>
         </div>
 

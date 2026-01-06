@@ -7,11 +7,13 @@ Antes de criar usuários, você **DEVE** executar o SQL abaixo no Supabase:
 ### 📋 Passo a Passo:
 
 1. **Acesse o SQL Editor do Supabase:**
+
    ```
    https://supabase.com/dashboard/project/lvqcualqeevdenghexjm/editor/sql
    ```
 
 2. **Execute o SQL do arquivo:**
+
    ```
    SQL_CREATE_STAFF_USERS.sql
    ```
@@ -84,6 +86,7 @@ Sistema de autenticação em cascata:
 ### 3. **Proteção contra Seed**
 
 O script `reset-and-seed.js` **NÃO** deleta:
+
 - ✅ `auth.users` (Supabase Auth)
 - ✅ `staff_users` (Usuários criados pelo Admin) ⭐
 
@@ -111,6 +114,7 @@ O script `reset-and-seed.js` **NÃO** deleta:
    - ✅ Deve funcionar!
 
 5. **Executar seed:**
+
    ```bash
    node scripts/reset-and-seed.js
    ```
@@ -124,11 +128,12 @@ O script `reset-and-seed.js` **NÃO** deleta:
 ## 📊 Verificar Usuários Criados
 
 ### Via SQL Editor:
+
 ```sql
-SELECT 
-  email, 
-  name, 
-  role, 
+SELECT
+  email,
+  name,
+  role,
   specialty,
   created_at,
   created_by
@@ -138,6 +143,7 @@ ORDER BY created_at DESC;
 ```
 
 ### Via Admin Dashboard:
+
 - Acesse a aba "Equipe"
 - Veja a seção "Usuários do Sistema" (em desenvolvimento)
 
@@ -145,13 +151,13 @@ ORDER BY created_at DESC;
 
 ## 🔧 Arquivos Importantes
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `SQL_CREATE_STAFF_USERS.sql` | SQL para criar tabela |
-| `src/lib/staff-users-api.ts` | API de gerenciamento de usuários |
-| `src/app/admin/dashboard/page.tsx` | Cadastro de usuários |
-| `src/app/staff/login/page.tsx` | Sistema de login |
-| `scripts/reset-and-seed.js` | Proteção contra exclusão |
+| Arquivo                            | Descrição                        |
+| ---------------------------------- | -------------------------------- |
+| `SQL_CREATE_STAFF_USERS.sql`       | SQL para criar tabela            |
+| `src/lib/staff-users-api.ts`       | API de gerenciamento de usuários |
+| `src/app/admin/dashboard/page.tsx` | Cadastro de usuários             |
+| `src/app/staff/login/page.tsx`     | Sistema de login                 |
+| `scripts/reset-and-seed.js`        | Proteção contra exclusão         |
 
 ---
 
@@ -161,6 +167,6 @@ ORDER BY created_at DESC;
 ✅ **Nunca serão deletados pelo seed**  
 ✅ **Senhas criptografadas com bcrypt**  
 ✅ **Login automático via Supabase**  
-✅ **Fallback para credenciais locais**  
+✅ **Fallback para credenciais locais**
 
 🎉 **Sistema pronto para produção!**

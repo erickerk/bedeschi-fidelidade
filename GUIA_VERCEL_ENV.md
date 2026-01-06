@@ -115,6 +115,7 @@ Ou acesse o painel da Vercel e clique em **Deploy** na seção de Deployments.
 Após seguir estes passos, seu aplicativo estará deployado na Vercel com todas as variáveis de ambiente configuradas corretamente!
 
 Se houver erro no build, verifique:
+
 1. ✅ Todas as 4 variáveis foram adicionadas
 2. ✅ Os valores estão corretos (sem espaços extras)
 3. ✅ O projeto está conectado ao GitHub

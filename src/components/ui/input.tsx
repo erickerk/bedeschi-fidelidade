@@ -1,8 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
 }
@@ -11,9 +10,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, label, error, id, ...props }, ref) => {
     const generatedId = React.useId();
     const inputId = id || generatedId;
-    
+
     // BUG-002 FIX: Auto-set autocomplete for password fields
-    const inputProps: React.InputHTMLAttributes<HTMLInputElement> = { ...props };
+    const inputProps: React.InputHTMLAttributes<HTMLInputElement> = {
+      ...props,
+    };
 
     if (!inputProps.autoComplete) {
       if (type === "password") {
@@ -41,18 +42,17 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "placeholder:text-slate-400",
             "focus:border-gold-500 focus:outline-none focus:ring-4 focus:ring-gold-500/20",
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-slate-50",
-            error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
-            className
+            error &&
+              "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+            className,
           )}
           ref={ref}
           {...inputProps}
         />
-        {error && (
-          <p className="mt-1.5 text-sm text-red-500">{error}</p>
-        )}
+        {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
       </div>
     );
-  }
+  },
 );
 Input.displayName = "Input";
 
@@ -64,9 +64,9 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
   ({ className, onChange, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let value = e.target.value.replace(/\D/g, "");
-      
+
       if (value.length > 11) value = value.slice(0, 11);
-      
+
       if (value.length > 6) {
         value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
       } else if (value.length > 2) {
@@ -74,7 +74,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
       } else if (value.length > 0) {
         value = `(${value}`;
       }
-      
+
       e.target.value = value;
       onChange?.(value);
     };
@@ -90,7 +90,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
         {...props}
       />
     );
-  }
+  },
 );
 PhoneInput.displayName = "PhoneInput";
 

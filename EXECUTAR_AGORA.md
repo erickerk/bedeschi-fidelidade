@@ -27,6 +27,7 @@ As tabelas `customers`, `appointments`, `reviews` e `rewards` **NÃO EXISTEM** n
 ### Passo 4: Verificar Sucesso
 
 Você deve ver:
+
 ```
 status
 Tabelas criadas com sucesso!
@@ -37,14 +38,15 @@ Tabelas criadas com sucesso!
 Execute no SQL Editor:
 
 ```sql
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
   AND table_type = 'BASE TABLE'
 ORDER BY table_name;
 ```
 
 **Deve mostrar:**
+
 - ✅ appointments
 - ✅ customers
 - ✅ reviews
@@ -63,6 +65,7 @@ node scripts/test-fluxo-completo.js
 ```
 
 Se tudo estiver correto, verá:
+
 ```
 ✅ TODOS OS TESTES PASSARAM!
 🎉 Sistema 100% funcional e sincronizado!
@@ -73,22 +76,26 @@ Se tudo estiver correto, verá:
 ## 📋 Tabelas Criadas
 
 ### 1. `customers` - Clientes
+
 - ID, nome, telefone, email, PIN
 - Pontos, gastos, número de atendimentos
 - Índices otimizados
 
 ### 2. `appointments` - Atendimentos
+
 - Cliente, profissional, data, horário
 - Serviços (JSON), total, pontos
 - Status de avaliação
 - Vinculado a `customers` e `staff_users`
 
 ### 3. `reviews` - Avaliações
+
 - Cliente, atendimento, profissional
 - Nota (1-5), comentário
 - Constraint: um cliente avalia um atendimento apenas uma vez
 
 ### 4. `rewards` - Recompensas
+
 - Cliente, tipo, valor
 - Status (disponível/resgatado/expirado)
 - Data de expiração
@@ -98,6 +105,7 @@ Se tudo estiver correto, verá:
 ## 🚀 Após Criar as Tabelas
 
 O teste QA vai:
+
 1. ✅ Verificar profissionais cadastrados
 2. ✅ Criar cliente de teste (Telefone: 11999888777, PIN: 9999)
 3. ✅ Criar atendimento (R$ 350,00, 350 pontos)

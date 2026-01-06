@@ -3,31 +3,31 @@
  * Usando a Database URL do Supabase
  */
 
-require('dotenv').config({ path: '.env.local' });
+require("dotenv").config({ path: ".env.local" });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceRoleKey) {
-  console.error('❌ Configure as variáveis no .env.local');
+  console.error("❌ Configure as variáveis no .env.local");
   process.exit(1);
 }
 
 // Extrair project ref da URL
-const projectRef = supabaseUrl.replace('https://', '').split('.')[0];
-console.log('📦 Project Ref:', projectRef);
+const projectRef = supabaseUrl.replace("https://", "").split(".")[0];
+console.log("📦 Project Ref:", projectRef);
 
 async function executeSQLViaREST(sql) {
   // Usar a API REST do Supabase para executar SQL via pg_query
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'apikey': serviceRoleKey,
-      'Authorization': `Bearer ${serviceRoleKey}`,
-      'Prefer': 'return=representation'
+      "Content-Type": "application/json",
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Prefer: "return=representation",
     },
-    body: JSON.stringify({})
+    body: JSON.stringify({}),
   });
 
   return response;
@@ -36,16 +36,18 @@ async function executeSQLViaREST(sql) {
 async function createTablesViaPooler() {
   // Tentar conectar via Supabase Pooler
   const poolerUrl = `postgresql://postgres.${projectRef}:[PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`;
-  
-  console.log('\n⚠️  Para criar as tabelas, você precisa:');
-  console.log('');
-  console.log('1. Acessar o Supabase Dashboard:');
-  console.log(`   https://supabase.com/dashboard/project/${projectRef}/sql/new`);
-  console.log('');
-  console.log('2. Colar e executar o SQL abaixo:');
-  console.log('');
-  console.log('═'.repeat(60));
-  
+
+  console.log("\n⚠️  Para criar as tabelas, você precisa:");
+  console.log("");
+  console.log("1. Acessar o Supabase Dashboard:");
+  console.log(
+    `   https://supabase.com/dashboard/project/${projectRef}/sql/new`,
+  );
+  console.log("");
+  console.log("2. Colar e executar o SQL abaixo:");
+  console.log("");
+  console.log("═".repeat(60));
+
   const sql = `
 -- TABELA DE CLIENTES
 CREATE TABLE IF NOT EXISTS public.fidelity_clients (
@@ -157,9 +159,11 @@ SELECT 'Tabelas criadas com sucesso!' as status;
 `;
 
   console.log(sql);
-  console.log('═'.repeat(60));
-  console.log('');
-  console.log('3. Após executar, rode: node scripts/execute-migration.js --seed');
+  console.log("═".repeat(60));
+  console.log("");
+  console.log(
+    "3. Após executar, rode: node scripts/execute-migration.js --seed",
+  );
 }
 
 createTablesViaPooler();

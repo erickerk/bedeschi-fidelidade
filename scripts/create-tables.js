@@ -2,52 +2,54 @@
  * Script para criar tabelas via Supabase REST API
  */
 
-require('dotenv').config({ path: '.env.local' })
+require("dotenv").config({ path: ".env.local" });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceRoleKey) {
-  console.error('❌ Erro: Configure as variáveis de ambiente')
-  process.exit(1)
+  console.error("❌ Erro: Configure as variáveis de ambiente");
+  process.exit(1);
 }
 
 // Extrair project ref da URL
-const projectRef = supabaseUrl.replace('https://', '').replace('.supabase.co', '')
+const projectRef = supabaseUrl
+  .replace("https://", "")
+  .replace(".supabase.co", "");
 
 async function executeSql(sql) {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'apikey': serviceRoleKey,
-      'Authorization': `Bearer ${serviceRoleKey}`
+      "Content-Type": "application/json",
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
     },
-    body: JSON.stringify({ sql_query: sql })
-  })
+    body: JSON.stringify({ sql_query: sql }),
+  });
 
   if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`SQL Error: ${error}`)
+    const error = await response.text();
+    throw new Error(`SQL Error: ${error}`);
   }
 
-  return response.json()
+  return response.json();
 }
 
 async function executeDirectSql(sql) {
   // Usar a API do Postgres diretamente via pg
-  const { Client } = require('pg')
-  
-  const connectionString = `postgresql://postgres.${projectRef}:${serviceRoleKey}@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`
-  
-  const client = new Client({ connectionString })
-  
+  const { Client } = require("pg");
+
+  const connectionString = `postgresql://postgres.${projectRef}:${serviceRoleKey}@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`;
+
+  const client = new Client({ connectionString });
+
   try {
-    await client.connect()
-    const result = await client.query(sql)
-    return result
+    await client.connect();
+    const result = await client.query(sql);
+    return result;
   } finally {
-    await client.end()
+    await client.end();
   }
 }
 
@@ -128,36 +130,38 @@ insert into public.roles (code, name, description, permissions) values
   ('RECEPCAO', 'Recepção', 'Perfil de recepção', '["clients:read", "clients:write", "appointments:read", "appointments:write"]'::jsonb),
   ('QA', 'QA / Teste', 'Usuário de teste', '["test:access", "reports:view"]'::jsonb)
 on conflict (code) do update set name = excluded.name, description = excluded.description, permissions = excluded.permissions;
-`
+`;
 
 async function main() {
-  console.log('🚀 Criando tabelas no Supabase...')
-  console.log(`📡 Projeto: ${projectRef}`)
+  console.log("🚀 Criando tabelas no Supabase...");
+  console.log(`📡 Projeto: ${projectRef}`);
 
   try {
     // Tentar via RPC primeiro
-    await executeSql(migrationSql)
-    console.log('✅ Migração executada com sucesso via RPC!')
+    await executeSql(migrationSql);
+    console.log("✅ Migração executada com sucesso via RPC!");
   } catch (rpcError) {
-    console.log('⚠️  RPC não disponível, verificando se pg está instalado...')
-    
+    console.log("⚠️  RPC não disponível, verificando se pg está instalado...");
+
     try {
       // Verificar se pg está instalado
-      require.resolve('pg')
-      console.log('📦 Usando conexão direta PostgreSQL...')
-      await executeDirectSql(migrationSql)
-      console.log('✅ Migração executada com sucesso via PostgreSQL!')
+      require.resolve("pg");
+      console.log("📦 Usando conexão direta PostgreSQL...");
+      await executeDirectSql(migrationSql);
+      console.log("✅ Migração executada com sucesso via PostgreSQL!");
     } catch (pgError) {
-      if (pgError.code === 'MODULE_NOT_FOUND') {
-        console.log('\n❌ Módulo pg não instalado.')
-        console.log('   Execute: npm install pg')
-        console.log('\n   Ou execute o SQL manualmente no dashboard:')
-        console.log(`   https://supabase.com/dashboard/project/${projectRef}/sql/new`)
+      if (pgError.code === "MODULE_NOT_FOUND") {
+        console.log("\n❌ Módulo pg não instalado.");
+        console.log("   Execute: npm install pg");
+        console.log("\n   Ou execute o SQL manualmente no dashboard:");
+        console.log(
+          `   https://supabase.com/dashboard/project/${projectRef}/sql/new`,
+        );
       } else {
-        console.error('❌ Erro:', pgError.message)
+        console.error("❌ Erro:", pgError.message);
       }
     }
   }
 }
 
-main()
+main();

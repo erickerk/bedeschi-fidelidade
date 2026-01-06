@@ -3,7 +3,7 @@
  * Projeto: Bedeschi Fidelidade/Estética
  */
 
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export interface AppointmentService {
   id: string;
@@ -24,7 +24,7 @@ export interface FidelityAppointment {
   professional_name?: string;
   date: string;
   time?: string;
-  status: 'completed' | 'pending' | 'cancelled';
+  status: "completed" | "pending" | "cancelled";
   total: number;
   points_earned: number;
   has_review: boolean;
@@ -43,7 +43,7 @@ export interface CreateAppointmentInput {
   professional_name?: string;
   date: string;
   time?: string;
-  status?: 'completed' | 'pending' | 'cancelled';
+  status?: "completed" | "pending" | "cancelled";
   total: number;
   points_earned: number;
   notes?: string;
@@ -61,7 +61,7 @@ export interface UpdateAppointmentInput {
   professional_name?: string;
   date?: string;
   time?: string;
-  status?: 'completed' | 'pending' | 'cancelled';
+  status?: "completed" | "pending" | "cancelled";
   total?: number;
   points_earned?: number;
   has_review?: boolean;
@@ -73,12 +73,12 @@ export interface UpdateAppointmentInput {
 // Buscar todos os agendamentos
 export async function getAppointments(): Promise<FidelityAppointment[]> {
   const { data, error } = await supabase
-    .from('fidelity_appointments')
-    .select('*')
-    .order('date', { ascending: false });
+    .from("fidelity_appointments")
+    .select("*")
+    .order("date", { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar agendamentos:', error);
+    console.error("Erro ao buscar agendamentos:", error);
     return [];
   }
 
@@ -86,84 +86,90 @@ export async function getAppointments(): Promise<FidelityAppointment[]> {
 }
 
 // Buscar agendamentos com serviços
-export async function getAppointmentsWithServices(): Promise<FidelityAppointment[]> {
+export async function getAppointmentsWithServices(): Promise<
+  FidelityAppointment[]
+> {
   const { data: appointments, error: aptError } = await supabase
-    .from('fidelity_appointments')
-    .select('*')
-    .order('date', { ascending: false });
+    .from("fidelity_appointments")
+    .select("*")
+    .order("date", { ascending: false });
 
   if (aptError) {
-    console.error('Erro ao buscar agendamentos:', aptError);
+    console.error("Erro ao buscar agendamentos:", aptError);
     return [];
   }
 
   if (!appointments || appointments.length === 0) return [];
 
   // Buscar serviços para cada agendamento
-  const appointmentIds = appointments.map(a => a.id);
+  const appointmentIds = appointments.map((a) => a.id);
   const { data: services, error: svcError } = await supabase
-    .from('fidelity_appointment_services')
-    .select('*')
-    .in('appointment_id', appointmentIds);
+    .from("fidelity_appointment_services")
+    .select("*")
+    .in("appointment_id", appointmentIds);
 
   if (svcError) {
-    console.error('Erro ao buscar serviços dos agendamentos:', svcError);
+    console.error("Erro ao buscar serviços dos agendamentos:", svcError);
     return appointments;
   }
 
   // Associar serviços aos agendamentos
-  return appointments.map(apt => ({
+  return appointments.map((apt) => ({
     ...apt,
-    services: services?.filter(s => s.appointment_id === apt.id) || [],
+    services: services?.filter((s) => s.appointment_id === apt.id) || [],
   }));
 }
 
 // Buscar agendamentos por cliente
-export async function getAppointmentsByClient(clientId: string): Promise<FidelityAppointment[]> {
+export async function getAppointmentsByClient(
+  clientId: string,
+): Promise<FidelityAppointment[]> {
   const { data: appointments, error: aptError } = await supabase
-    .from('fidelity_appointments')
-    .select('*')
-    .eq('client_id', clientId)
-    .order('date', { ascending: false });
+    .from("fidelity_appointments")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("date", { ascending: false });
 
   if (aptError) {
-    console.error('Erro ao buscar agendamentos do cliente:', aptError);
+    console.error("Erro ao buscar agendamentos do cliente:", aptError);
     return [];
   }
 
   if (!appointments || appointments.length === 0) return [];
 
   // Buscar serviços
-  const appointmentIds = appointments.map(a => a.id);
+  const appointmentIds = appointments.map((a) => a.id);
   const { data: services } = await supabase
-    .from('fidelity_appointment_services')
-    .select('*')
-    .in('appointment_id', appointmentIds);
+    .from("fidelity_appointment_services")
+    .select("*")
+    .in("appointment_id", appointmentIds);
 
-  return appointments.map(apt => ({
+  return appointments.map((apt) => ({
     ...apt,
-    services: services?.filter(s => s.appointment_id === apt.id) || [],
+    services: services?.filter((s) => s.appointment_id === apt.id) || [],
   }));
 }
 
 // Buscar agendamento por ID
-export async function getAppointmentById(id: string): Promise<FidelityAppointment | null> {
+export async function getAppointmentById(
+  id: string,
+): Promise<FidelityAppointment | null> {
   const { data, error } = await supabase
-    .from('fidelity_appointments')
-    .select('*')
-    .eq('id', id)
+    .from("fidelity_appointments")
+    .select("*")
+    .eq("id", id)
     .single();
 
   if (error) {
-    console.error('Erro ao buscar agendamento:', error);
+    console.error("Erro ao buscar agendamento:", error);
     return null;
   }
 
   // Buscar serviços
   const { data: services } = await supabase
-    .from('fidelity_appointment_services')
-    .select('*')
-    .eq('appointment_id', id);
+    .from("fidelity_appointment_services")
+    .select("*")
+    .eq("appointment_id", id);
 
   return {
     ...data,
@@ -172,38 +178,40 @@ export async function getAppointmentById(id: string): Promise<FidelityAppointmen
 }
 
 // Criar agendamento
-export async function createAppointment(input: CreateAppointmentInput): Promise<FidelityAppointment | null> {
+export async function createAppointment(
+  input: CreateAppointmentInput,
+): Promise<FidelityAppointment | null> {
   const { services, ...appointmentData } = input;
 
   // Criar agendamento
   const { data: appointment, error: aptError } = await supabase
-    .from('fidelity_appointments')
+    .from("fidelity_appointments")
     .insert({
       ...appointmentData,
-      status: appointmentData.status || 'completed',
+      status: appointmentData.status || "completed",
       has_review: false,
     })
     .select()
     .single();
 
   if (aptError) {
-    console.error('Erro ao criar agendamento:', aptError);
+    console.error("Erro ao criar agendamento:", aptError);
     return null;
   }
 
   // Criar serviços do agendamento
   if (services && services.length > 0) {
-    const servicesData = services.map(s => ({
+    const servicesData = services.map((s) => ({
       appointment_id: appointment.id,
       ...s,
     }));
 
     const { error: svcError } = await supabase
-      .from('fidelity_appointment_services')
+      .from("fidelity_appointment_services")
       .insert(servicesData);
 
     if (svcError) {
-      console.error('Erro ao criar serviços do agendamento:', svcError);
+      console.error("Erro ao criar serviços do agendamento:", svcError);
     }
   }
 
@@ -219,16 +227,19 @@ export async function createAppointment(input: CreateAppointmentInput): Promise<
 }
 
 // Atualizar agendamento
-export async function updateAppointment(id: string, input: UpdateAppointmentInput): Promise<FidelityAppointment | null> {
+export async function updateAppointment(
+  id: string,
+  input: UpdateAppointmentInput,
+): Promise<FidelityAppointment | null> {
   const { data, error } = await supabase
-    .from('fidelity_appointments')
+    .from("fidelity_appointments")
     .update(input)
-    .eq('id', id)
+    .eq("id", id)
     .select()
     .single();
 
   if (error) {
-    console.error('Erro ao atualizar agendamento:', error);
+    console.error("Erro ao atualizar agendamento:", error);
     return null;
   }
 
@@ -239,7 +250,7 @@ export async function updateAppointment(id: string, input: UpdateAppointmentInpu
 export async function addReviewToAppointment(
   appointmentId: string,
   rating: number,
-  comment?: string
+  comment?: string,
 ): Promise<FidelityAppointment | null> {
   return updateAppointment(appointmentId, {
     has_review: true,
@@ -249,20 +260,22 @@ export async function addReviewToAppointment(
 }
 
 // Buscar agendamento pendente de avaliação para um cliente
-export async function getPendingReviewForClient(clientId: string): Promise<FidelityAppointment | null> {
+export async function getPendingReviewForClient(
+  clientId: string,
+): Promise<FidelityAppointment | null> {
   const { data, error } = await supabase
-    .from('fidelity_appointments')
-    .select('*')
-    .eq('client_id', clientId)
-    .eq('status', 'completed')
-    .eq('has_review', false)
-    .order('date', { ascending: false })
+    .from("fidelity_appointments")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("status", "completed")
+    .eq("has_review", false)
+    .order("date", { ascending: false })
     .limit(1)
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') {
-      console.error('Erro ao buscar avaliação pendente:', error);
+    if (error.code !== "PGRST116") {
+      console.error("Erro ao buscar avaliação pendente:", error);
     }
     return null;
   }
@@ -271,16 +284,19 @@ export async function getPendingReviewForClient(clientId: string): Promise<Fidel
 }
 
 // Buscar agendamentos por período
-export async function getAppointmentsByPeriod(startDate: string, endDate: string): Promise<FidelityAppointment[]> {
+export async function getAppointmentsByPeriod(
+  startDate: string,
+  endDate: string,
+): Promise<FidelityAppointment[]> {
   const { data, error } = await supabase
-    .from('fidelity_appointments')
-    .select('*')
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date', { ascending: false });
+    .from("fidelity_appointments")
+    .select("*")
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar agendamentos por período:', error);
+    console.error("Erro ao buscar agendamentos por período:", error);
     return [];
   }
 

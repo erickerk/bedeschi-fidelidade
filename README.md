@@ -14,24 +14,24 @@ SaaS mobile-first para automação de programa de fidelidade, permitindo:
 
 ## Tech Stack
 
-| Camada | Tecnologia |
-|--------|------------|
+| Camada   | Tecnologia                                     |
+| -------- | ---------------------------------------------- |
 | Frontend | Next.js 14, TypeScript, TailwindCSS, shadcn/ui |
-| Backend | Next.js API Routes, Supabase |
-| Database | PostgreSQL (Supabase) |
-| Auth | Supabase Auth + OTP via WhatsApp |
-| Deploy | Vercel |
+| Backend  | Next.js API Routes, Supabase                   |
+| Database | PostgreSQL (Supabase)                          |
+| Auth     | Supabase Auth + OTP via WhatsApp               |
+| Deploy   | Vercel                                         |
 
 ## Documentação
 
-| Documento | Descrição |
-|-----------|-----------|
-| [PRD](./docs/PRD.md) | Product Requirements Document |
-| [Arquitetura](./docs/ARCHITECTURE.md) | Decisões técnicas e diagramas |
-| [Banco de Dados](./docs/DATABASE.md) | Schema e modelo de dados |
-| [API](./docs/API.md) | Endpoints e payloads |
-| [Design System](./docs/DESIGN-SYSTEM.md) | Cores, tipografia, componentes |
-| [Implementação](./docs/IMPLEMENTATION-PLAN.md) | Sprints e cronograma |
+| Documento                                      | Descrição                      |
+| ---------------------------------------------- | ------------------------------ |
+| [PRD](./docs/PRD.md)                           | Product Requirements Document  |
+| [Arquitetura](./docs/ARCHITECTURE.md)          | Decisões técnicas e diagramas  |
+| [Banco de Dados](./docs/DATABASE.md)           | Schema e modelo de dados       |
+| [API](./docs/API.md)                           | Endpoints e payloads           |
+| [Design System](./docs/DESIGN-SYSTEM.md)       | Cores, tipografia, componentes |
+| [Implementação](./docs/IMPLEMENTATION-PLAN.md) | Sprints e cronograma           |
 
 ## Quick Start
 
@@ -139,11 +139,11 @@ Login → Importa serviços (XLSX) → Configura regras → Monitora dashboard
 
 Baseado no logo Instituto Bedeschi:
 
-| Cor | Hex | Uso |
-|-----|-----|-----|
-| Dourado | `#C9A962` | Primária, destaques, CTAs |
-| Slate | `#3D4555` | Secundária, backgrounds escuros |
-| White | `#FFFFFF` | Backgrounds claros |
+| Cor     | Hex       | Uso                             |
+| ------- | --------- | ------------------------------- |
+| Dourado | `#C9A962` | Primária, destaques, CTAs       |
+| Slate   | `#3D4555` | Secundária, backgrounds escuros |
+| White   | `#FFFFFF` | Backgrounds claros              |
 
 ## Contribuição
 

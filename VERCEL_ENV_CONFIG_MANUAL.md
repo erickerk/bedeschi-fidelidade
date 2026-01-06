@@ -95,6 +95,7 @@ Ou clique em **Redeploy** no painel da Vercel.
 ## 🔍 Por que o Build Falha?
 
 **Sem as variáveis na Vercel:**
+
 - `NEXT_PUBLIC_SUPABASE_URL` ❌ undefined
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` ❌ undefined
 - `SUPABASE_SERVICE_ROLE_KEY` ❌ undefined
@@ -103,6 +104,7 @@ Ou clique em **Redeploy** no painel da Vercel.
 O Next.js tenta usar essas variáveis durante o build e falha.
 
 **Com as variáveis configuradas:**
+
 - ✅ Build completa com sucesso
 - ✅ Aplicação funciona corretamente
 - ✅ Todos os dispositivos veem a mesma versão

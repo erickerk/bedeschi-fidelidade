@@ -36,7 +36,9 @@ export interface UpdateStaffUserInput {
 }
 
 // Criar novo usuário da equipe
-export async function createStaffUser(input: CreateStaffUserInput): Promise<StaffUser> {
+export async function createStaffUser(
+  input: CreateStaffUserInput,
+): Promise<StaffUser> {
   // Hash da senha usando bcrypt
   const passwordHash = bcrypt.hashSync(input.password, 10);
 
@@ -79,7 +81,9 @@ export async function getStaffUsers(): Promise<StaffUser[]> {
 }
 
 // Buscar usuário por email
-export async function getStaffUserByEmail(email: string): Promise<StaffUser | null> {
+export async function getStaffUserByEmail(
+  email: string,
+): Promise<StaffUser | null> {
   const { data, error } = await supabase
     .from("staff_users")
     .select("*")
@@ -101,7 +105,7 @@ export async function getStaffUserByEmail(email: string): Promise<StaffUser | nu
 // Autenticar usuário (verificar email e senha)
 export async function authenticateStaffUser(
   email: string,
-  password: string
+  password: string,
 ): Promise<StaffUser | null> {
   const { data, error } = await supabase
     .from("staff_users")
@@ -116,7 +120,7 @@ export async function authenticateStaffUser(
 
   // Verificar senha com bcrypt
   const isPasswordValid = bcrypt.compareSync(password, data.password_hash);
-  
+
   if (!isPasswordValid) {
     return null;
   }
@@ -127,7 +131,7 @@ export async function authenticateStaffUser(
 // Atualizar usuário
 export async function updateStaffUser(
   id: string,
-  input: UpdateStaffUserInput
+  input: UpdateStaffUserInput,
 ): Promise<StaffUser> {
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
@@ -137,7 +141,7 @@ export async function updateStaffUser(
   if (input.email !== undefined) updateData.email = input.email.toLowerCase();
   if (input.specialty !== undefined) updateData.specialty = input.specialty;
   if (input.is_active !== undefined) updateData.is_active = input.is_active;
-  
+
   // Se houver nova senha, hash ela
   if (input.password) {
     updateData.password_hash = bcrypt.hashSync(input.password, 10);
@@ -162,9 +166,9 @@ export async function updateStaffUser(
 export async function deactivateStaffUser(id: string): Promise<void> {
   const { error } = await supabase
     .from("staff_users")
-    .update({ 
-      is_active: false, 
-      updated_at: new Date().toISOString() 
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id);
 
@@ -176,10 +180,7 @@ export async function deactivateStaffUser(id: string): Promise<void> {
 
 // Deletar permanentemente (usar com cuidado)
 export async function deleteStaffUser(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("staff_users")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("staff_users").delete().eq("id", id);
 
   if (error) {
     console.error("Erro ao deletar usuário:", error);

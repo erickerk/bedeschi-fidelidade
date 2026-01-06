@@ -10,24 +10,24 @@ import { importedServices } from "./services-data";
 export function generateDailyRevenue() {
   const data = [];
   const today = new Date();
-  
+
   for (let i = 89; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    
+
     // Simular variação realista de receita (mais alta em finais de semana)
     const dayOfWeek = date.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const baseRevenue = isWeekend ? 2500 : 1800;
     const variation = Math.random() * 800 - 400;
-    
+
     data.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       revenue: Math.max(800, baseRevenue + variation),
-      appointments: Math.floor(Math.random() * 8) + (isWeekend ? 12 : 8)
+      appointments: Math.floor(Math.random() * 8) + (isWeekend ? 12 : 8),
     });
   }
-  
+
   return data;
 }
 
@@ -35,7 +35,7 @@ export function generateDailyRevenue() {
 export function generateRealisticAppointments(): Appointment[] {
   const appointments: Appointment[] = [];
   const today = new Date();
-  
+
   const clients = [
     { id: "cli-1", name: "Fernanda Rodrigues" },
     { id: "cli-2", name: "Patricia Mendes" },
@@ -48,7 +48,7 @@ export function generateRealisticAppointments(): Appointment[] {
     { id: "cli-9", name: "Gabriela Oliveira" },
     { id: "cli-10", name: "Rafaela Costa" },
   ];
-  
+
   const professionals = [
     { id: "prof-1", name: "Dra. Amanda Costa" },
     { id: "prof-2", name: "Carla Santos" },
@@ -56,25 +56,27 @@ export function generateRealisticAppointments(): Appointment[] {
     { id: "prof-4", name: "Patricia Alves" },
     { id: "prof-6", name: "Fernanda Oliveira" },
   ];
-  
+
   const servicesPool = importedServices.filter((s) => s.isActive);
-  
+
   let aptId = 1;
-  
+
   // Gerar 8-15 atendimentos por dia nos últimos 90 dias
   for (let dayOffset = 0; dayOffset < 90; dayOffset++) {
     const date = new Date(today);
     date.setDate(date.getDate() - dayOffset);
     const dayOfWeek = date.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
+
     // Mais atendimentos em finais de semana
-    const numAppointments = Math.floor(Math.random() * 7) + (isWeekend ? 12 : 8);
-    
+    const numAppointments =
+      Math.floor(Math.random() * 7) + (isWeekend ? 12 : 8);
+
     for (let i = 0; i < numAppointments; i++) {
       const client = clients[Math.floor(Math.random() * clients.length)];
-      const prof = professionals[Math.floor(Math.random() * professionals.length)];
-      
+      const prof =
+        professionals[Math.floor(Math.random() * professionals.length)];
+
       // 1-3 serviços por atendimento usando a base oficial de serviços importados
       const numServices = Math.floor(Math.random() * 3) + 1;
       const selectedServices = [];
@@ -94,11 +96,11 @@ export function generateRealisticAppointments(): Appointment[] {
           price: svc.price,
         });
       }
-      
+
       const total = selectedServices.reduce((sum, s) => sum + s.price, 0);
       const hasReview = Math.random() > 0.3; // 70% têm avaliação
-      const dateStr = date.toISOString().split('T')[0];
-      
+      const dateStr = date.toISOString().split("T")[0];
+
       appointments.push({
         id: `apt-${aptId++}`,
         clientId: client.id,
@@ -112,55 +114,75 @@ export function generateRealisticAppointments(): Appointment[] {
         pointsEarned: total,
         status: "completed",
         hasReview,
-        review: hasReview ? {
-          rating: Math.random() > 0.8 ? 5 : (Math.random() > 0.5 ? 4 : 3),
-          comment: "",
-          professionalRating: Math.random() > 0.8 ? 5 : (Math.random() > 0.5 ? 4 : 3)
-        } : undefined,
+        review: hasReview
+          ? {
+              rating: Math.random() > 0.8 ? 5 : Math.random() > 0.5 ? 4 : 3,
+              comment: "",
+              professionalRating:
+                Math.random() > 0.8 ? 5 : Math.random() > 0.5 ? 4 : 3,
+            }
+          : undefined,
       });
     }
   }
-  
-  return appointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return appointments.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 }
 
 // Gerar clientes realistas com dados completos
 export function generateEnhancedClients(): Client[] {
   const names = [
-    "Fernanda Rodrigues", "Patricia Mendes", "Camila Almeida", "Beatriz Costa",
-    "Larissa Souza", "Amanda Pereira", "Juliana Santos", "Mariana Lima",
-    "Gabriela Oliveira", "Rafaela Costa", "Carolina Silva", "Isabela Martins",
-    "Letícia Ferreira", "Natália Rocha", "Vanessa Alves", "Priscila Dias",
-    "Renata Cardoso", "Tatiana Barbosa", "Viviane Monteiro", "Daniela Ribeiro"
+    "Fernanda Rodrigues",
+    "Patricia Mendes",
+    "Camila Almeida",
+    "Beatriz Costa",
+    "Larissa Souza",
+    "Amanda Pereira",
+    "Juliana Santos",
+    "Mariana Lima",
+    "Gabriela Oliveira",
+    "Rafaela Costa",
+    "Carolina Silva",
+    "Isabela Martins",
+    "Letícia Ferreira",
+    "Natália Rocha",
+    "Vanessa Alves",
+    "Priscila Dias",
+    "Renata Cardoso",
+    "Tatiana Barbosa",
+    "Viviane Monteiro",
+    "Daniela Ribeiro",
   ];
-  
+
   return names.map((name, idx) => {
     const totalAppointments = Math.floor(Math.random() * 40) + 5;
     const avgSpending = 150 + Math.random() * 200;
     const totalSpent = totalAppointments * avgSpending;
     const pointsBalance = Math.floor(totalSpent * 0.3 + Math.random() * 500);
-    
+
     const today = new Date();
     const lastVisitDays = Math.floor(Math.random() * 60);
     const lastVisit = new Date(today);
     lastVisit.setDate(lastVisit.getDate() - lastVisitDays);
-    
+
     const createdMonths = Math.floor(Math.random() * 24) + 3;
     const createdAt = new Date(today);
     createdAt.setMonth(createdAt.getMonth() - createdMonths);
-    
+
     return {
       id: `cli-${idx + 1}`,
       name,
-      phone: `119${String(87654321 + idx).padStart(8, '0')}`,
+      phone: `119${String(87654321 + idx).padStart(8, "0")}`,
       pin: String(1000 + idx * 111).slice(0, 4),
-      email: `${name.toLowerCase().replace(' ', '.')}@email.com`,
-      birthDate: `19${85 + Math.floor(Math.random() * 15)}-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+      email: `${name.toLowerCase().replace(" ", ".")}@email.com`,
+      birthDate: `19${85 + Math.floor(Math.random() * 15)}-${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, "0")}`,
       pointsBalance,
       totalSpent,
       totalAppointments,
-      lastVisit: lastVisit.toISOString().split('T')[0],
-      createdAt: createdAt.toISOString().split('T')[0],
+      lastVisit: lastVisit.toISOString().split("T")[0],
+      createdAt: createdAt.toISOString().split("T")[0],
     };
   });
 }
@@ -264,7 +286,7 @@ export function generateEnhancedProfessionals(): Professional[] {
 // Gerar avaliações realistas
 export function generateEnhancedReviews(appointments: Appointment[]): Review[] {
   return appointments
-    .filter(apt => apt.hasReview && apt.review)
+    .filter((apt) => apt.hasReview && apt.review)
     .map((apt, idx) => ({
       id: `rev-${idx + 1}`,
       clientId: apt.clientId,

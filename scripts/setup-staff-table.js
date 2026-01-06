@@ -1,14 +1,14 @@
-require('dotenv').config({ path: '.env.local' });
-const { createClient } = require('@supabase/supabase-js');
+require("dotenv").config({ path: ".env.local" });
+const { createClient } = require("@supabase/supabase-js");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } }
+  { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
 async function setupStaffUsersTable() {
-  console.log('🔧 Configurando tabela staff_users...\n');
+  console.log("🔧 Configurando tabela staff_users...\n");
 
   // Criar tabela via query SQL
   const createTableSQL = `
@@ -32,40 +32,46 @@ async function setupStaffUsersTable() {
 
   try {
     // Tentar criar via query direta
-    const { error: createError } = await supabase.from('staff_users').select('id').limit(1);
-    
-    if (createError && createError.code === '42P01') {
+    const { error: createError } = await supabase
+      .from("staff_users")
+      .select("id")
+      .limit(1);
+
+    if (createError && createError.code === "42P01") {
       // Tabela não existe, precisa criar manualmente
-      console.log('⚠️  Tabela staff_users não existe. Por favor, execute o SQL manualmente:\n');
-      console.log('1. Acesse: https://lvqcualqeevdenghexjm.supabase.co/project/lvqcualqeevdenghexjm/editor/sql');
-      console.log('2. Execute o seguinte SQL:\n');
+      console.log(
+        "⚠️  Tabela staff_users não existe. Por favor, execute o SQL manualmente:\n",
+      );
+      console.log(
+        "1. Acesse: https://lvqcualqeevdenghexjm.supabase.co/project/lvqcualqeevdenghexjm/editor/sql",
+      );
+      console.log("2. Execute o seguinte SQL:\n");
       console.log(createTableSQL);
-      console.log('\n3. Execute este script novamente\n');
+      console.log("\n3. Execute este script novamente\n");
       process.exit(1);
     }
 
-    console.log('✅ Tabela staff_users já existe!\n');
-    
+    console.log("✅ Tabela staff_users já existe!\n");
+
     // Verificar se já existem usuários
     const { data: users, error: selectError } = await supabase
-      .from('staff_users')
-      .select('*');
+      .from("staff_users")
+      .select("*");
 
     if (selectError) {
-      console.error('❌ Erro ao verificar usuários:', selectError);
+      console.error("❌ Erro ao verificar usuários:", selectError);
       process.exit(1);
     }
 
     console.log(`📊 Usuários cadastrados: ${users?.length || 0}\n`);
-    
+
     if (users && users.length > 0) {
-      users.forEach(user => {
+      users.forEach((user) => {
         console.log(`   - ${user.name} (${user.email}) - ${user.role}`);
       });
     }
-
   } catch (error) {
-    console.error('❌ Erro:', error.message);
+    console.error("❌ Erro:", error.message);
     process.exit(1);
   }
 }

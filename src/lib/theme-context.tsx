@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -12,10 +18,10 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ 
-  children, 
-  defaultTheme = "light" 
-}: { 
+export function ThemeProvider({
+  children,
+  defaultTheme = "light",
+}: {
   children: ReactNode;
   defaultTheme?: Theme;
 }) {
@@ -40,7 +46,9 @@ export function ThemeProvider({
   };
 
   if (!mounted) {
-    return <div className={defaultTheme === "dark" ? "bg-slate-950" : "bg-white"} />;
+    return (
+      <div className={defaultTheme === "dark" ? "bg-slate-950" : "bg-white"} />
+    );
   }
 
   return (

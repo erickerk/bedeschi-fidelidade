@@ -7,18 +7,21 @@
 **Funcionalidade:** Recepção e Admin podem editar dados dos clientes
 
 **O que foi adicionado:**
+
 - Botão "Editar" na lista de clientes
 - Modal de edição completo
 - Campos editáveis: Nome, Telefone, Email
 - PIN exibido mas não editável (segurança)
 
 **Como usar:**
+
 1. Aba "Clientes" na recepção
 2. Clique em "Editar" ao lado do cliente
 3. Altere os dados necessários
 4. Clique em "Salvar Alterações"
 
 **Arquivos modificados:**
+
 - `src/app/recepcao/page.tsx` (linhas 39-44, 141-162, 422-431, 633-709)
 
 ---
@@ -28,17 +31,20 @@
 ### Antes vs Depois
 
 **Antes:**
+
 - Background branco puro (muito claro)
 - Sem profundidade visual
 - Contraste baixo
 
 **Depois:**
+
 - Background com gradiente suave: `from-slate-50 via-amber-50/30 to-slate-100`
 - Header com backdrop blur e sombra: `bg-white/80 backdrop-blur-sm shadow-sm`
 - Cards com sombras e bordas: `shadow-md border border-slate-200`
 - Melhor hierarquia visual
 
 **Benefícios:**
+
 - Menos cansaço visual
 - Mais elegante e profissional
 - Melhor separação entre elementos
@@ -76,13 +82,13 @@ const handleSaveEditClient = () => {
 
 ```tsx
 // Background principal
-className="bg-gradient-to-br from-slate-50 via-amber-50/30 to-slate-100"
+className = "bg-gradient-to-br from-slate-50 via-amber-50/30 to-slate-100";
 
 // Header com blur
-className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm"
+className = "bg-white/80 backdrop-blur-sm border-slate-200 shadow-sm";
 
 // Cards
-className="bg-white shadow-md border border-slate-200"
+className = "bg-white shadow-md border border-slate-200";
 ```
 
 ---
@@ -90,6 +96,7 @@ className="bg-white shadow-md border border-slate-200"
 ## 📋 Testes Realizados
 
 ### Teste 1: Editar Cliente
+
 - ✅ Modal abre corretamente
 - ✅ Dados pré-preenchidos
 - ✅ Validação de campos obrigatórios
@@ -97,6 +104,7 @@ className="bg-white shadow-md border border-slate-200"
 - ✅ Lista atualiza após edição
 
 ### Teste 2: Tema Light
+
 - ✅ Gradiente de background suave
 - ✅ Header com backdrop blur
 - ✅ Sombras em cards
@@ -112,10 +120,12 @@ className="bg-white shadow-md border border-slate-200"
 **Commit:** `feat: adicionar edicao clientes + otimizar tema light`
 
 **URLs:**
+
 - **Local:** http://localhost:3001/recepcao
 - **Produção:** https://bedeschi-fidelidade-app.vercel.app/recepcao
 
 **Credenciais de teste:**
+
 - Email: `julia.atendente@bedeschi.com`
 - Senha: `teste123`
 
@@ -153,6 +163,7 @@ className="bg-white shadow-md border border-slate-200"
 ✅ Deploy concluído
 
 **Próximos passos sugeridos:**
+
 - Testar fluxo completo de edição
 - Validar tema light em diferentes dispositivos
 - Coletar feedback dos usuários

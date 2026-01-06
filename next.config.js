@@ -8,6 +8,11 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === "production",
   },
 
+  // Cache busting automático - força navegador a buscar nova versão
+  generateBuildId: async () => {
+    return `build-${Date.now()}`;
+  },
+
   // Configuração de imagens
   images: {
     remotePatterns: [

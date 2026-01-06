@@ -3,7 +3,7 @@
  * Projeto: Bedeschi Fidelidade/Estética
  */
 
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export interface FidelityReward {
   id: string;
@@ -11,10 +11,10 @@ export interface FidelityReward {
   rule_id?: string;
   title: string;
   description?: string;
-  type: 'FREE_SERVICE' | 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'CREDIT';
+  type: "FREE_SERVICE" | "DISCOUNT_PERCENT" | "DISCOUNT_FIXED" | "CREDIT";
   value?: number;
   service_name?: string;
-  status: 'available' | 'redeemed' | 'expired';
+  status: "available" | "redeemed" | "expired";
   expires_at?: string;
   redeemed_at?: string;
   created_at: string;
@@ -25,7 +25,7 @@ export interface CreateRewardInput {
   rule_id?: string;
   title: string;
   description?: string;
-  type: 'FREE_SERVICE' | 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'CREDIT';
+  type: "FREE_SERVICE" | "DISCOUNT_PERCENT" | "DISCOUNT_FIXED" | "CREDIT";
   value?: number;
   service_name?: string;
   expires_at?: string;
@@ -34,12 +34,12 @@ export interface CreateRewardInput {
 // Buscar todas as recompensas
 export async function getRewards(): Promise<FidelityReward[]> {
   const { data, error } = await supabase
-    .from('fidelity_rewards')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .from("fidelity_rewards")
+    .select("*")
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar recompensas:', error);
+    console.error("Erro ao buscar recompensas:", error);
     return [];
   }
 
@@ -47,15 +47,17 @@ export async function getRewards(): Promise<FidelityReward[]> {
 }
 
 // Buscar recompensas por cliente
-export async function getRewardsByClient(clientId: string): Promise<FidelityReward[]> {
+export async function getRewardsByClient(
+  clientId: string,
+): Promise<FidelityReward[]> {
   const { data, error } = await supabase
-    .from('fidelity_rewards')
-    .select('*')
-    .eq('client_id', clientId)
-    .order('created_at', { ascending: false });
+    .from("fidelity_rewards")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar recompensas do cliente:', error);
+    console.error("Erro ao buscar recompensas do cliente:", error);
     return [];
   }
 
@@ -63,16 +65,18 @@ export async function getRewardsByClient(clientId: string): Promise<FidelityRewa
 }
 
 // Buscar recompensas disponíveis por cliente
-export async function getAvailableRewardsByClient(clientId: string): Promise<FidelityReward[]> {
+export async function getAvailableRewardsByClient(
+  clientId: string,
+): Promise<FidelityReward[]> {
   const { data, error } = await supabase
-    .from('fidelity_rewards')
-    .select('*')
-    .eq('client_id', clientId)
-    .eq('status', 'available')
-    .order('expires_at', { ascending: true });
+    .from("fidelity_rewards")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("status", "available")
+    .order("expires_at", { ascending: true });
 
   if (error) {
-    console.error('Erro ao buscar recompensas disponíveis:', error);
+    console.error("Erro ao buscar recompensas disponíveis:", error);
     return [];
   }
 
@@ -80,18 +84,20 @@ export async function getAvailableRewardsByClient(clientId: string): Promise<Fid
 }
 
 // Criar recompensa
-export async function createReward(input: CreateRewardInput): Promise<FidelityReward | null> {
+export async function createReward(
+  input: CreateRewardInput,
+): Promise<FidelityReward | null> {
   const { data, error } = await supabase
-    .from('fidelity_rewards')
+    .from("fidelity_rewards")
     .insert({
       ...input,
-      status: 'available',
+      status: "available",
     })
     .select()
     .single();
 
   if (error) {
-    console.error('Erro ao criar recompensa:', error);
+    console.error("Erro ao criar recompensa:", error);
     return null;
   }
 
@@ -99,20 +105,22 @@ export async function createReward(input: CreateRewardInput): Promise<FidelityRe
 }
 
 // Resgatar recompensa (marcar como usada)
-export async function redeemReward(rewardId: string): Promise<FidelityReward | null> {
+export async function redeemReward(
+  rewardId: string,
+): Promise<FidelityReward | null> {
   const { data, error } = await supabase
-    .from('fidelity_rewards')
+    .from("fidelity_rewards")
     .update({
-      status: 'redeemed',
+      status: "redeemed",
       redeemed_at: new Date().toISOString(),
     })
-    .eq('id', rewardId)
-    .eq('status', 'available') // Só pode resgatar se estiver disponível
+    .eq("id", rewardId)
+    .eq("status", "available") // Só pode resgatar se estiver disponível
     .select()
     .single();
 
   if (error) {
-    console.error('Erro ao resgatar recompensa:', error);
+    console.error("Erro ao resgatar recompensa:", error);
     return null;
   }
 
@@ -121,17 +129,17 @@ export async function redeemReward(rewardId: string): Promise<FidelityReward | n
 
 // Marcar recompensas expiradas
 export async function expireOldRewards(): Promise<number> {
-  const today = new Date().toISOString().split('T')[0];
-  
+  const today = new Date().toISOString().split("T")[0];
+
   const { data, error } = await supabase
-    .from('fidelity_rewards')
-    .update({ status: 'expired' })
-    .eq('status', 'available')
-    .lt('expires_at', today)
+    .from("fidelity_rewards")
+    .update({ status: "expired" })
+    .eq("status", "available")
+    .lt("expires_at", today)
     .select();
 
   if (error) {
-    console.error('Erro ao expirar recompensas:', error);
+    console.error("Erro ao expirar recompensas:", error);
     return 0;
   }
 
@@ -141,13 +149,13 @@ export async function expireOldRewards(): Promise<number> {
 // Buscar recompensas resgatadas (para relatório)
 export async function getRedeemedRewards(): Promise<FidelityReward[]> {
   const { data, error } = await supabase
-    .from('fidelity_rewards')
-    .select('*')
-    .eq('status', 'redeemed')
-    .order('redeemed_at', { ascending: false });
+    .from("fidelity_rewards")
+    .select("*")
+    .eq("status", "redeemed")
+    .order("redeemed_at", { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar recompensas resgatadas:', error);
+    console.error("Erro ao buscar recompensas resgatadas:", error);
     return [];
   }
 
@@ -155,13 +163,17 @@ export async function getRedeemedRewards(): Promise<FidelityReward[]> {
 }
 
 // Contar recompensas por status
-export async function countRewardsByStatus(): Promise<{ available: number; redeemed: number; expired: number }> {
+export async function countRewardsByStatus(): Promise<{
+  available: number;
+  redeemed: number;
+  expired: number;
+}> {
   const { data, error } = await supabase
-    .from('fidelity_rewards')
-    .select('status');
+    .from("fidelity_rewards")
+    .select("status");
 
   if (error) {
-    console.error('Erro ao contar recompensas:', error);
+    console.error("Erro ao contar recompensas:", error);
     return { available: 0, redeemed: 0, expired: 0 };
   }
 

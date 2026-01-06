@@ -1,16 +1,16 @@
-require('dotenv').config({ path: '.env.local' });
-const { createClient } = require('@supabase/supabase-js');
+require("dotenv").config({ path: ".env.local" });
+const { createClient } = require("@supabase/supabase-js");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } }
+  { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
 async function createStaffUsersTable() {
-  console.log('🔧 Criando tabela staff_users...\n');
+  console.log("🔧 Criando tabela staff_users...\n");
 
-  const { error } = await supabase.rpc('exec_sql', {
+  const { error } = await supabase.rpc("exec_sql", {
     sql: `
       -- Criar tabela staff_users
       CREATE TABLE IF NOT EXISTS staff_users (
@@ -42,15 +42,15 @@ async function createStaffUsersTable() {
       CREATE POLICY "Todos podem ler staff_users ativos"
         ON staff_users FOR SELECT
         USING (is_active = true);
-    `
+    `,
   });
 
   if (error) {
-    console.error('❌ Erro ao criar tabela:', error);
+    console.error("❌ Erro ao criar tabela:", error);
     process.exit(1);
   }
 
-  console.log('✅ Tabela staff_users criada com sucesso!\n');
+  console.log("✅ Tabela staff_users criada com sucesso!\n");
 }
 
 createStaffUsersTable();

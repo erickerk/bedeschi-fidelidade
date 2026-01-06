@@ -67,7 +67,7 @@ Após a tabela ser criada, execute este script para inserir profissionais de tes
 ```sql
 -- Dados de teste (senha: teste123)
 INSERT INTO public.staff_users (email, name, role, password_hash, specialty, created_by)
-VALUES 
+VALUES
   ('admin@bedeschi.com', 'Administrador', 'admin', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQDq7rPqUz3DwJQjJHQI5B2UqZnKFGq', NULL, 'system'),
   ('dra.amanda@bedeschi.com', 'Dra. Amanda Costa', 'medico', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQDq7rPqUz3DwJQjJHQI5B2UqZnKFGq', 'Dermatologia Estética', 'admin@bedeschi.com'),
   ('carla.santos@bedeschi.com', 'Carla Santos', 'profissional', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQDq7rPqUz3DwJQjJHQI5B2UqZnKFGq', 'Massagem e Estética Corporal', 'admin@bedeschi.com'),
@@ -90,9 +90,9 @@ SELECT * FROM public.staff_users;
 
 ## Credenciais de Teste
 
-| Email | Senha | Função |
-|-------|-------|--------|
-| `admin@bedeschi.com` | `teste123` | Admin |
-| `dra.amanda@bedeschi.com` | `teste123` | Médico |
-| `carla.santos@bedeschi.com` | `teste123` | Profissional |
-| `julia.atendente@bedeschi.com` | `teste123` | Recepção |
+| Email                          | Senha      | Função       |
+| ------------------------------ | ---------- | ------------ |
+| `admin@bedeschi.com`           | `teste123` | Admin        |
+| `dra.amanda@bedeschi.com`      | `teste123` | Médico       |
+| `carla.santos@bedeschi.com`    | `teste123` | Profissional |
+| `julia.atendente@bedeschi.com` | `teste123` | Recepção     |

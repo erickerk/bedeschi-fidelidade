@@ -31,6 +31,7 @@
 
 **Status**: Pendente
 **Ações necessárias**:
+
 - Adicionar campo `avatar` na interface `Client`
 - Implementar componente de avatar com suporte light/dark
 - Adicionar avatar no dashboard do cliente
@@ -40,11 +41,13 @@
 
 **Status**: Parcialmente implementado
 **Já implementado**:
+
 - ✅ Lazy loading do ClientDashboard
 - ✅ Suspense boundaries
 - ✅ CSS externo para gráficos (eliminando inline styles)
 
 **Pendente**:
+
 - Implementar React.memo em componentes pesados
 - Code splitting adicional
 - Otimizar re-renders com useCallback/useMemo
@@ -54,6 +57,7 @@
 
 **Status**: Pendente
 **Ações necessárias**:
+
 - Adicionar aba "Recepcionistas" no painel admin
 - Criar formulário de cadastro com campos:
   - Nome completo
@@ -68,11 +72,13 @@
 
 **Status**: Dados existem mas precisam ser exibidos
 **Situação atual**:
+
 - `mockServices`: 10 serviços cadastrados
 - `mockFidelityRules`: 5 regras ativas
 - Problema: Telas mostram vazio no admin
 
 **Ações necessárias**:
+
 - Verificar por que serviços não aparecem na aba Serviços
 - Verificar por que regras não aparecem na aba Regras
 - Corrigir renderização/filtros
@@ -81,6 +87,7 @@
 
 **Status**: Pendente
 **Checklist de testes**:
+
 - [ ] Login de cliente via telefone + PIN
 - [ ] Dashboard do cliente (pontos, histórico, benefícios)
 - [ ] Login de staff (admin/qa/recepção)

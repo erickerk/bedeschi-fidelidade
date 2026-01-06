@@ -3,6 +3,7 @@
 ## 📋 Objetivo
 
 Validar o fluxo completo:
+
 1. Recepção cria atendimento
 2. Cliente visualiza atendimento
 3. Cliente avalia atendimento
@@ -32,6 +33,7 @@ No Admin Dashboard:
 3. Cadastre ao menos 2 profissionais:
 
 **Profissional 1:**
+
 - Nome: `Carla Santos`
 - Papel: **Profissional**
 - Especialidade: **Massagem e Estética Corporal**
@@ -39,6 +41,7 @@ No Admin Dashboard:
 - ✅ Clique **Cadastrar**
 
 **Profissional 2:**
+
 - Nome: `Dra. Amanda Costa`
 - Papel: **Médico**
 - Especialidade: **Dermatologia Estética**
@@ -73,19 +76,24 @@ Na Recepção, verifique se há clientes:
 2. Preencha todos os campos:
 
 **Cliente:**
+
 - Digite o nome no campo de busca
 - Selecione: `Maria Silva Teste` (ou outro cliente)
 
 **Profissional:**
+
 - Selecione: `Carla Santos - Massagem e Estética Corporal`
 
 **Data:**
+
 - Selecione: **Hoje** (data máxima permitida)
 
 **Horário:**
+
 - Selecione: `14:00` (ou qualquer horário)
 
 **Procedimentos:**
+
 - Digite: `massagem`
 - Marque: ✅ `Massagem Relaxante 60min`
 - Digite: `limpeza`
@@ -100,11 +108,13 @@ Na Recepção, verifique se há clientes:
 ### Passo 3: Verificar Sucesso
 
 **Esperado:**
+
 - ✅ Alert de sucesso com detalhes do atendimento
 - ✅ Modal fecha automaticamente
 - ✅ Atendimento aparece na lista da aba **Atendimentos**
 
 **Console do navegador:**
+
 ```
 📝 Iniciando criação de atendimento...
 ✅ Atendimento criado: {id: "...", clientId: "...", ...}
@@ -118,7 +128,7 @@ Na Recepção, verifique se há clientes:
 2. Execute:
 
 ```sql
-SELECT 
+SELECT
   a.client_name,
   a.professional_name,
   a.date,
@@ -132,6 +142,7 @@ LIMIT 5;
 ```
 
 **Esperado:**
+
 - ✅ Atendimento aparece no topo
 - ✅ `has_review` = `false`
 - ✅ Dados corretos (cliente, profissional, total, pontos)
@@ -154,11 +165,13 @@ LIMIT 5;
 ### Passo 3: Verificar Dashboard do Cliente
 
 **Aba Início:**
+
 - ✅ Saldo de pontos atualizado
 - ✅ Gasto total atualizado
 - ✅ Última visita mostra data de hoje
 
 **Aba Histórico:**
+
 1. Clique em **Histórico**
 2. **Verificar:**
    - ✅ Atendimento criado aparece no topo
@@ -170,6 +183,7 @@ LIMIT 5;
 ### Passo 4: Verificar Modal de Avaliação
 
 **Esperado:**
+
 - ✅ Modal de avaliação aparece automaticamente
 - ✅ Título: "Avalie seu último atendimento"
 - ✅ Mostra profissional correto
@@ -184,19 +198,23 @@ LIMIT 5;
 
 1. Clique nas estrelas: **5 estrelas** ⭐⭐⭐⭐⭐
 2. Digite comentário:
+
 ```
 Excelente atendimento! A Carla é muito profissional e atenciosa. Saí relaxada e renovada. Super recomendo!
 ```
+
 3. Clique **Enviar Avaliação**
 
 ### Passo 2: Verificar Confirmação
 
 **Esperado:**
+
 - ✅ Mensagem: "✓ Avaliação enviada com sucesso!"
 - ✅ Modal fecha após 2 segundos
 - ✅ Atendimento agora mostra: "✓ Avaliado"
 
 **Console do navegador:**
+
 ```
 ✅ Review criada: {id: "rev-...", rating: 5, comment: "..."}
 [AppContext] Criando review no Supabase...
@@ -207,7 +225,7 @@ Excelente atendimento! A Carla é muito profissional e atenciosa. Saí relaxada 
 Execute:
 
 ```sql
-SELECT 
+SELECT
   r.rating,
   r.comment,
   c.name as customer_name,
@@ -221,6 +239,7 @@ LIMIT 5;
 ```
 
 **Esperado:**
+
 - ✅ Avaliação aparece no topo
 - ✅ Rating: 5
 - ✅ Comentário completo
@@ -239,6 +258,7 @@ LIMIT 5;
 ### Passo 2: Verificar Seção "Mais Bem Avaliados"
 
 **Esperado:**
+
 - ✅ Profissional aparece na lista
 - ✅ Nome: `Carla Santos`
 - ✅ Estrelas: ⭐⭐⭐⭐⭐ (5.0)
@@ -247,6 +267,7 @@ LIMIT 5;
 ### Passo 3: Verificar Seção "Piores Avaliações"
 
 **Esperado:**
+
 - ✅ Nenhuma avaliação negativa (seção vazia ou apenas 5 estrelas)
 
 ### Passo 4: Verificar Analytics (Se houver)
@@ -276,6 +297,7 @@ Repita o **Teste 1** para criar mais atendimentos:
 - Data/Horário: Hoje, 16:00
 
 **Para cada atendimento:**
+
 1. ✅ Criar na recepção
 2. ✅ Cliente visualizar
 3. ✅ Cliente avaliar (varie as notas: 4, 5 estrelas)
@@ -288,10 +310,12 @@ Repita o **Teste 1** para criar mais atendimentos:
 ### Dashboard Admin
 
 **Mais Bem Avaliados:**
+
 - `Carla Santos` - ⭐⭐⭐⭐⭐ (5.0) - 2 avaliações
 - `Dra. Amanda Costa` - ⭐⭐⭐⭐ (4.0) - 1 avaliação
 
 **Estatísticas:**
+
 - Total de atendimentos: 3+
 - Total de avaliações: 3+
 - Média geral: 4.7
@@ -300,16 +324,19 @@ Repita o **Teste 1** para criar mais atendimentos:
 ### Supabase
 
 **Tabela `appointments`:**
+
 - 3+ registros
 - Todos com `status = 'completed'`
 - Todos com `has_review = true`
 
 **Tabela `reviews`:**
+
 - 3+ registros
 - Ratings: 4, 5
 - Comentários preenchidos
 
 **Tabela `customers`:**
+
 - Saldo de pontos atualizado
 - `total_spent` incrementado
 - `total_appointments` incrementado
@@ -321,11 +348,13 @@ Repita o **Teste 1** para criar mais atendimentos:
 ### Problema 1: Atendimento não salva
 
 **Sintomas:**
+
 - Clica em "Registrar" mas nada acontece
 - Modal não fecha
 - Nenhum alert aparece
 
 **Solução:**
+
 1. Abra o Console do navegador (F12)
 2. Procure por erros em vermelho
 3. Verifique se todos os campos foram preenchidos:
@@ -337,10 +366,12 @@ Repita o **Teste 1** para criar mais atendimentos:
 ### Problema 2: Cliente não vê atendimento
 
 **Sintomas:**
+
 - Cliente loga mas histórico está vazio
 - Atendimento foi criado na recepção
 
 **Solução:**
+
 1. Verifique se usou o telefone correto (sem formatação)
 2. Verifique se o PIN está correto
 3. Verifique no Supabase se o `client_id` está correto:
@@ -352,9 +383,11 @@ SELECT id, name, phone FROM customers WHERE phone = '11987654321';
 ### Problema 3: Modal de avaliação não aparece
 
 **Sintomas:**
+
 - Cliente vê atendimento mas não aparece modal para avaliar
 
 **Solução:**
+
 1. Verifique se o atendimento já foi avaliado
 2. Verifique no console por erros
 3. Force refresh (Ctrl+Shift+R)
@@ -362,9 +395,11 @@ SELECT id, name, phone FROM customers WHERE phone = '11987654321';
 ### Problema 4: Dashboard admin não mostra avaliações
 
 **Sintomas:**
+
 - Avaliações foram feitas mas dashboard mostra vazio
 
 **Solução:**
+
 1. Verifique no Supabase se as reviews foram salvas:
 
 ```sql
@@ -400,6 +435,7 @@ Antes de considerar o teste completo, marque:
 Abra o Console do navegador (F12) e monitore:
 
 **Recepção criando atendimento:**
+
 ```
 📝 Iniciando criação de atendimento...
 ✅ Atendimento criado: {...}
@@ -408,6 +444,7 @@ Abra o Console do navegador (F12) e monitore:
 ```
 
 **Cliente avaliando:**
+
 ```
 ✅ Review criada: {...}
 [AppContext] Criando review no Supabase...
@@ -415,6 +452,7 @@ Abra o Console do navegador (F12) e monitore:
 ```
 
 **Admin carregando dados:**
+
 ```
 [AppContext] Carregando dados do Supabase Bedeschi...
 [AppContext] X avaliações carregadas do Supabase
@@ -427,6 +465,7 @@ Abra o Console do navegador (F12) e monitore:
 Este guia cobre todo o fluxo de atendimentos e avaliações. Siga os passos em ordem e verifique cada checkpoint. Se todos os testes passarem, o sistema está funcionando corretamente!
 
 **Dúvidas ou problemas?**
+
 - Verifique os logs do console
 - Confira os dados no Supabase
 - Revise se todos os pré-requisitos foram cumpridos

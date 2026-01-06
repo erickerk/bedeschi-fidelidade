@@ -5,8 +5,15 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/app-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { importedServices, importedCategories, type Service as DomainService, type Professional, type FidelityRule, type Client } from "@/lib/mock-data";
-import { 
+import {
+  importedServices,
+  importedCategories,
+  type Service as DomainService,
+  type Professional,
+  type FidelityRule,
+  type Client,
+} from "@/lib/mock-data";
+import {
   getServices as getServicesFromSupabase,
   createService as createSupabaseService,
   updateService as updateSupabaseService,
@@ -18,15 +25,57 @@ import {
   deactivateStaffUser,
   type StaffUser,
 } from "@/lib/staff-users-api";
-import { 
-  Sun, Moon, LogOut, Users, Calendar, Gift, Star, TrendingUp, Settings,
-  Download, Plus, Edit2, Trash2, Search, Filter, ChevronDown, Check, X,
-  BarChart3, PieChart, UserPlus, Award, FileSpreadsheet, Eye, EyeOff,
-  Clock, DollarSign, Target, Zap, Info, AlertCircle, CheckCircle, Save,
-  ArrowUp, ArrowDown, Trophy, Crown, Percent, Hash, Send
+import {
+  Sun,
+  Moon,
+  LogOut,
+  Users,
+  Calendar,
+  Gift,
+  Star,
+  TrendingUp,
+  Settings,
+  Download,
+  Plus,
+  Edit2,
+  Trash2,
+  Search,
+  Filter,
+  ChevronDown,
+  Check,
+  X,
+  BarChart3,
+  PieChart,
+  UserPlus,
+  Award,
+  FileSpreadsheet,
+  Eye,
+  EyeOff,
+  Clock,
+  DollarSign,
+  Target,
+  Zap,
+  Info,
+  AlertCircle,
+  CheckCircle,
+  Save,
+  ArrowUp,
+  ArrowDown,
+  Trophy,
+  Crown,
+  Percent,
+  Hash,
+  Send,
 } from "lucide-react";
 
-type Tab = "dashboard" | "analytics" | "clientes" | "equipe" | "servicos" | "regras" | "relatorios";
+type Tab =
+  | "dashboard"
+  | "analytics"
+  | "clientes"
+  | "equipe"
+  | "servicos"
+  | "regras"
+  | "relatorios";
 
 interface StaffSession {
   email: string;
@@ -37,8 +86,16 @@ interface StaffSession {
 
 // Cores para gráficos
 const CHART_COLORS = [
-  "bg-amber-500", "bg-emerald-500", "bg-blue-500", "bg-purple-500", "bg-rose-500",
-  "bg-cyan-500", "bg-orange-500", "bg-pink-500", "bg-indigo-500", "bg-teal-500"
+  "bg-amber-500",
+  "bg-emerald-500",
+  "bg-blue-500",
+  "bg-purple-500",
+  "bg-rose-500",
+  "bg-cyan-500",
+  "bg-orange-500",
+  "bg-pink-500",
+  "bg-indigo-500",
+  "bg-teal-500",
 ];
 
 const PERIOD_LABEL: Record<"7d" | "30d" | "90d" | "all", string> = {
@@ -60,22 +117,34 @@ export default function AdminDashboard() {
   const [showAddProfessional, setShowAddProfessional] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
   const [showAddRule, setShowAddRule] = useState(false);
-  const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
-  const [editingService, setEditingService] = useState<DomainService | null>(null);
+  const [editingProfessional, setEditingProfessional] =
+    useState<Professional | null>(null);
+  const [editingService, setEditingService] = useState<DomainService | null>(
+    null,
+  );
   const [editingRule, setEditingRule] = useState<FidelityRule | null>(null);
   const [showRulesHelp, setShowRulesHelp] = useState(false);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
-  
+
   // Filtros
-  const [clientFilter, setClientFilter] = useState<"all" | "withRewards" | "vip" | "inactive">("all");
-  const [professionalRoleFilter, setProfessionalRoleFilter] = useState<"all" | "medico" | "profissional" | "recepcionista">("all");
-  const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("all");
-  const [analyticsCategoryFilter, setAnalyticsCategoryFilter] = useState<string>("all");
-  const [analyticsProfessionalFilter, setAnalyticsProfessionalFilter] = useState<string>("all");
-  const [analyticsPeriodFilter, setAnalyticsPeriodFilter] = useState<"7d" | "30d" | "90d" | "all">("30d");
+  const [clientFilter, setClientFilter] = useState<
+    "all" | "withRewards" | "vip" | "inactive"
+  >("all");
+  const [professionalRoleFilter, setProfessionalRoleFilter] = useState<
+    "all" | "medico" | "profissional" | "recepcionista"
+  >("all");
+  const [serviceCategoryFilter, setServiceCategoryFilter] =
+    useState<string>("all");
+  const [analyticsCategoryFilter, setAnalyticsCategoryFilter] =
+    useState<string>("all");
+  const [analyticsProfessionalFilter, setAnalyticsProfessionalFilter] =
+    useState<string>("all");
+  const [analyticsPeriodFilter, setAnalyticsPeriodFilter] = useState<
+    "7d" | "30d" | "90d" | "all"
+  >("30d");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  
+
   // Estados para formulários
   const [newProfessional, setNewProfessional] = useState<{
     name: string;
@@ -94,7 +163,12 @@ export default function AdminDashboard() {
     servicesIds: [],
     loginPassword: "",
   });
-  const [newService, setNewService] = useState({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
+  const [newService, setNewService] = useState({
+    name: "",
+    categoryId: "",
+    price: 0,
+    durationMinutes: 30,
+  });
   const [newRule, setNewRule] = useState<{
     name: string;
     description: string;
@@ -116,10 +190,23 @@ export default function AdminDashboard() {
   });
 
   const appData = useApp();
-  const { 
-    clients, appointments, rewards, reviews, professionals, rules,
-    updateClient, addProfessional, updateProfessional, removeProfessional,
-    getRules, toggleRule, addRule, updateRule, getClientRewards, redeemReward
+  const {
+    clients,
+    appointments,
+    rewards,
+    reviews,
+    professionals,
+    rules,
+    updateClient,
+    addProfessional,
+    updateProfessional,
+    removeProfessional,
+    getRules,
+    toggleRule,
+    addRule,
+    updateRule,
+    getClientRewards,
+    redeemReward,
   } = appData;
 
   const isDark = theme === "dark";
@@ -135,20 +222,25 @@ export default function AdminDashboard() {
         if (cancelled) return;
 
         if (apiServices && apiServices.length > 0) {
-          const mapped: DomainService[] = apiServices.map((svc: SupabaseService) => ({
-            id: svc.id,
-            externalCode: svc.external_code,
-            name: svc.name,
-            categoryId: svc.category_id,
-            categoryName: svc.category_name,
-            price: svc.price,
-            durationMinutes: svc.duration_minutes,
-            isActive: svc.is_active,
-          }));
+          const mapped: DomainService[] = apiServices.map(
+            (svc: SupabaseService) => ({
+              id: svc.id,
+              externalCode: svc.external_code,
+              name: svc.name,
+              categoryId: svc.category_id,
+              categoryName: svc.category_name,
+              price: svc.price,
+              durationMinutes: svc.duration_minutes,
+              isActive: svc.is_active,
+            }),
+          );
           setServices(mapped);
         }
       } catch (error) {
-        console.error("Erro ao carregar serviços do Supabase. Mantendo lista mock em memória.", error);
+        console.error(
+          "Erro ao carregar serviços do Supabase. Mantendo lista mock em memória.",
+          error,
+        );
       }
     };
 
@@ -194,18 +286,27 @@ export default function AdminDashboard() {
     if (tab !== "dashboard" && tab !== "analytics") return;
 
     const applyChartStyles = () => {
-      document.querySelectorAll('[data-chart-height]').forEach((el) => {
+      document.querySelectorAll("[data-chart-height]").forEach((el) => {
         const height = el.getAttribute("data-chart-height");
-        if (height) (el as HTMLElement).style.setProperty("--chart-height", height);
+        if (height)
+          (el as HTMLElement).style.setProperty("--chart-height", height);
       });
-      document.querySelectorAll('[data-chart-width]').forEach((el) => {
+      document.querySelectorAll("[data-chart-width]").forEach((el) => {
         const width = el.getAttribute("data-chart-width");
-        if (width) (el as HTMLElement).style.setProperty("--chart-width", width);
+        if (width)
+          (el as HTMLElement).style.setProperty("--chart-width", width);
       });
     };
 
     applyChartStyles();
-  }, [tab, analyticsPeriodFilter, analyticsProfessionalFilter, analyticsCategoryFilter, dateFrom, dateTo]);
+  }, [
+    tab,
+    analyticsPeriodFilter,
+    analyticsProfessionalFilter,
+    analyticsCategoryFilter,
+    dateFrom,
+    dateTo,
+  ]);
 
   const handleLogout = () => {
     localStorage.removeItem("staffSession");
@@ -243,7 +344,8 @@ export default function AdminDashboard() {
 
   // Estado para modal de usar bônus
   const [showRedeemModal, setShowRedeemModal] = useState(false);
-  const [selectedClientForRedeem, setSelectedClientForRedeem] = useState<Client | null>(null);
+  const [selectedClientForRedeem, setSelectedClientForRedeem] =
+    useState<Client | null>(null);
   const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
 
   const handleOpenRedeemModal = (client: Client) => {
@@ -254,7 +356,7 @@ export default function AdminDashboard() {
 
   const handleRedeemReward = () => {
     if (!selectedClientForRedeem || !selectedRewardId) return;
-    
+
     redeemReward(selectedRewardId);
     setShowRedeemModal(false);
     setSelectedClientForRedeem(null);
@@ -262,23 +364,33 @@ export default function AdminDashboard() {
   };
 
   const getClientAvailableRewards = (clientId: string) => {
-    return getClientRewards(clientId).filter(r => r.status === 'available');
+    return getClientRewards(clientId).filter((r) => r.status === "available");
   };
 
   // Filtrar atendimentos por período
-  const getFilteredAppointments = useCallback((period: string) => {
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (period) {
-      case "7d": startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
-      case "30d": startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
-      case "90d": startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
-      default: return appointments;
-    }
-    
-    return appointments.filter(a => new Date(a.date) >= startDate);
-  }, [appointments]);
+  const getFilteredAppointments = useCallback(
+    (period: string) => {
+      const now = new Date();
+      let startDate: Date;
+
+      switch (period) {
+        case "7d":
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "30d":
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case "90d":
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          return appointments;
+      }
+
+      return appointments.filter((a) => new Date(a.date) >= startDate);
+    },
+    [appointments],
+  );
 
   // Analytics calculados com filtros
   const analytics = useMemo(() => {
@@ -301,9 +413,11 @@ export default function AdminDashboard() {
     // Filtrar por mês atual e anterior considerando filtro de categoria
     const thisMonth = appointments.filter((a) => {
       const d = new Date(a.date);
-      const isThisMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      const isThisMonth =
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear();
       if (!isThisMonth) return false;
-      
+
       // Aplicar filtro de categoria se selecionado
       if (analyticsCategoryFilter === "all") return true;
       return a.services.some((s) => {
@@ -311,13 +425,15 @@ export default function AdminDashboard() {
         return serviceData?.categoryId === analyticsCategoryFilter;
       });
     });
-    
+
     const lastMonth = appointments.filter((a) => {
       const d = new Date(a.date);
       const lastM = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const isLastMonth = d.getMonth() === lastM.getMonth() && d.getFullYear() === lastM.getFullYear();
+      const isLastMonth =
+        d.getMonth() === lastM.getMonth() &&
+        d.getFullYear() === lastM.getFullYear();
       if (!isLastMonth) return false;
-      
+
       // Aplicar filtro de categoria se selecionado
       if (analyticsCategoryFilter === "all") return true;
       return a.services.some((s) => {
@@ -328,9 +444,13 @@ export default function AdminDashboard() {
 
     const revenueThisMonth = thisMonth.reduce((sum, a) => sum + a.total, 0);
     const revenueLastMonth = lastMonth.reduce((sum, a) => sum + a.total, 0);
-    const revenueGrowth = revenueLastMonth > 0
-      ? (((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100).toFixed(1)
-      : "N/A";
+    const revenueGrowth =
+      revenueLastMonth > 0
+        ? (
+            ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) *
+            100
+          ).toFixed(1)
+        : "N/A";
 
     // Serviços mais populares
     const serviceCount: Record<string, number> = {};
@@ -344,7 +464,11 @@ export default function AdminDashboard() {
     const topServices = Object.entries(serviceCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
-      .map(([name, count]) => ({ name, count, revenue: serviceRevenue[name] || 0 }));
+      .map(([name, count]) => ({
+        name,
+        count,
+        revenue: serviceRevenue[name] || 0,
+      }));
 
     // Top clientes por gasto
     const topClients = [...clients]
@@ -352,13 +476,16 @@ export default function AdminDashboard() {
       .slice(0, 10)
       .map((c) => ({
         ...c,
-        appointmentsInPeriod: filteredApts.filter((a) => a.clientId === c.id).length,
+        appointmentsInPeriod: filteredApts.filter((a) => a.clientId === c.id)
+          .length,
       }));
 
     // Performance da equipe - considerar TODOS os atendimentos para avaliações
     const professionalPerformance = professionals
       .map((p) => {
-        const profAppointments = filteredApts.filter((a) => a.professionalId === p.id);
+        const profAppointments = filteredApts.filter(
+          (a) => a.professionalId === p.id,
+        );
         // Buscar avaliações de TODOS os atendimentos (não apenas filtrados)
         const profReviews = reviews.filter((r) => {
           const apt = appointments.find((a) => a.id === r.appointmentId);
@@ -366,9 +493,15 @@ export default function AdminDashboard() {
         });
         const avgRating =
           profReviews.length > 0
-            ? (profReviews.reduce((sum, r) => sum + r.rating, 0) / profReviews.length).toFixed(1)
+            ? (
+                profReviews.reduce((sum, r) => sum + r.rating, 0) /
+                profReviews.length
+              ).toFixed(1)
             : "N/A";
-        const totalRevenue = profAppointments.reduce((sum, a) => sum + a.total, 0);
+        const totalRevenue = profAppointments.reduce(
+          (sum, a) => sum + a.total,
+          0,
+        );
 
         return {
           ...p,
@@ -384,7 +517,8 @@ export default function AdminDashboard() {
     const topRatedProfessionals = [...professionalPerformance]
       .filter((p) => p.avgRating !== "N/A" && p.reviewsCount > 0)
       .sort(
-        (a, b) => parseFloat(b.avgRating as string) - parseFloat(a.avgRating as string),
+        (a, b) =>
+          parseFloat(b.avgRating as string) - parseFloat(a.avgRating as string),
       )
       .slice(0, 5);
 
@@ -396,7 +530,10 @@ export default function AdminDashboard() {
     // Piores profissionais por avaliação - mostrar apenas quem tem avaliações
     const worstProfessionals = [...professionalPerformance]
       .filter((p) => p.avgRating !== "N/A" && p.reviewsCount > 0)
-      .sort((a, b) => parseFloat(a.avgRating as string) - parseFloat(b.avgRating as string))
+      .sort(
+        (a, b) =>
+          parseFloat(a.avgRating as string) - parseFloat(b.avgRating as string),
+      )
       .slice(0, 5);
 
     // Receita por categoria
@@ -405,7 +542,8 @@ export default function AdminDashboard() {
       a.services.forEach((s) => {
         const serviceData = services.find((srv) => srv.name === s.name);
         const categoryName = serviceData?.categoryName ?? "Outros";
-        categoryRevenue[categoryName] = (categoryRevenue[categoryName] || 0) + s.price;
+        categoryRevenue[categoryName] =
+          (categoryRevenue[categoryName] || 0) + s.price;
       });
     });
     const revenueByCategory = Object.entries(categoryRevenue)
@@ -418,7 +556,7 @@ export default function AdminDashboard() {
     if (analyticsPeriodFilter === "30d") daysToShow = 30;
     else if (analyticsPeriodFilter === "90d") daysToShow = 90;
     else if (analyticsPeriodFilter === "all") daysToShow = 90; // Limitar a 90 dias para visualização
-    
+
     for (let i = daysToShow - 1; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split("T")[0];
@@ -429,18 +567,24 @@ export default function AdminDashboard() {
     }
 
     // Avaliações do período filtrado
-    const reviewsInPeriod = reviews.filter(r => {
+    const reviewsInPeriod = reviews.filter((r) => {
       const reviewDate = new Date(r.createdAt);
-      return filteredApts.some(a => a.id === r.appointmentId);
+      return filteredApts.some((a) => a.id === r.appointmentId);
     });
-    
-    const avgRatingPeriod = reviewsInPeriod.length > 0
-      ? (reviewsInPeriod.reduce((sum, r) => sum + r.rating, 0) / reviewsInPeriod.length).toFixed(1)
-      : "0.0";
-    
-    const avgTicketPeriod = filteredApts.length > 0
-      ? filteredApts.reduce((sum, a) => sum + a.total, 0) / filteredApts.length
-      : 0;
+
+    const avgRatingPeriod =
+      reviewsInPeriod.length > 0
+        ? (
+            reviewsInPeriod.reduce((sum, r) => sum + r.rating, 0) /
+            reviewsInPeriod.length
+          ).toFixed(1)
+        : "0.0";
+
+    const avgTicketPeriod =
+      filteredApts.length > 0
+        ? filteredApts.reduce((sum, a) => sum + a.total, 0) /
+          filteredApts.length
+        : 0;
 
     return {
       totalRevenue: clients.reduce((sum, c) => sum + c.totalSpent, 0),
@@ -451,7 +595,8 @@ export default function AdminDashboard() {
       appointmentsPeriod: filteredApts.length,
       avgTicket:
         filteredApts.length > 0
-          ? filteredApts.reduce((sum, a) => sum + a.total, 0) / filteredApts.length
+          ? filteredApts.reduce((sum, a) => sum + a.total, 0) /
+            filteredApts.length
           : 0,
       avgTicketPeriod,
       avgRatingPeriod,
@@ -466,12 +611,17 @@ export default function AdminDashboard() {
       dailyRevenue,
       clientsThisMonth: clients.filter((c) => {
         const d = new Date(c.createdAt);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return (
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
       }).length,
       totalPoints: clients.reduce((sum, c) => sum + c.pointsBalance, 0),
       avgRating:
         reviews.length > 0
-          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+          ? (
+              reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+            ).toFixed(1)
           : "N/A",
       totalReviews: reviews.length,
       activeRewards: rewards.filter((r) => r.status === "available").length,
@@ -495,9 +645,11 @@ export default function AdminDashboard() {
     const headers = Object.keys(data[0]);
     const csv = [
       headers.join(","),
-      ...data.map(row => headers.map(h => JSON.stringify(row[h] ?? "")).join(","))
+      ...data.map((row) =>
+        headers.map((h) => JSON.stringify(row[h] ?? "")).join(","),
+      ),
     ].join("\n");
-    
+
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -512,7 +664,9 @@ export default function AdminDashboard() {
     if (!matchesSearch) return false;
 
     if (clientFilter === "withRewards") {
-      return rewards.some((r) => r.clientId === c.id && r.status === "available");
+      return rewards.some(
+        (r) => r.clientId === c.id && r.status === "available",
+      );
     }
     if (clientFilter === "vip") {
       return c.totalSpent >= 3000 || c.pointsBalance >= 2000;
@@ -528,7 +682,9 @@ export default function AdminDashboard() {
     () =>
       services
         .filter((s) =>
-          serviceCategoryFilter === "all" ? true : s.categoryId === serviceCategoryFilter,
+          serviceCategoryFilter === "all"
+            ? true
+            : s.categoryId === serviceCategoryFilter,
         )
         .filter((s) =>
           serviceSearch.trim()
@@ -541,7 +697,7 @@ export default function AdminDashboard() {
   // Handlers para CRUD de Profissionais
   const handleAddProfessional = async () => {
     if (!newProfessional.name) return;
-    
+
     const professional: Professional = {
       id: `prof-${Date.now()}`,
       name: newProfessional.name,
@@ -555,7 +711,8 @@ export default function AdminDashboard() {
       isActive: true,
       createdAt: new Date().toISOString(),
       loginPassword:
-        newProfessional.role === "recepcionista" && newProfessional.loginPassword
+        newProfessional.role === "recepcionista" &&
+        newProfessional.loginPassword
           ? newProfessional.loginPassword
           : undefined,
     };
@@ -564,7 +721,7 @@ export default function AdminDashboard() {
     // SALVAR USUÁRIO PERSISTENTE NO SUPABASE
     // APENAS RECEPCIONISTAS TÊM LOGIN - Profissionais/Médicos são cadastros para seleção/avaliação
     const isReceptionist = professional.role === "recepcionista";
-    
+
     if (isReceptionist) {
       // Recepcionista PRECISA de email e senha
       if (!professional.email || !newProfessional.loginPassword) {
@@ -575,18 +732,19 @@ export default function AdminDashboard() {
       // Profissionais/Médicos NÃO precisam de email/senha (apenas prestadores de serviço)
       // Gerar email fictício e senha padrão para o Supabase
       if (!professional.email) {
-        const nameSlug = professional.name.toLowerCase().replace(/\s+/g, '.');
+        const nameSlug = professional.name.toLowerCase().replace(/\s+/g, ".");
         professional.email = `${nameSlug}@prestador.bedeschi.local`;
       }
       if (!newProfessional.loginPassword) {
-        newProfessional.loginPassword = 'prestador123'; // Senha padrão (não usada)
+        newProfessional.loginPassword = "prestador123"; // Senha padrão (não usada)
       }
     }
 
     try {
       // Mapear role do formulário para role do Supabase
-      const supabaseRole = professional.role === "recepcionista" ? "recepcao" : professional.role;
-      
+      const supabaseRole =
+        professional.role === "recepcionista" ? "recepcao" : professional.role;
+
       // Salvar na tabela staff_users do Supabase (PERSISTENTE)
       await createStaffUser({
         email: professional.email,
@@ -596,17 +754,22 @@ export default function AdminDashboard() {
         specialty: professional.specialty,
         created_by: user?.email || "admin",
       });
-      
+
       const roleLabel = isReceptionist ? "Recepcionista" : "Prestador(a)";
       alert(`${roleLabel} cadastrado(a) com sucesso!`);
-      console.log("✅ Usuário salvo permanentemente no Supabase:", professional.email);
+      console.log(
+        "✅ Usuário salvo permanentemente no Supabase:",
+        professional.email,
+      );
 
       // Recarregar lista de usuários
       const updatedUsers = await getStaffUsers();
       setStaffUsers(updatedUsers);
     } catch (error) {
       console.error("❌ Erro ao salvar usuário no Supabase:", error);
-      alert(`Erro ao salvar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      alert(
+        `Erro ao salvar: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+      );
       return;
     }
 
@@ -632,7 +795,9 @@ export default function AdminDashboard() {
   const handleAddService = async () => {
     if (!newService.name || !newService.categoryId) return;
 
-    const category = importedCategories.find((c) => c.id === newService.categoryId);
+    const category = importedCategories.find(
+      (c) => c.id === newService.categoryId,
+    );
     const categoryName = category?.name ?? "Outros";
 
     try {
@@ -657,7 +822,10 @@ export default function AdminDashboard() {
 
       setServices((prev) => [mapped, ...prev]);
     } catch (error) {
-      console.error("Erro ao criar serviço no Supabase, usando apenas estado local.", error);
+      console.error(
+        "Erro ao criar serviço no Supabase, usando apenas estado local.",
+        error,
+      );
 
       const fallbackService: DomainService = {
         id: `srv-custom-${Date.now()}`,
@@ -703,8 +871,13 @@ export default function AdminDashboard() {
 
       setServices((prev) => prev.map((s) => (s.id === mapped.id ? mapped : s)));
     } catch (error) {
-      console.error("Erro ao atualizar serviço no Supabase, mantendo atualização apenas em memória.", error);
-      setServices((prev) => prev.map((s) => (s.id === editingService.id ? editingService : s)));
+      console.error(
+        "Erro ao atualizar serviço no Supabase, mantendo atualização apenas em memória.",
+        error,
+      );
+      setServices((prev) =>
+        prev.map((s) => (s.id === editingService.id ? editingService : s)),
+      );
     }
 
     setEditingService(null);
@@ -715,16 +888,23 @@ export default function AdminDashboard() {
 
     // Atualização otimista no estado local
     setServices((prev) =>
-      prev.map((s) => (s.id === service.id ? { ...s, isActive: nextIsActive } : s)),
+      prev.map((s) =>
+        s.id === service.id ? { ...s, isActive: nextIsActive } : s,
+      ),
     );
 
     try {
       await updateSupabaseService(service.id, { is_active: nextIsActive });
     } catch (error) {
-      console.error("Erro ao atualizar status do serviço no Supabase, revertendo no estado local.", error);
+      console.error(
+        "Erro ao atualizar status do serviço no Supabase, revertendo no estado local.",
+        error,
+      );
       // Reverter em caso de erro
       setServices((prev) =>
-        prev.map((s) => (s.id === service.id ? { ...s, isActive: service.isActive } : s)),
+        prev.map((s) =>
+          s.id === service.id ? { ...s, isActive: service.isActive } : s,
+        ),
       );
     }
   };
@@ -738,7 +918,8 @@ export default function AdminDashboard() {
       description: newRule.description,
       type: newRule.type,
       categoryId: newRule.categoryId || undefined,
-      categoryName: importedCategories.find(c => c.id === newRule.categoryId)?.name,
+      categoryName: importedCategories.find((c) => c.id === newRule.categoryId)
+        ?.name,
       thresholdValue: newRule.thresholdValue,
       rewardType: newRule.rewardType,
       rewardValue: newRule.rewardValue,
@@ -746,7 +927,16 @@ export default function AdminDashboard() {
       isActive: true,
     };
     addRule(rule);
-    setNewRule({ name: "", description: "", type: "VALUE_ACCUMULATION", thresholdValue: 0, rewardType: "DISCOUNT_PERCENT", rewardValue: 0, validityDays: 30, categoryId: "" });
+    setNewRule({
+      name: "",
+      description: "",
+      type: "VALUE_ACCUMULATION",
+      thresholdValue: 0,
+      rewardType: "DISCOUNT_PERCENT",
+      rewardValue: 0,
+      validityDays: 30,
+      categoryId: "",
+    });
     setShowAddRule(false);
   };
 
@@ -759,7 +949,9 @@ export default function AdminDashboard() {
   const filteredProfessionals = useMemo(
     () =>
       professionals.filter((p) =>
-        professionalRoleFilter === "all" ? true : p.role === professionalRoleFilter,
+        professionalRoleFilter === "all"
+          ? true
+          : p.role === professionalRoleFilter,
       ),
     [professionals, professionalRoleFilter],
   );
@@ -790,7 +982,9 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-slate-100"}`}>
+      <div
+        className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-slate-100"}`}
+      >
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
       </div>
     );
@@ -809,9 +1003,13 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className={`min-h-screen transition-colors ${isDark ? "bg-slate-900" : "bg-slate-100"}`}>
+    <div
+      className={`min-h-screen transition-colors ${isDark ? "bg-slate-900" : "bg-slate-100"}`}
+    >
       {/* Header */}
-      <header className={`px-6 py-4 ${isDark ? "bg-slate-800/95 backdrop-blur" : "bg-white/95 backdrop-blur border-b border-slate-200"}`}>
+      <header
+        className={`px-6 py-4 ${isDark ? "bg-slate-800/95 backdrop-blur" : "bg-white/95 backdrop-blur border-b border-slate-200"}`}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="shrink-0">
@@ -843,11 +1041,27 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={toggleTheme} className={`p-2 rounded-lg transition-colors ${isDark ? "bg-slate-700 text-amber-400 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`} aria-label="Alternar tema">
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg transition-colors ${isDark ? "bg-slate-700 text-amber-400 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              aria-label="Alternar tema"
+            >
+              {isDark ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
             </button>
-            <span className={`text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}>{user.name}</span>
-            <button onClick={handleLogout} className={`p-2 rounded-lg transition-colors ${isDark ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`} aria-label="Sair">
+            <span
+              className={`text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}
+            >
+              {user.name}
+            </span>
+            <button
+              onClick={handleLogout}
+              className={`p-2 rounded-lg transition-colors ${isDark ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              aria-label="Sair"
+            >
               <LogOut className="h-5 w-5" />
             </button>
           </div>
@@ -855,16 +1069,26 @@ export default function AdminDashboard() {
       </header>
 
       {/* Tabs */}
-      <nav className={`border-b px-6 ${isDark ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"}`}>
+      <nav
+        className={`border-b px-6 ${isDark ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"}`}
+      >
         <div className="flex gap-1 overflow-x-auto">
           {tabs.map((t) => {
             const Icon = t.icon;
             return (
-              <button key={t.id} onClick={() => setTab(t.id as Tab)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
-                tab === t.id
-                  ? isDark ? "border-amber-500 text-amber-400" : "border-amber-500 text-amber-600"
-                  : isDark ? "border-transparent text-slate-400 hover:text-slate-300" : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}>
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id as Tab)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
+                  tab === t.id
+                    ? isDark
+                      ? "border-amber-500 text-amber-400"
+                      : "border-amber-500 text-amber-600"
+                    : isDark
+                      ? "border-transparent text-slate-400 hover:text-slate-300"
+                      : "border-transparent text-slate-500 hover:text-slate-700"
+                }`}
+              >
                 <Icon className="h-4 w-4" />
                 {t.label}
               </button>
@@ -879,7 +1103,9 @@ export default function AdminDashboard() {
         {tab === "dashboard" && (
           <div className="space-y-6">
             {/* Filtros rápidos do Dashboard */}
-            <div className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div
+              className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Filter
@@ -954,30 +1180,70 @@ export default function AdminDashboard() {
 
             {/* KPIs Principais - SINCRONIZADOS COM FILTROS */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard title="Total de Clientes" value={clients.length} icon={Users} isDark={isDark} trend={`+${analytics.clientsThisMonth} este mês`} />
-              <StatCard title="Receita Total" value={formatCurrency(analytics.revenuePeriod)} icon={DollarSign} isDark={isDark} trend={analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : undefined} trendUp={Number(analytics.revenueGrowth) > 0} />
-              <StatCard title="Ticket Médio" value={formatCurrency(analytics.avgTicketPeriod)} icon={Target} isDark={isDark} trend={`${analytics.appointmentsPeriod} atendimentos`} />
-              <StatCard title="Avaliação Média" value={`${analytics.avgRatingPeriod} ⭐`} icon={Star} isDark={isDark} trend={`${analytics.reviewsInPeriod} avaliações`} />
+              <StatCard
+                title="Total de Clientes"
+                value={clients.length}
+                icon={Users}
+                isDark={isDark}
+                trend={`+${analytics.clientsThisMonth} este mês`}
+              />
+              <StatCard
+                title="Receita Total"
+                value={formatCurrency(analytics.revenuePeriod)}
+                icon={DollarSign}
+                isDark={isDark}
+                trend={
+                  analytics.revenueGrowth !== "N/A"
+                    ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%`
+                    : undefined
+                }
+                trendUp={Number(analytics.revenueGrowth) > 0}
+              />
+              <StatCard
+                title="Ticket Médio"
+                value={formatCurrency(analytics.avgTicketPeriod)}
+                icon={Target}
+                isDark={isDark}
+                trend={`${analytics.appointmentsPeriod} atendimentos`}
+              />
+              <StatCard
+                title="Avaliação Média"
+                value={`${analytics.avgRatingPeriod} ⭐`}
+                icon={Star}
+                isDark={isDark}
+                trend={`${analytics.reviewsInPeriod} avaliações`}
+              />
             </div>
 
             {/* Gráficos em Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Gráfico de Receita Premium - Linha */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
-                      📈 Receita no período ({PERIOD_LABEL[analyticsPeriodFilter]})
+                    <h3
+                      className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+                    >
+                      📈 Receita no período (
+                      {PERIOD_LABEL[analyticsPeriodFilter]})
                     </h3>
-                    <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <p
+                      className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
                       Valores filtrados por período e tipo de procedimento
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                    <p
+                      className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                    >
                       {formatCurrency(analytics.revenuePeriod)}
                     </p>
-                    <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                    <p
+                      className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                    >
                       {analytics.appointmentsPeriod} atendimentos
                     </p>
                   </div>
@@ -987,29 +1253,51 @@ export default function AdminDashboard() {
                     {/* Eixo Y - Valores */}
                     <div className="flex flex-col justify-between text-right py-4">
                       {(() => {
-                        const maxRevenue = Math.max(...analytics.dailyRevenue.map((d) => d.revenue), 1);
+                        const maxRevenue = Math.max(
+                          ...analytics.dailyRevenue.map((d) => d.revenue),
+                          1,
+                        );
                         const steps = 5;
                         return Array.from({ length: steps }, (_, i) => {
                           const value = maxRevenue * (1 - i / (steps - 1));
                           return (
-                            <span key={i} className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                            <span
+                              key={i}
+                              className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                            >
                               {formatCurrency(value)}
                             </span>
                           );
                         });
                       })()}
                     </div>
-                    
+
                     {/* Gráfico */}
                     <div className="flex-1 relative">
-                      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <svg
+                        className="w-full h-full"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                      >
                         <defs>
-                          <linearGradient id="revenueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="rgb(251 191 36 / 0.3)" />
-                            <stop offset="100%" stopColor="rgb(251 191 36 / 0)" />
+                          <linearGradient
+                            id="revenueGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="0%"
+                            y2="100%"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="rgb(251 191 36 / 0.3)"
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="rgb(251 191 36 / 0)"
+                            />
                           </linearGradient>
                         </defs>
-                        
+
                         {/* Grid horizontal */}
                         {[0, 25, 50, 75, 100].map((y) => (
                           <line
@@ -1018,44 +1306,84 @@ export default function AdminDashboard() {
                             y1={y}
                             x2="100"
                             y2={y}
-                            className={isDark ? "stroke-slate-700" : "stroke-slate-200"}
+                            className={
+                              isDark ? "stroke-slate-700" : "stroke-slate-200"
+                            }
                             strokeWidth="0.3"
                             vectorEffect="non-scaling-stroke"
                           />
                         ))}
-                        
+
                         {(() => {
-                          const maxRevenue = Math.max(...analytics.dailyRevenue.map((d) => d.revenue), 1);
+                          const maxRevenue = Math.max(
+                            ...analytics.dailyRevenue.map((d) => d.revenue),
+                            1,
+                          );
                           const padding = 2;
-                          const points = analytics.dailyRevenue.map((day, i) => {
-                            const x = (i / Math.max(analytics.dailyRevenue.length - 1, 1)) * (100 - 2 * padding) + padding;
-                            const y = 100 - ((day.revenue / maxRevenue) * (100 - 2 * padding) + padding);
-                            return `${x},${y}`;
-                          }).join(' ');
+                          const points = analytics.dailyRevenue
+                            .map((day, i) => {
+                              const x =
+                                (i /
+                                  Math.max(
+                                    analytics.dailyRevenue.length - 1,
+                                    1,
+                                  )) *
+                                  (100 - 2 * padding) +
+                                padding;
+                              const y =
+                                100 -
+                                ((day.revenue / maxRevenue) *
+                                  (100 - 2 * padding) +
+                                  padding);
+                              return `${x},${y}`;
+                            })
+                            .join(" ");
                           const areaPoints = `${padding},100 ${points} ${100 - padding},100`;
-                          
+
                           return (
                             <>
-                              <polygon points={areaPoints} fill="url(#revenueGradient)" />
+                              <polygon
+                                points={areaPoints}
+                                fill="url(#revenueGradient)"
+                              />
                               <polyline
                                 points={points}
                                 fill="none"
-                                className={isDark ? "stroke-amber-400" : "stroke-amber-500"}
+                                className={
+                                  isDark
+                                    ? "stroke-amber-400"
+                                    : "stroke-amber-500"
+                                }
                                 strokeWidth="0.8"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 vectorEffect="non-scaling-stroke"
                               />
                               {analytics.dailyRevenue.map((day, i) => {
-                                const x = (i / Math.max(analytics.dailyRevenue.length - 1, 1)) * (100 - 2 * padding) + padding;
-                                const y = 100 - ((day.revenue / maxRevenue) * (100 - 2 * padding) + padding);
+                                const x =
+                                  (i /
+                                    Math.max(
+                                      analytics.dailyRevenue.length - 1,
+                                      1,
+                                    )) *
+                                    (100 - 2 * padding) +
+                                  padding;
+                                const y =
+                                  100 -
+                                  ((day.revenue / maxRevenue) *
+                                    (100 - 2 * padding) +
+                                    padding);
                                 return day.revenue > 0 ? (
                                   <circle
                                     key={day.date}
                                     cx={x}
                                     cy={y}
                                     r="1.2"
-                                    className={isDark ? "fill-amber-400" : "fill-amber-500"}
+                                    className={
+                                      isDark
+                                        ? "fill-amber-400"
+                                        : "fill-amber-500"
+                                    }
                                     vectorEffect="non-scaling-stroke"
                                   />
                                 ) : null;
@@ -1064,30 +1392,49 @@ export default function AdminDashboard() {
                           );
                         })()}
                       </svg>
-                      
+
                       {/* Eixo X - Datas */}
                       <div className="absolute -bottom-6 left-0 right-0 flex justify-between px-1">
-                        {analytics.dailyRevenue.filter((_, i) => {
-                          const step = Math.ceil(analytics.dailyRevenue.length / 6);
-                          return i % step === 0 || i === analytics.dailyRevenue.length - 1;
-                        }).map((day) => (
-                          <span key={day.date} className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                            {new Date(day.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                          </span>
-                        ))}
+                        {analytics.dailyRevenue
+                          .filter((_, i) => {
+                            const step = Math.ceil(
+                              analytics.dailyRevenue.length / 6,
+                            );
+                            return (
+                              i % step === 0 ||
+                              i === analytics.dailyRevenue.length - 1
+                            );
+                          })
+                          .map((day) => (
+                            <span
+                              key={day.date}
+                              className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                            >
+                              {new Date(day.date).toLocaleDateString("pt-BR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                              })}
+                            </span>
+                          ))}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className={`h-56 flex items-center justify-center ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                  <div
+                    className={`h-56 flex items-center justify-center ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                  >
                     Nenhuma receita no período selecionado
                   </div>
                 )}
               </div>
 
               {/* Top 5 Procedimentos */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
+                >
                   🏆 Top 5 Procedimentos
                 </h3>
                 <div className="space-y-3">
@@ -1097,16 +1444,28 @@ export default function AdminDashboard() {
                     return (
                       <div key={service.name} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
+                          <span
+                            className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                          >
                             {i + 1}. {service.name}
                           </span>
                           <div className="text-right">
-                            <span className={`text-sm font-semibold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(service.revenue)}</span>
-                            <span className={`text-xs ml-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>({service.count}x)</span>
+                            <span
+                              className={`text-sm font-semibold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                            >
+                              {formatCurrency(service.revenue)}
+                            </span>
+                            <span
+                              className={`text-xs ml-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                            >
+                              ({service.count}x)
+                            </span>
                           </div>
                         </div>
-                        <div className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-slate-200"}`}>
-                          <div 
+                        <div
+                          className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-slate-200"}`}
+                        >
+                          <div
                             className="h-2 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-500 chart-bar-horizontal"
                             data-chart-width={`${widthPercent}%`}
                           />
@@ -1121,66 +1480,116 @@ export default function AdminDashboard() {
             {/* Avaliações dos Profissionais */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Mais Bem Avaliados */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}>
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}
+                >
                   ⭐ Mais Bem Avaliados
                 </h3>
                 {analytics.topRatedProfessionals.length > 0 ? (
                   <div className="space-y-3">
                     {analytics.topRatedProfessionals.map((prof, i) => (
-                      <div key={prof.id} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                      <div
+                        key={prof.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                      >
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            i === 0 ? "bg-amber-500 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"
-                          }`}>
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              i === 0
+                                ? "bg-amber-500 text-white"
+                                : isDark
+                                  ? "bg-slate-600 text-slate-300"
+                                  : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
                             {i + 1}
                           </div>
                           <div>
-                            <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</p>
-                            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.reviewsCount} avaliações</p>
+                            <p
+                              className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                            >
+                              {prof.name}
+                            </p>
+                            <p
+                              className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                            >
+                              {prof.reviewsCount} avaliações
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                          <span className={`text-lg font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
+                          <span
+                            className={`text-lg font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                          >
+                            {prof.avgRating}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className={`text-center py-8 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                  <div
+                    className={`text-center py-8 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                  >
                     Nenhuma avaliação registrada ainda
                   </div>
                 )}
               </div>
 
               {/* Piores Avaliações */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}>
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}
+                >
                   ⚠️ Piores Avaliações
                 </h3>
                 {analytics.worstProfessionals.length > 0 ? (
                   <div className="space-y-3">
                     {analytics.worstProfessionals.map((prof, i) => (
-                      <div key={prof.id} className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                      <div
+                        key={prof.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                      >
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}
+                          >
                             {i + 1}
                           </div>
                           <div>
-                            <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</p>
-                            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.reviewsCount} avaliações</p>
+                            <p
+                              className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                            >
+                              {prof.name}
+                            </p>
+                            <p
+                              className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                            >
+                              {prof.reviewsCount} avaliações
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                          <span className={`text-lg font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
+                          <span
+                            className={`text-lg font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                          >
+                            {prof.avgRating}
+                          </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className={`text-center py-8 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                  <div
+                    className={`text-center py-8 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                  >
                     Nenhuma avaliação registrada ainda
                   </div>
                 )}
@@ -1190,53 +1599,124 @@ export default function AdminDashboard() {
             {/* Profissionais - Grid de 3 colunas */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Mais Atendimentos */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
+                >
                   🔥 Mais Atendimentos
                 </h3>
                 <div className="space-y-3">
                   {analytics.mostActiveProfessionals.map((prof, i) => (
-                    <div key={prof.id} className={`flex items-center justify-between p-2 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                    <div
+                      key={prof.id}
+                      className={`flex items-center justify-between p-2 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                    >
                       <div className="flex items-center gap-2">
-                        <span className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
-                        <span className={`text-sm ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</span>
+                        <span
+                          className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}
+                        >
+                          {i === 0
+                            ? "🥇"
+                            : i === 1
+                              ? "🥈"
+                              : i === 2
+                                ? "🥉"
+                                : `${i + 1}.`}
+                        </span>
+                        <span
+                          className={`text-sm ${isDark ? "text-white" : "text-slate-800"}`}
+                        >
+                          {prof.name}
+                        </span>
                       </div>
-                      <span className={`text-sm font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{prof.appointmentsCount} atend.</span>
+                      <span
+                        className={`text-sm font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                      >
+                        {prof.appointmentsCount} atend.
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* KPIs Rápidos */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
+                >
                   📋 Resumo Rápido
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recompensas Ativas</span>
-                    <span className={`font-semibold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{analytics.activeRewards}</span>
+                    <span
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Recompensas Ativas
+                    </span>
+                    <span
+                      className={`font-semibold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                    >
+                      {analytics.activeRewards}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recompensas Resgatadas</span>
-                    <span className={`font-semibold ${isDark ? "text-blue-400" : "text-blue-600"}`}>{analytics.redeemedRewards}</span>
+                    <span
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Recompensas Resgatadas
+                    </span>
+                    <span
+                      className={`font-semibold ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                    >
+                      {analytics.redeemedRewards}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Pontos Distribuídos</span>
-                    <span className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{analytics.totalPoints.toLocaleString()}</span>
+                    <span
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Pontos Distribuídos
+                    </span>
+                    <span
+                      className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                    >
+                      {analytics.totalPoints.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Regras Ativas</span>
-                    <span className={`font-semibold ${isDark ? "text-purple-400" : "text-purple-600"}`}>{rules.filter(r => r.isActive).length}</span>
+                    <span
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Regras Ativas
+                    </span>
+                    <span
+                      className={`font-semibold ${isDark ? "text-purple-400" : "text-purple-600"}`}
+                    >
+                      {rules.filter((r) => r.isActive).length}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Profissionais Ativos</span>
-                    <span className={`font-semibold ${isDark ? "text-cyan-400" : "text-cyan-600"}`}>{professionals.filter(p => p.isActive).length}</span>
+                    <span
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Profissionais Ativos
+                    </span>
+                    <span
+                      className={`font-semibold ${isDark ? "text-cyan-400" : "text-cyan-600"}`}
+                    >
+                      {professionals.filter((p) => p.isActive).length}
+                    </span>
                   </div>
                 </div>
               </div>
               {/* Maior Receita */}
-              <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
                 <h3
                   className={`text-lg font-semibold mb-4 ${
                     isDark ? "text-white" : "text-slate-800"
@@ -1249,33 +1729,43 @@ export default function AdminDashboard() {
                     .sort((a, b) => b.revenue - a.revenue)
                     .slice(0, 5)
                     .map((prof, i) => (
-                    <div
-                      key={prof.id}
-                      className={`flex items-center justify-between p-2 rounded-lg ${
-                        isDark ? "bg-slate-700/50" : "bg-slate-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
-                        <span
-                          className={`text-sm ${
-                            isDark ? "text-white" : "text-slate-800"
-                          }`}
-                        >
-                          {prof.name}
-                        </span>
+                      <div
+                        key={prof.id}
+                        className={`flex items-center justify-between p-2 rounded-lg ${
+                          isDark ? "bg-slate-700/50" : "bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-lg ${i === 0 ? "text-amber-400" : ""}`}
+                          >
+                            {i === 0
+                              ? "🥇"
+                              : i === 1
+                                ? "🥈"
+                                : i === 2
+                                  ? "🥉"
+                                  : `${i + 1}.`}
+                          </span>
+                          <span
+                            className={`text-sm ${
+                              isDark ? "text-white" : "text-slate-800"
+                            }`}
+                          >
+                            {prof.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={`text-sm font-medium ${
+                              isDark ? "text-emerald-400" : "text-emerald-600"
+                            }`}
+                          >
+                            {formatCurrency(prof.revenue)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span
-                          className={`text-sm font-medium ${
-                            isDark ? "text-emerald-400" : "text-emerald-600"
-                          }`}
-                        >
-                          {formatCurrency(prof.revenue)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             </div>
@@ -1286,52 +1776,116 @@ export default function AdminDashboard() {
         {tab === "analytics" && (
           <div className="space-y-6">
             {/* Comparativo Mensal - MOVIDO PARA O TOPO */}
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
+              <h3
+                className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
+              >
                 📊 Comparativo Mensal
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}>
-                  <p className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Atual</p>
-                  <p className={`text-3xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(analytics.revenueThisMonth)}</p>
-                  <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+                <div
+                  className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}
+                >
+                  <p
+                    className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Mês Atual
+                  </p>
+                  <p
+                    className={`text-3xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                  >
+                    {formatCurrency(analytics.revenueThisMonth)}
+                  </p>
+                  <p
+                    className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                  >
+                    {new Date().toLocaleDateString("pt-BR", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
                 </div>
-                <div className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}>
-                  <p className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mês Anterior</p>
-                  <p className={`text-3xl font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{formatCurrency(analytics.revenueLastMonth)}</p>
-                  <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+                <div
+                  className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}
+                >
+                  <p
+                    className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Mês Anterior
+                  </p>
+                  <p
+                    className={`text-3xl font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}
+                  >
+                    {formatCurrency(analytics.revenueLastMonth)}
+                  </p>
+                  <p
+                    className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                  >
+                    {new Date(
+                      new Date().setMonth(new Date().getMonth() - 1),
+                    ).toLocaleDateString("pt-BR", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
                 </div>
-                <div className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}>
-                  <p className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Variação (Crescimento)</p>
+                <div
+                  className={`p-5 rounded-xl ${isDark ? "bg-gradient-to-br from-slate-700/80 to-slate-700/50" : "bg-gradient-to-br from-slate-50 to-slate-100"}`}
+                >
+                  <p
+                    className={`text-sm font-medium mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Variação (Crescimento)
+                  </p>
                   <div className="flex items-center gap-2">
                     {Number(analytics.revenueGrowth) > 0 ? (
                       <ArrowUp className="h-6 w-6 text-green-500" />
                     ) : Number(analytics.revenueGrowth) < 0 ? (
                       <ArrowDown className="h-6 w-6 text-red-500" />
                     ) : null}
-                    <p className={`text-3xl font-bold ${
-                      Number(analytics.revenueGrowth) > 0 
-                        ? "text-green-500" 
-                        : Number(analytics.revenueGrowth) < 0 
-                          ? "text-red-500" 
-                          : isDark ? "text-slate-400" : "text-slate-500"
-                    }`}>
-                      {analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : "Sem dados"}
+                    <p
+                      className={`text-3xl font-bold ${
+                        Number(analytics.revenueGrowth) > 0
+                          ? "text-green-500"
+                          : Number(analytics.revenueGrowth) < 0
+                            ? "text-red-500"
+                            : isDark
+                              ? "text-slate-400"
+                              : "text-slate-500"
+                      }`}
+                    >
+                      {analytics.revenueGrowth !== "N/A"
+                        ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%`
+                        : "Sem dados"}
                     </p>
                   </div>
                   {analytics.revenueGrowth === "N/A" && (
-                    <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Mês anterior sem receita</p>
+                    <p
+                      className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                    >
+                      Mês anterior sem receita
+                    </p>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Filtros de Período */}
-            <div className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div
+              className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Filter className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
-                  <span className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}>Período:</span>
+                  <Filter
+                    className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                  >
+                    Período:
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   {[
@@ -1342,11 +1896,17 @@ export default function AdminDashboard() {
                   ].map((period) => (
                     <button
                       key={period.value}
-                      onClick={() => setAnalyticsPeriodFilter(period.value as typeof analyticsPeriodFilter)}
+                      onClick={() =>
+                        setAnalyticsPeriodFilter(
+                          period.value as typeof analyticsPeriodFilter,
+                        )
+                      }
                       className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                         analyticsPeriodFilter === period.value
                           ? "bg-amber-500 text-white"
-                          : isDark ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          : isDark
+                            ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
                     >
                       {period.label}
@@ -1373,7 +1933,9 @@ export default function AdminDashboard() {
                   </select>
                   <select
                     value={analyticsProfessionalFilter}
-                    onChange={(e) => setAnalyticsProfessionalFilter(e.target.value)}
+                    onChange={(e) =>
+                      setAnalyticsProfessionalFilter(e.target.value)
+                    }
                     aria-label="Filtrar por profissional"
                     className={`rounded-lg border px-3 py-1.5 text-sm ${
                       isDark
@@ -1394,51 +1956,111 @@ export default function AdminDashboard() {
 
             {/* KPIs do Período */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div
+                className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-lg ${isDark ? "bg-amber-500/20" : "bg-amber-50"}`}>
-                    <DollarSign className={`h-6 w-6 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
+                  <div
+                    className={`p-3 rounded-lg ${isDark ? "bg-amber-500/20" : "bg-amber-50"}`}
+                  >
+                    <DollarSign
+                      className={`h-6 w-6 ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                    />
                   </div>
                   <div>
-                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Receita no Período</p>
-                    <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(analytics.revenuePeriod)}</p>
+                    <p
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Receita no Período
+                    </p>
+                    <p
+                      className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                    >
+                      {formatCurrency(analytics.revenuePeriod)}
+                    </p>
                   </div>
                 </div>
               </div>
-              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div
+                className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-lg ${isDark ? "bg-emerald-500/20" : "bg-emerald-50"}`}>
-                    <Calendar className={`h-6 w-6 ${isDark ? "text-emerald-400" : "text-emerald-600"}`} />
+                  <div
+                    className={`p-3 rounded-lg ${isDark ? "bg-emerald-500/20" : "bg-emerald-50"}`}
+                  >
+                    <Calendar
+                      className={`h-6 w-6 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                    />
                   </div>
                   <div>
-                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Atendimentos</p>
-                    <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{analytics.appointmentsPeriod}</p>
+                    <p
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Atendimentos
+                    </p>
+                    <p
+                      className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                    >
+                      {analytics.appointmentsPeriod}
+                    </p>
                   </div>
                 </div>
               </div>
-              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div
+                className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-lg ${isDark ? "bg-blue-500/20" : "bg-blue-50"}`}>
-                    <Target className={`h-6 w-6 ${isDark ? "text-blue-400" : "text-blue-600"}`} />
+                  <div
+                    className={`p-3 rounded-lg ${isDark ? "bg-blue-500/20" : "bg-blue-50"}`}
+                  >
+                    <Target
+                      className={`h-6 w-6 ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                    />
                   </div>
                   <div>
-                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Ticket Médio</p>
-                    <p className={`text-2xl font-bold ${isDark ? "text-blue-400" : "text-blue-600"}`}>{formatCurrency(analytics.avgTicket)}</p>
+                    <p
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Ticket Médio
+                    </p>
+                    <p
+                      className={`text-2xl font-bold ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                    >
+                      {formatCurrency(analytics.avgTicket)}
+                    </p>
                   </div>
                 </div>
               </div>
-              <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+              <div
+                className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-lg ${isDark ? "bg-purple-500/20" : "bg-purple-50"}`}>
-                    <TrendingUp className={`h-6 w-6 ${isDark ? "text-purple-400" : "text-purple-600"}`} />
+                  <div
+                    className={`p-3 rounded-lg ${isDark ? "bg-purple-500/20" : "bg-purple-50"}`}
+                  >
+                    <TrendingUp
+                      className={`h-6 w-6 ${isDark ? "text-purple-400" : "text-purple-600"}`}
+                    />
                   </div>
                   <div>
-                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Crescimento Mensal</p>
-                    <p className={`text-2xl font-bold ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : Number(analytics.revenueGrowth) < 0 ? "text-red-500" : isDark ? "text-slate-400" : "text-slate-500"}`}>
-                      {analytics.revenueGrowth !== "N/A" ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%` : "Sem dados"}
+                    <p
+                      className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      Crescimento Mensal
+                    </p>
+                    <p
+                      className={`text-2xl font-bold ${Number(analytics.revenueGrowth) > 0 ? "text-green-500" : Number(analytics.revenueGrowth) < 0 ? "text-red-500" : isDark ? "text-slate-400" : "text-slate-500"}`}
+                    >
+                      {analytics.revenueGrowth !== "N/A"
+                        ? `${Number(analytics.revenueGrowth) > 0 ? "+" : ""}${analytics.revenueGrowth}%`
+                        : "Sem dados"}
                     </p>
                     {analytics.revenueGrowth === "N/A" && (
-                      <p className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Mês anterior sem receita</p>
+                      <p
+                        className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                      >
+                        Mês anterior sem receita
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1446,8 +2068,12 @@ export default function AdminDashboard() {
             </div>
 
             {/* Gráfico Principal - AUMENTADO E MELHORADO */}
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
+              <h3
+                className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
+              >
                 📊 Top 10 Procedimentos por Receita
               </h3>
               <div className="space-y-4">
@@ -1455,31 +2081,58 @@ export default function AdminDashboard() {
                   const maxRevenue = analytics.topServices[0]?.revenue || 1;
                   const widthPercent = (service.revenue / maxRevenue) * 100;
                   return (
-                    <div key={service.name} className={`p-4 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
+                    <div
+                      key={service.name}
+                      className={`p-4 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${
-                            i === 0 ? "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg" 
-                            : i === 1 ? "bg-gradient-to-br from-slate-400 to-slate-500 text-white shadow-md" 
-                            : i === 2 ? "bg-gradient-to-br from-orange-600 to-orange-700 text-white shadow-md"
-                            : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"
-                          }`}>
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${
+                              i === 0
+                                ? "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg"
+                                : i === 1
+                                  ? "bg-gradient-to-br from-slate-400 to-slate-500 text-white shadow-md"
+                                  : i === 2
+                                    ? "bg-gradient-to-br from-orange-600 to-orange-700 text-white shadow-md"
+                                    : isDark
+                                      ? "bg-slate-600 text-slate-300"
+                                      : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
                             #{i + 1}
                           </div>
-                          <span className={`text-base font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{service.name}</span>
+                          <span
+                            className={`text-base font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                          >
+                            {service.name}
+                          </span>
                         </div>
                         <div className="text-right">
-                          <span className={`text-lg font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(service.revenue)}</span>
-                          <span className={`text-sm ml-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>({service.count}x)</span>
+                          <span
+                            className={`text-lg font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                          >
+                            {formatCurrency(service.revenue)}
+                          </span>
+                          <span
+                            className={`text-sm ml-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                          >
+                            ({service.count}x)
+                          </span>
                         </div>
                       </div>
-                      <div className={`h-3 rounded-full overflow-hidden ${isDark ? "bg-slate-600" : "bg-slate-200"}`}>
-                        <div 
+                      <div
+                        className={`h-3 rounded-full overflow-hidden ${isDark ? "bg-slate-600" : "bg-slate-200"}`}
+                      >
+                        <div
                           className={`h-3 rounded-full transition-all duration-700 chart-bar-horizontal ${
-                            i === 0 ? "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400"
-                            : i === 1 ? "bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400"
-                            : i === 2 ? "bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400"
-                            : "bg-gradient-to-r from-purple-500 via-purple-400 to-pink-400"
+                            i === 0
+                              ? "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400"
+                              : i === 1
+                                ? "bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400"
+                                : i === 2
+                                  ? "bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400"
+                                  : "bg-gradient-to-r from-purple-500 via-purple-400 to-pink-400"
                           }`}
                           data-chart-width={`${widthPercent}%`}
                         />
@@ -1491,55 +2144,100 @@ export default function AdminDashboard() {
             </div>
 
             {/* Performance da Equipe - MELHORADO */}
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
-              <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}>
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
+              <h3
+                className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
+              >
                 👥 Performance Detalhada da Equipe
               </h3>
               <div className="space-y-4">
                 {filteredProfessionalPerformance.map((prof, i) => (
-                  <div key={prof.id} className={`p-5 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-amber-500 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
-                            {i + 1}
-                          </div>
-                          <div>
-                            <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{prof.name}</p>
-                            <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>{prof.role === "medico" ? "Médico" : prof.role === "profissional" ? "Profissional" : "Recepção"}</p>
-                          </div>
+                  <div
+                    key={prof.id}
+                    className={`p-5 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? "bg-amber-500 text-white" : isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}
+                        >
+                          {i + 1}
                         </div>
-                        <div className="text-right">
-                          <p className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>{formatCurrency(prof.revenue)}</p>
-                          <div className="flex items-center gap-2 justify-end">
-                            <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{prof.appointmentsCount} atend.</span>
-                            <div className="flex items-center gap-0.5">
-                              <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
-                              <span className={`text-xs font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}>{prof.avgRating}</span>
-                            </div>
-                          </div>
+                        <div>
+                          <p
+                            className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                          >
+                            {prof.name}
+                          </p>
+                          <p
+                            className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                          >
+                            {prof.role === "medico"
+                              ? "Médico"
+                              : prof.role === "profissional"
+                                ? "Profissional"
+                                : "Recepção"}
+                          </p>
                         </div>
                       </div>
-                      <div className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-slate-600" : "bg-slate-200"}`}>
-                        <div
-                          className="h-2 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700 chart-bar-horizontal"
-                          data-chart-width={`${(prof.revenue / (analytics.professionalPerformance[0]?.revenue || 1)) * 100}%`}
-                        />
+                      <div className="text-right">
+                        <p
+                          className={`font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                        >
+                          {formatCurrency(prof.revenue)}
+                        </p>
+                        <div className="flex items-center gap-2 justify-end">
+                          <span
+                            className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                          >
+                            {prof.appointmentsCount} atend.
+                          </span>
+                          <div className="flex items-center gap-0.5">
+                            <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                            <span
+                              className={`text-xs font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                            >
+                              {prof.avgRating}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div
+                      className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-slate-600" : "bg-slate-200"}`}
+                    >
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-700 chart-bar-horizontal"
+                        data-chart-width={`${(prof.revenue / (analytics.professionalPerformance[0]?.revenue || 1)) * 100}%`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Clientes */}
         {tab === "clientes" && (
-          <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+          <div
+            className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>Gestão de Clientes</h3>
+              <h3
+                className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+              >
+                Gestão de Clientes
+              </h3>
               <div className="flex items-center gap-3">
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-slate-700" : "bg-slate-100"}`}>
-                  <Search className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+                <div
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-slate-700" : "bg-slate-100"}`}
+                >
+                  <Search
+                    className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  />
                   <input
                     type="text"
                     placeholder="Buscar cliente..."
@@ -1549,7 +2247,19 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <button
-                  onClick={() => exportToCSV(clients.map(c => ({ Nome: c.name, Telefone: c.phone, Email: c.email || "", Pontos: c.pointsBalance, TotalGasto: c.totalSpent, Visitas: c.totalAppointments })), "clientes")}
+                  onClick={() =>
+                    exportToCSV(
+                      clients.map((c) => ({
+                        Nome: c.name,
+                        Telefone: c.phone,
+                        Email: c.email || "",
+                        Pontos: c.pointsBalance,
+                        TotalGasto: c.totalSpent,
+                        Visitas: c.totalAppointments,
+                      })),
+                      "clientes",
+                    )
+                  }
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isDark ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
                 >
                   <Download className="h-4 w-4" />
@@ -1557,7 +2267,9 @@ export default function AdminDashboard() {
                 </button>
                 <select
                   value={clientFilter}
-                  onChange={(e) => setClientFilter(e.target.value as typeof clientFilter)}
+                  onChange={(e) =>
+                    setClientFilter(e.target.value as typeof clientFilter)
+                  }
                   aria-label="Filtrar lista de clientes"
                   className={`rounded-lg border px-2 py-2 text-xs ${
                     isDark
@@ -1577,31 +2289,76 @@ export default function AdminDashboard() {
                 <thead>
                   <tr className={isDark ? "text-slate-400" : "text-slate-500"}>
                     <th className="text-left p-3 text-sm font-medium">Nome</th>
-                    <th className="text-left p-3 text-sm font-medium">Telefone</th>
+                    <th className="text-left p-3 text-sm font-medium">
+                      Telefone
+                    </th>
                     <th className="text-left p-3 text-sm font-medium">PIN</th>
                     <th className="text-left p-3 text-sm font-medium">Email</th>
-                    <th className="text-left p-3 text-sm font-medium">Pontos</th>
-                    <th className="text-left p-3 text-sm font-medium">Total Gasto</th>
-                    <th className="text-left p-3 text-sm font-medium">Visitas</th>
-                    <th className="text-left p-3 text-sm font-medium">Última Visita</th>
-                    <th className="text-right p-3 text-sm font-medium">Ações</th>
+                    <th className="text-left p-3 text-sm font-medium">
+                      Pontos
+                    </th>
+                    <th className="text-left p-3 text-sm font-medium">
+                      Total Gasto
+                    </th>
+                    <th className="text-left p-3 text-sm font-medium">
+                      Visitas
+                    </th>
+                    <th className="text-left p-3 text-sm font-medium">
+                      Última Visita
+                    </th>
+                    <th className="text-right p-3 text-sm font-medium">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredClients.map((client) => (
-                    <tr key={client.id} className={`border-t ${isDark ? "border-slate-700" : "border-slate-100"}`}>
-                      <td className={`p-3 font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{client.name}</td>
-                      <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.phone}</td>
+                    <tr
+                      key={client.id}
+                      className={`border-t ${isDark ? "border-slate-700" : "border-slate-100"}`}
+                    >
+                      <td
+                        className={`p-3 font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                      >
+                        {client.name}
+                      </td>
+                      <td
+                        className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                      >
+                        {client.phone}
+                      </td>
                       <td className="p-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700"}`}>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700"}`}
+                        >
                           🔑 {client.pin}
                         </span>
                       </td>
-                      <td className={`p-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{client.email || "-"}</td>
-                      <td className={`p-3 ${isDark ? "text-amber-400" : "text-amber-600"}`}>{client.pointsBalance.toLocaleString()}</td>
-                      <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{formatCurrency(client.totalSpent)}</td>
-                      <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>{client.totalAppointments}</td>
-                      <td className={`p-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>{client.lastVisit ? formatDate(client.lastVisit) : "-"}</td>
+                      <td
+                        className={`p-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                      >
+                        {client.email || "-"}
+                      </td>
+                      <td
+                        className={`p-3 ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                      >
+                        {client.pointsBalance.toLocaleString()}
+                      </td>
+                      <td
+                        className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                      >
+                        {formatCurrency(client.totalSpent)}
+                      </td>
+                      <td
+                        className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                      >
+                        {client.totalAppointments}
+                      </td>
+                      <td
+                        className={`p-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                      >
+                        {client.lastVisit ? formatDate(client.lastVisit) : "-"}
+                      </td>
                       <td className="p-3 text-right flex gap-2 justify-end">
                         {getClientAvailableRewards(client.id).length > 0 && (
                           <button
@@ -1643,13 +2400,19 @@ export default function AdminDashboard() {
         {/* Equipe */}
         {tab === "equipe" && (
           <div className="space-y-6">
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                  <h3
+                    className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+                  >
                     Gestão da Equipe
                   </h3>
-                  <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <p
+                    className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
                     Gerencie profissionais, médicos e recepcionistas da clínica
                   </p>
                 </div>
@@ -1657,43 +2420,93 @@ export default function AdminDashboard() {
 
               {/* Resumo por função - Dados do Supabase */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{staffUsers.length}</p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Total</p>
+                <div
+                  className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                >
+                  <p
+                    className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}
+                  >
+                    {staffUsers.length}
+                  </p>
+                  <p
+                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Total
+                  </p>
                 </div>
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-blue-400" : "text-blue-600"}`}>
+                <div
+                  className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                >
+                  <p
+                    className={`text-2xl font-bold ${isDark ? "text-blue-400" : "text-blue-600"}`}
+                  >
                     {staffUsers.filter((u) => u.role === "medico").length}
                   </p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Médicos</p>
+                  <p
+                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Médicos
+                  </p>
                 </div>
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                <div
+                  className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                >
+                  <p
+                    className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                  >
                     {staffUsers.filter((u) => u.role === "profissional").length}
                   </p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Profissionais</p>
-                </div>
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-purple-400" : "text-purple-600"}`}>
-                    {staffUsers.filter((u) => u.role === "recepcao" || u.role === "admin").length}
+                  <p
+                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Profissionais
                   </p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Recepção/Admin</p>
+                </div>
+                <div
+                  className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                >
+                  <p
+                    className={`text-2xl font-bold ${isDark ? "text-purple-400" : "text-purple-600"}`}
+                  >
+                    {
+                      staffUsers.filter(
+                        (u) => u.role === "recepcao" || u.role === "admin",
+                      ).length
+                    }
+                  </p>
+                  <p
+                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Recepção/Admin
+                  </p>
                 </div>
               </div>
 
               {/* Usuários do Sistema - Dados Persistentes */}
-              <div className={`mt-8 rounded-xl p-6 ${isDark ? "bg-slate-900/50 border border-slate-700" : "bg-slate-50 border border-slate-200"}`}>
+              <div
+                className={`mt-8 rounded-xl p-6 ${isDark ? "bg-slate-900/50 border border-slate-700" : "bg-slate-50 border border-slate-200"}`}
+              >
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isDark ? "bg-amber-500/10" : "bg-amber-100"}`}>
-                      <Users className={`h-5 w-5 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
+                    <div
+                      className={`p-2 rounded-lg ${isDark ? "bg-amber-500/10" : "bg-amber-100"}`}
+                    >
+                      <Users
+                        className={`h-5 w-5 ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                      />
                     </div>
                     <div>
-                      <h4 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                      <h4
+                        className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+                      >
                         Usuários do Sistema
                       </h4>
-                      <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                        {staffUsers.length} usuário{staffUsers.length !== 1 ? 's' : ''} cadastrado{staffUsers.length !== 1 ? 's' : ''}
+                      <p
+                        className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                      >
+                        {staffUsers.length} usuário
+                        {staffUsers.length !== 1 ? "s" : ""} cadastrado
+                        {staffUsers.length !== 1 ? "s" : ""}
                       </p>
                     </div>
                   </div>
@@ -1710,17 +2523,27 @@ export default function AdminDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className={`border-b ${isDark ? "border-slate-700" : "border-slate-200"}`}>
-                          <th className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                        <tr
+                          className={`border-b ${isDark ? "border-slate-700" : "border-slate-200"}`}
+                        >
+                          <th
+                            className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                          >
                             Usuário
                           </th>
-                          <th className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                          <th
+                            className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                          >
                             Função
                           </th>
-                          <th className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                          <th
+                            className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                          >
                             Cadastrado em
                           </th>
-                          <th className={`text-right py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                          <th
+                            className={`text-right py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                          >
                             Status
                           </th>
                         </tr>
@@ -1733,43 +2556,65 @@ export default function AdminDashboard() {
                           >
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                                  user.role === "admin" ? "bg-purple-500/20 text-purple-400" :
-                                  user.role === "recepcao" ? "bg-blue-500/20 text-blue-400" :
-                                  user.role === "profissional" ? "bg-green-500/20 text-green-400" :
-                                  "bg-cyan-500/20 text-cyan-400"
-                                }`}>
+                                <div
+                                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                    user.role === "admin"
+                                      ? "bg-purple-500/20 text-purple-400"
+                                      : user.role === "recepcao"
+                                        ? "bg-blue-500/20 text-blue-400"
+                                        : user.role === "profissional"
+                                          ? "bg-green-500/20 text-green-400"
+                                          : "bg-cyan-500/20 text-cyan-400"
+                                  }`}
+                                >
                                   {user.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                  <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
+                                  <p
+                                    className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                                  >
                                     {user.name}
                                   </p>
-                                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                                  <p
+                                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                                  >
                                     {user.email}
                                   </p>
                                 </div>
                               </div>
                             </td>
                             <td className="py-4 px-4">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                user.role === "admin" ? "bg-purple-500/20 text-purple-400" :
-                                user.role === "recepcao" ? "bg-blue-500/20 text-blue-400" :
-                                user.role === "profissional" ? "bg-green-500/20 text-green-400" :
-                                "bg-cyan-500/20 text-cyan-400"
-                              }`}>
-                                {user.role === "admin" ? "Administrador" :
-                                 user.role === "recepcao" ? "Recepção" :
-                                 user.role === "profissional" ? "Profissional" :
-                                 "Médico"}
+                              <span
+                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                  user.role === "admin"
+                                    ? "bg-purple-500/20 text-purple-400"
+                                    : user.role === "recepcao"
+                                      ? "bg-blue-500/20 text-blue-400"
+                                      : user.role === "profissional"
+                                        ? "bg-green-500/20 text-green-400"
+                                        : "bg-cyan-500/20 text-cyan-400"
+                                }`}
+                              >
+                                {user.role === "admin"
+                                  ? "Administrador"
+                                  : user.role === "recepcao"
+                                    ? "Recepção"
+                                    : user.role === "profissional"
+                                      ? "Profissional"
+                                      : "Médico"}
                               </span>
                             </td>
-                            <td className={`py-4 px-4 text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                              {new Date(user.created_at).toLocaleDateString("pt-BR", {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                              })}
+                            <td
+                              className={`py-4 px-4 text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                            >
+                              {new Date(user.created_at).toLocaleDateString(
+                                "pt-BR",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )}
                             </td>
                             <td className="py-4 px-4 text-right">
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
@@ -1782,11 +2627,17 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                 ) : (
-                  <div className={`text-center py-12 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                    <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${isDark ? "bg-slate-800" : "bg-slate-100"}`}>
+                  <div
+                    className={`text-center py-12 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                  >
+                    <div
+                      className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${isDark ? "bg-slate-800" : "bg-slate-100"}`}
+                    >
                       <Users className="h-8 w-8" />
                     </div>
-                    <p className="text-lg font-medium mb-2">Nenhum usuário cadastrado</p>
+                    <p className="text-lg font-medium mb-2">
+                      Nenhum usuário cadastrado
+                    </p>
                     <p className="text-sm mb-4">
                       Adicione usuários do sistema para gerenciar a equipe
                     </p>
@@ -1809,7 +2660,9 @@ export default function AdminDashboard() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div
               className={`w-full max-w-lg rounded-2xl p-6 shadow-xl ${
-                isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                isDark
+                  ? "bg-slate-900 border border-slate-700"
+                  : "bg-white border border-slate-200"
               }`}
             >
               <h3
@@ -1827,8 +2680,9 @@ export default function AdminDashboard() {
                     isDark ? "text-slate-400" : "text-slate-500"
                   }`}
                 >
-                  Use este formulário para cadastrar profissionais em geral, médicos
-                  e também recepcionistas (basta escolher o papel &quot;Recepção&quot;).
+                  Use este formulário para cadastrar profissionais em geral,
+                  médicos e também recepcionistas (basta escolher o papel
+                  &quot;Recepção&quot;).
                 </p>
               )}
               <form
@@ -1850,7 +2704,11 @@ export default function AdminDashboard() {
                   </label>
                   <input
                     type="text"
-                    value={editingProfessional ? editingProfessional.name : newProfessional.name}
+                    value={
+                      editingProfessional
+                        ? editingProfessional.name
+                        : newProfessional.name
+                    }
                     onChange={(e) =>
                       editingProfessional
                         ? setEditingProfessional((prev) =>
@@ -1880,12 +2738,20 @@ export default function AdminDashboard() {
                     </label>
                     <select
                       aria-label="Selecionar o papel do profissional"
-                      value={editingProfessional ? editingProfessional.role : newProfessional.role}
+                      value={
+                        editingProfessional
+                          ? editingProfessional.role
+                          : newProfessional.role
+                      }
                       onChange={(e) =>
                         editingProfessional
                           ? setEditingProfessional((prev) =>
                               prev
-                                ? { ...prev, role: e.target.value as Professional["role"] }
+                                ? {
+                                    ...prev,
+                                    role: e.target
+                                      .value as Professional["role"],
+                                  }
                                 : prev,
                             )
                           : setNewProfessional({
@@ -1940,21 +2806,38 @@ export default function AdminDashboard() {
                       }`}
                     >
                       <option value="">Selecione uma especialidade</option>
-                      <option value="Massagem e Estética Corporal">Massagem e Estética Corporal</option>
+                      <option value="Massagem e Estética Corporal">
+                        Massagem e Estética Corporal
+                      </option>
                       <option value="Estética Facial">Estética Facial</option>
                       <option value="Depilação">Depilação</option>
-                      <option value="Design de Sobrancelhas">Design de Sobrancelhas</option>
+                      <option value="Design de Sobrancelhas">
+                        Design de Sobrancelhas
+                      </option>
                       <option value="Micropigmentação">Micropigmentação</option>
-                      <option value="Alongamento de Cílios">Alongamento de Cílios</option>
-                      <option value="Manicure e Pedicure">Manicure e Pedicure</option>
-                      <option value="Dermatologia Estética">Dermatologia Estética</option>
-                      <option value="Harmonização Facial">Harmonização Facial</option>
-                      <option value="Fisioterapia Dermato-Funcional">Fisioterapia Dermato-Funcional</option>
-                      <option value="Nutrição Estética">Nutrição Estética</option>
+                      <option value="Alongamento de Cílios">
+                        Alongamento de Cílios
+                      </option>
+                      <option value="Manicure e Pedicure">
+                        Manicure e Pedicure
+                      </option>
+                      <option value="Dermatologia Estética">
+                        Dermatologia Estética
+                      </option>
+                      <option value="Harmonização Facial">
+                        Harmonização Facial
+                      </option>
+                      <option value="Fisioterapia Dermato-Funcional">
+                        Fisioterapia Dermato-Funcional
+                      </option>
+                      <option value="Nutrição Estética">
+                        Nutrição Estética
+                      </option>
                       <option value="Cosmetologia">Cosmetologia</option>
                       <option value="Outra">Outra (digite abaixo)</option>
                     </select>
-                    {(editingProfessional?.specialty === "Outra" || newProfessional.specialty === "Outra") && (
+                    {(editingProfessional?.specialty === "Outra" ||
+                      newProfessional.specialty === "Outra") && (
                       <input
                         type="text"
                         placeholder="Digite a especialidade"
@@ -1966,7 +2849,9 @@ export default function AdminDashboard() {
                         onChange={(e) =>
                           editingProfessional
                             ? setEditingProfessional((prev) =>
-                                prev ? { ...prev, specialty: e.target.value } : prev
+                                prev
+                                  ? { ...prev, specialty: e.target.value }
+                                  : prev,
                               )
                             : setNewProfessional({
                                 ...newProfessional,
@@ -1984,11 +2869,19 @@ export default function AdminDashboard() {
                         isDark ? "text-slate-200" : "text-slate-700"
                       }`}
                     >
-                      Email {(editingProfessional?.role === "recepcionista" || newProfessional.role === "recepcionista") ? "*" : "(opcional)"}
+                      Email{" "}
+                      {editingProfessional?.role === "recepcionista" ||
+                      newProfessional.role === "recepcionista"
+                        ? "*"
+                        : "(opcional)"}
                     </label>
                     <input
                       type="email"
-                      value={editingProfessional ? editingProfessional.email || "" : newProfessional.email}
+                      value={
+                        editingProfessional
+                          ? editingProfessional.email || ""
+                          : newProfessional.email
+                      }
                       onChange={(e) =>
                         editingProfessional
                           ? setEditingProfessional((prev) =>
@@ -2018,7 +2911,11 @@ export default function AdminDashboard() {
                     </label>
                     <input
                       type="tel"
-                      value={editingProfessional ? editingProfessional.phone || "" : newProfessional.phone}
+                      value={
+                        editingProfessional
+                          ? editingProfessional.phone || ""
+                          : newProfessional.phone
+                      }
                       onChange={(e) =>
                         editingProfessional
                           ? setEditingProfessional((prev) =>
@@ -2038,7 +2935,9 @@ export default function AdminDashboard() {
                     />
                   </div>
                 </div>
-                {(editingProfessional ? editingProfessional.role : newProfessional.role) === "recepcionista" && (
+                {(editingProfessional
+                  ? editingProfessional.role
+                  : newProfessional.role) === "recepcionista" && (
                   <div className="space-y-2">
                     <label
                       className={`text-sm font-medium ${
@@ -2051,14 +2950,18 @@ export default function AdminDashboard() {
                       type="text"
                       value={
                         editingProfessional
-                          ? (editingProfessional as Professional).loginPassword || ""
+                          ? (editingProfessional as Professional)
+                              .loginPassword || ""
                           : newProfessional.loginPassword
                       }
                       onChange={(e) =>
                         editingProfessional
                           ? setEditingProfessional((prev) =>
                               prev
-                                ? { ...(prev as Professional), loginPassword: e.target.value }
+                                ? {
+                                    ...(prev as Professional),
+                                    loginPassword: e.target.value,
+                                  }
                                 : prev,
                             )
                           : setNewProfessional({
@@ -2073,8 +2976,11 @@ export default function AdminDashboard() {
                       }`}
                       placeholder="Defina uma senha forte para uso na tela de recepção"
                     />
-                    <p className={`text-xs ${isDark ? "text-slate-500" : "text-slate-500"}`}>
-                      Essa senha será usada no login de recepção junto com o email informado acima.
+                    <p
+                      className={`text-xs ${isDark ? "text-slate-500" : "text-slate-500"}`}
+                    >
+                      Essa senha será usada no login de recepção junto com o
+                      email informado acima.
                     </p>
                   </div>
                 )}
@@ -2109,19 +3015,29 @@ export default function AdminDashboard() {
         {/* Serviços */}
         {tab === "servicos" && (
           <div className="space-y-6">
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                  <h3
+                    className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+                  >
                     Catálogo de Serviços
                   </h3>
-                  <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <p
+                    className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
                     Serviços importados da planilha e organizados por categoria
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-slate-700" : "bg-slate-100"}`}>
-                    <Search className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`} />
+                  <div
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? "bg-slate-700" : "bg-slate-100"}`}
+                  >
+                    <Search
+                      className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                    />
                     <input
                       type="text"
                       placeholder="Buscar serviço..."
@@ -2150,7 +3066,12 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => {
-                      setNewService({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
+                      setNewService({
+                        name: "",
+                        categoryId: "",
+                        price: 0,
+                        durationMinutes: 30,
+                      });
                       setShowAddService(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 text-sm font-medium"
@@ -2164,7 +3085,9 @@ export default function AdminDashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className={isDark ? "text-slate-400" : "text-slate-500"}>
+                    <tr
+                      className={isDark ? "text-slate-400" : "text-slate-500"}
+                    >
                       <th className="text-left p-3 font-medium">Nome</th>
                       <th className="text-left p-3 font-medium">Categoria</th>
                       <th className="text-left p-3 font-medium">Preço</th>
@@ -2179,19 +3102,29 @@ export default function AdminDashboard() {
                         key={s.id}
                         className={`border-t ${isDark ? "border-slate-700" : "border-slate-100"}`}
                       >
-                        <td className={`p-3 ${isDark ? "text-white" : "text-slate-800"}`}>
+                        <td
+                          className={`p-3 ${isDark ? "text-white" : "text-slate-800"}`}
+                        >
                           {s.name}
                         </td>
-                        <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                        <td
+                          className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                        >
                           {s.categoryName}
                         </td>
-                        <td className={`p-3 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                        <td
+                          className={`p-3 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                        >
                           {formatCurrency(s.price)}
                         </td>
-                        <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                        <td
+                          className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                        >
                           {s.durationMinutes} min
                         </td>
-                        <td className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                        <td
+                          className={`p-3 ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                        >
                           {s.isActive ? "Ativo" : "Inativo"}
                         </td>
                         <td className="p-3 text-right">
@@ -2245,7 +3178,9 @@ export default function AdminDashboard() {
                 </table>
               </div>
               {filteredServices.length === 0 && (
-                <p className={`mt-4 text-sm ${isDark ? "text-slate-500" : "text-slate-500"}`}>
+                <p
+                  className={`mt-4 text-sm ${isDark ? "text-slate-500" : "text-slate-500"}`}
+                >
                   Nenhum serviço encontrado para os filtros selecionados.
                 </p>
               )}
@@ -2256,7 +3191,9 @@ export default function AdminDashboard() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                 <div
                   className={`w-full max-w-lg rounded-2xl p-6 shadow-xl ${
-                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                    isDark
+                      ? "bg-slate-900 border border-slate-700"
+                      : "bg-white border border-slate-200"
                   }`}
                 >
                   <h3
@@ -2412,7 +3349,9 @@ export default function AdminDashboard() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                 <div
                   className={`w-full max-w-lg rounded-2xl p-6 shadow-xl ${
-                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                    isDark
+                      ? "bg-slate-900 border border-slate-700"
+                      : "bg-white border border-slate-200"
                   }`}
                 >
                   <h3
@@ -2441,7 +3380,10 @@ export default function AdminDashboard() {
                         type="text"
                         value={editingService.name}
                         onChange={(e) =>
-                          setEditingService({ ...editingService, name: e.target.value })
+                          setEditingService({
+                            ...editingService,
+                            name: e.target.value,
+                          })
                         }
                         placeholder="Nome do serviço"
                         title="Nome do serviço"
@@ -2465,11 +3407,14 @@ export default function AdminDashboard() {
                           title="Categoria do serviço"
                           value={editingService.categoryId}
                           onChange={(e) => {
-                            const cat = importedCategories.find((c) => c.id === e.target.value);
+                            const cat = importedCategories.find(
+                              (c) => c.id === e.target.value,
+                            );
                             setEditingService({
                               ...editingService,
                               categoryId: e.target.value,
-                              categoryName: cat?.name ?? editingService.categoryName,
+                              categoryName:
+                                cat?.name ?? editingService.categoryName,
                             });
                           }}
                           className={`w-full rounded-lg border px-3 py-2 text-sm ${
@@ -2571,14 +3516,21 @@ export default function AdminDashboard() {
         {/* Regras */}
         {tab === "regras" && (
           <div className="space-y-6">
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                  <h3
+                    className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+                  >
                     Regras de Fidelidade
                   </h3>
-                  <p className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                    Configure e acompanhe as regras que geram pontos, créditos e brindes
+                  <p
+                    className={`text-sm mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
+                    Configure e acompanhe as regras que geram pontos, créditos e
+                    brindes
                   </p>
                   <button
                     type="button"
@@ -2622,50 +3574,75 @@ export default function AdminDashboard() {
                       : "border-amber-100 bg-amber-50 text-slate-800"
                   }`}
                 >
-                  <p className="font-semibold mb-1">Como configurar boas regras:</p>
+                  <p className="font-semibold mb-1">
+                    Como configurar boas regras:
+                  </p>
                   <ul className="list-disc pl-4 space-y-1">
                     <li>
-                      <span className="font-medium">Acúmulo por valor:</span> defina um
-                      valor mínimo gasto (gatilho) para liberar um desconto ou crédito.
+                      <span className="font-medium">Acúmulo por valor:</span>{" "}
+                      defina um valor mínimo gasto (gatilho) para liberar um
+                      desconto ou crédito.
                     </li>
                     <li>
-                      <span className="font-medium">Acúmulo por quantidade:</span> ideal
-                      para combos do tipo &quot;a cada 10 sessões, ganhe 1 grátis&quot;.
+                      <span className="font-medium">
+                        Acúmulo por quantidade:
+                      </span>{" "}
+                      ideal para combos do tipo &quot;a cada 10 sessões, ganhe 1
+                      grátis&quot;.
                     </li>
                     <li>
-                      <span className="font-medium">Tipo de recompensa:</span> escolha se
-                      o benefício será desconto em reais, desconto em %, serviço grátis ou
-                      crédito em carteira.
+                      <span className="font-medium">Tipo de recompensa:</span>{" "}
+                      escolha se o benefício será desconto em reais, desconto em
+                      %, serviço grátis ou crédito em carteira.
                     </li>
                     <li>
-                      <span className="font-medium">Validade:</span> use a validade em
-                      dias para estimular o resgate dentro de um período saudável.
+                      <span className="font-medium">Validade:</span> use a
+                      validade em dias para estimular o resgate dentro de um
+                      período saudável.
                     </li>
                   </ul>
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+                <div
+                  className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                >
+                  <p
+                    className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}
+                  >
                     {rules.length}
                   </p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <p
+                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
                     Regras cadastradas
                   </p>
                 </div>
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                <div
+                  className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                >
+                  <p
+                    className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                  >
                     {rules.filter((r) => r.isActive).length}
                   </p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <p
+                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
                     Regras ativas
                   </p>
                 </div>
-                <div className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}>
-                  <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                <div
+                  className={`p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
+                >
+                  <p
+                    className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                  >
                     {rules.filter((r) => !r.isActive).length}
                   </p>
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <p
+                    className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  >
                     Regras pausadas
                   </p>
                 </div>
@@ -2683,10 +3660,14 @@ export default function AdminDashboard() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+                        <p
+                          className={`font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+                        >
                           {rule.name}
                         </p>
-                        <p className={`text-sm mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                        <p
+                          className={`text-sm mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                        >
                           {rule.description}
                         </p>
                         <div className="flex flex-wrap gap-2 mt-3 text-xs">
@@ -2729,7 +3710,9 @@ export default function AdminDashboard() {
                             }`}
                           >
                             Recompensa: {rule.rewardType}
-                            {rule.rewardValue ? ` (${formatCurrency(rule.rewardValue)})` : ""}
+                            {rule.rewardValue
+                              ? ` (${formatCurrency(rule.rewardValue)})`
+                              : ""}
                           </span>
                           <span
                             className={`px-2 py-1 rounded-full ${
@@ -2793,7 +3776,9 @@ export default function AdminDashboard() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                 <div
                   className={`w-full max-w-xl rounded-2xl p-6 shadow-xl ${
-                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                    isDark
+                      ? "bg-slate-900 border border-slate-700"
+                      : "bg-white border border-slate-200"
                   }`}
                 >
                   <h3
@@ -2839,7 +3824,10 @@ export default function AdminDashboard() {
                       <textarea
                         value={newRule.description}
                         onChange={(e) =>
-                          setNewRule({ ...newRule, description: e.target.value })
+                          setNewRule({
+                            ...newRule,
+                            description: e.target.value,
+                          })
                         }
                         rows={3}
                         className={`w-full rounded-lg border px-3 py-2 ${
@@ -2853,7 +3841,9 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Tipo de regra
                         </label>
@@ -2872,11 +3862,15 @@ export default function AdminDashboard() {
                               : "bg-white border-slate-300 text-slate-900"
                           }`}
                         >
-                          <option value="VALUE_ACCUMULATION">Acúmulo por valor</option>
+                          <option value="VALUE_ACCUMULATION">
+                            Acúmulo por valor
+                          </option>
                           <option value="QUANTITY_ACCUMULATION">
                             Acúmulo por quantidade
                           </option>
-                          <option value="POINTS_CONVERSION">Conversão de pontos</option>
+                          <option value="POINTS_CONVERSION">
+                            Conversão de pontos
+                          </option>
                           <option value="SERVICE_SPECIFIC">
                             Serviço específico
                           </option>
@@ -2885,7 +3879,9 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Categoria (opcional)
                         </label>
@@ -2893,7 +3889,10 @@ export default function AdminDashboard() {
                           title="Categoria de serviços à qual a regra se aplica"
                           value={newRule.categoryId}
                           onChange={(e) =>
-                            setNewRule({ ...newRule, categoryId: e.target.value })
+                            setNewRule({
+                              ...newRule,
+                              categoryId: e.target.value,
+                            })
                           }
                           className={`w-full rounded-lg border px-3 py-2 ${
                             isDark
@@ -2913,7 +3912,9 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Gatilho (valor mínimo)
                         </label>
@@ -2939,7 +3940,9 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Tipo de recompensa
                         </label>
@@ -2949,7 +3952,8 @@ export default function AdminDashboard() {
                           onChange={(e) =>
                             setNewRule({
                               ...newRule,
-                              rewardType: e.target.value as FidelityRule["rewardType"],
+                              rewardType: e.target
+                                .value as FidelityRule["rewardType"],
                             })
                           }
                           className={`w-full rounded-lg border px-3 py-2 ${
@@ -2966,7 +3970,9 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Valor da recompensa
                         </label>
@@ -3044,7 +4050,9 @@ export default function AdminDashboard() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                 <div
                   className={`w-full max-w-xl rounded-2xl p-6 shadow-xl ${
-                    isDark ? "bg-slate-900 border border-slate-700" : "bg-white border border-slate-200"
+                    isDark
+                      ? "bg-slate-900 border border-slate-700"
+                      : "bg-white border border-slate-200"
                   }`}
                 >
                   <h3
@@ -3071,7 +4079,10 @@ export default function AdminDashboard() {
                         type="text"
                         value={editingRule.name}
                         onChange={(e) =>
-                          setEditingRule({ ...editingRule, name: e.target.value })
+                          setEditingRule({
+                            ...editingRule,
+                            name: e.target.value,
+                          })
                         }
                         placeholder="Nome da regra de fidelidade"
                         title="Nome da regra de fidelidade"
@@ -3109,7 +4120,9 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Gatilho (valor mínimo)
                         </label>
@@ -3135,7 +4148,9 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Tipo de recompensa
                         </label>
@@ -3145,7 +4160,8 @@ export default function AdminDashboard() {
                           onChange={(e) =>
                             setEditingRule({
                               ...editingRule,
-                              rewardType: e.target.value as FidelityRule["rewardType"],
+                              rewardType: e.target
+                                .value as FidelityRule["rewardType"],
                             })
                           }
                           className={`w-full rounded-lg border px-3 py-2 ${
@@ -3162,7 +4178,9 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-2">
                         <label
-                          className={isDark ? "text-slate-200" : "text-slate-700"}
+                          className={
+                            isDark ? "text-slate-200" : "text-slate-700"
+                          }
                         >
                           Valor da recompensa
                         </label>
@@ -3242,7 +4260,9 @@ export default function AdminDashboard() {
         {/* Relatórios */}
         {tab === "relatorios" && (
           <div className="space-y-6">
-            <div className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
               <h3
                 className={`text-lg font-semibold mb-4 ${
                   isDark ? "text-white" : "text-slate-800"
@@ -3321,7 +4341,9 @@ export default function AdminDashboard() {
                     )
                   }
                   className={`p-4 rounded-xl text-left ${
-                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                    isDark
+                      ? "bg-slate-700 hover:bg-slate-600"
+                      : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
                   <Users
@@ -3361,7 +4383,9 @@ export default function AdminDashboard() {
                     )
                   }
                   className={`p-4 rounded-xl text-left ${
-                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                    isDark
+                      ? "bg-slate-700 hover:bg-slate-600"
+                      : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
                   <Calendar
@@ -3390,7 +4414,8 @@ export default function AdminDashboard() {
                     exportToCSV(
                       rewards.map((r) => ({
                         Titulo: r.title,
-                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
+                        Cliente:
+                          clients.find((c) => c.id === r.clientId)?.name || "",
                         Status: r.status,
                         Expira: r.expiresAt,
                       })),
@@ -3398,7 +4423,9 @@ export default function AdminDashboard() {
                     )
                   }
                   className={`p-4 rounded-xl text-left ${
-                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                    isDark
+                      ? "bg-slate-700 hover:bg-slate-600"
+                      : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
                   <Gift
@@ -3424,10 +4451,16 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={() => {
-                    const availableRewards = rewards.filter(r => r.status === "available");
-                    const redeemedRewards = rewards.filter(r => r.status === "redeemed");
-                    const expiredRewards = rewards.filter(r => r.status === "expired");
-                    
+                    const availableRewards = rewards.filter(
+                      (r) => r.status === "available",
+                    );
+                    const redeemedRewards = rewards.filter(
+                      (r) => r.status === "redeemed",
+                    );
+                    const expiredRewards = rewards.filter(
+                      (r) => r.status === "expired",
+                    );
+
                     const getTipoRecompensa = (type: string) => {
                       if (type === "FREE_SERVICE") return "Serviço Grátis";
                       if (type === "DISCOUNT_FIXED") return "Desconto Fixo";
@@ -3435,29 +4468,40 @@ export default function AdminDashboard() {
                       if (type === "CREDIT") return "Crédito";
                       return type;
                     };
-                    
-                    const getValorRecompensa = (r: typeof rewards[0]) => {
-                      if (r.type === "FREE_SERVICE") return r.serviceName || "Serviço";
-                      if (r.type === "DISCOUNT_PERCENT") return `${r.value || 0}%`;
-                      if (r.type === "DISCOUNT_FIXED" || r.type === "CREDIT") return `R$ ${r.value || 0}`;
+
+                    const getValorRecompensa = (r: (typeof rewards)[0]) => {
+                      if (r.type === "FREE_SERVICE")
+                        return r.serviceName || "Serviço";
+                      if (r.type === "DISCOUNT_PERCENT")
+                        return `${r.value || 0}%`;
+                      if (r.type === "DISCOUNT_FIXED" || r.type === "CREDIT")
+                        return `R$ ${r.value || 0}`;
                       return "";
                     };
-                    
+
                     const reportData = [
                       ...availableRewards.map((r) => ({
                         Status: "DISPONÍVEL",
-                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
-                        Telefone: clients.find((c) => c.id === r.clientId)?.phone || "",
+                        Cliente:
+                          clients.find((c) => c.id === r.clientId)?.name || "",
+                        Telefone:
+                          clients.find((c) => c.id === r.clientId)?.phone || "",
                         Recompensa: r.title,
                         Tipo: getTipoRecompensa(r.type),
                         Valor: getValorRecompensa(r),
                         Expira: r.expiresAt,
-                        DiasRestantes: Math.ceil((new Date(r.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
+                        DiasRestantes: Math.ceil(
+                          (new Date(r.expiresAt).getTime() -
+                            new Date().getTime()) /
+                            (1000 * 60 * 60 * 24),
+                        ),
                       })),
                       ...redeemedRewards.map((r) => ({
                         Status: "RESGATADO",
-                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
-                        Telefone: clients.find((c) => c.id === r.clientId)?.phone || "",
+                        Cliente:
+                          clients.find((c) => c.id === r.clientId)?.name || "",
+                        Telefone:
+                          clients.find((c) => c.id === r.clientId)?.phone || "",
                         Recompensa: r.title,
                         Tipo: getTipoRecompensa(r.type),
                         Valor: getValorRecompensa(r),
@@ -3466,8 +4510,10 @@ export default function AdminDashboard() {
                       })),
                       ...expiredRewards.map((r) => ({
                         Status: "EXPIRADO",
-                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
-                        Telefone: clients.find((c) => c.id === r.clientId)?.phone || "",
+                        Cliente:
+                          clients.find((c) => c.id === r.clientId)?.name || "",
+                        Telefone:
+                          clients.find((c) => c.id === r.clientId)?.phone || "",
                         Recompensa: r.title,
                         Tipo: getTipoRecompensa(r.type),
                         Valor: getValorRecompensa(r),
@@ -3475,11 +4521,13 @@ export default function AdminDashboard() {
                         DiasRestantes: "Expirado",
                       })),
                     ];
-                    
+
                     exportToCSV(reportData, "itens-fidelidade-detalhado");
                   }}
                   className={`p-4 rounded-xl text-left ${
-                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                    isDark
+                      ? "bg-slate-700 hover:bg-slate-600"
+                      : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
                   <Award
@@ -3502,11 +4550,17 @@ export default function AdminDashboard() {
                     Utilizados e disponíveis
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-green-500/20 text-green-400" : "bg-green-100 text-green-700"}`}>
-                      {rewards.filter(r => r.status === "available").length} disponíveis
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-green-500/20 text-green-400" : "bg-green-100 text-green-700"}`}
+                    >
+                      {rewards.filter((r) => r.status === "available").length}{" "}
+                      disponíveis
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-700"}`}>
-                      {rewards.filter(r => r.status === "redeemed").length} resgatados
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-700"}`}
+                    >
+                      {rewards.filter((r) => r.status === "redeemed").length}{" "}
+                      resgatados
                     </span>
                   </div>
                 </button>
@@ -3515,7 +4569,8 @@ export default function AdminDashboard() {
                   onClick={() =>
                     exportToCSV(
                       reviews.map((r) => ({
-                        Cliente: clients.find((c) => c.id === r.clientId)?.name || "",
+                        Cliente:
+                          clients.find((c) => c.id === r.clientId)?.name || "",
                         Nota: r.rating,
                         Comentario: r.comment || "",
                         Data: r.createdAt,
@@ -3524,7 +4579,9 @@ export default function AdminDashboard() {
                     )
                   }
                   className={`p-4 rounded-xl text-left ${
-                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                    isDark
+                      ? "bg-slate-700 hover:bg-slate-600"
+                      : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
                   <Star
@@ -3562,7 +4619,9 @@ export default function AdminDashboard() {
                     )
                   }
                   className={`p-4 rounded-xl text-left ${
-                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                    isDark
+                      ? "bg-slate-700 hover:bg-slate-600"
+                      : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
                   <UserPlus
@@ -3606,7 +4665,9 @@ export default function AdminDashboard() {
                     exportToCSV([report], "resumo_executivo");
                   }}
                   className={`p-4 rounded-xl text-left ${
-                    isDark ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-50 hover:bg-slate-100"
+                    isDark
+                      ? "bg-slate-700 hover:bg-slate-600"
+                      : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
                   <BarChart3
@@ -3638,13 +4699,17 @@ export default function AdminDashboard() {
       {/* Modal Usar Bônus */}
       {showRedeemModal && selectedClientForRedeem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className={`w-full max-w-md rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+          <div
+            className={`w-full max-w-md rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}>
+              <h3
+                className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+              >
                 Usar Bônus - {selectedClientForRedeem.name}
               </h3>
-              <button 
-                onClick={() => setShowRedeemModal(false)} 
+              <button
+                onClick={() => setShowRedeemModal(false)}
                 className={isDark ? "text-slate-400" : "text-slate-500"}
                 aria-label="Fechar modal"
               >
@@ -3653,39 +4718,60 @@ export default function AdminDashboard() {
             </div>
 
             <div className="space-y-3 mb-6">
-              {getClientAvailableRewards(selectedClientForRedeem.id).map((reward) => (
-                <label
-                  key={reward.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-colors ${
-                    selectedRewardId === reward.id
-                      ? isDark ? "border-amber-500 bg-amber-500/10" : "border-amber-500 bg-amber-50"
-                      : isDark ? "border-slate-700 hover:border-slate-600" : "border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="reward"
-                    value={reward.id}
-                    checked={selectedRewardId === reward.id}
-                    onChange={() => setSelectedRewardId(reward.id)}
-                    className="sr-only"
-                  />
-                  <Gift className={`h-5 w-5 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
-                  <div className="flex-1">
-                    <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>{reward.title}</p>
-                    <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{reward.description}</p>
-                    <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                      Válido até: {formatDate(reward.expiresAt)}
-                    </p>
-                  </div>
-                  {selectedRewardId === reward.id && (
-                    <Check className="h-5 w-5 text-amber-500" />
-                  )}
-                </label>
-              ))}
+              {getClientAvailableRewards(selectedClientForRedeem.id).map(
+                (reward) => (
+                  <label
+                    key={reward.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-colors ${
+                      selectedRewardId === reward.id
+                        ? isDark
+                          ? "border-amber-500 bg-amber-500/10"
+                          : "border-amber-500 bg-amber-50"
+                        : isDark
+                          ? "border-slate-700 hover:border-slate-600"
+                          : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="reward"
+                      value={reward.id}
+                      checked={selectedRewardId === reward.id}
+                      onChange={() => setSelectedRewardId(reward.id)}
+                      className="sr-only"
+                    />
+                    <Gift
+                      className={`h-5 w-5 ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                    />
+                    <div className="flex-1">
+                      <p
+                        className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}
+                      >
+                        {reward.title}
+                      </p>
+                      <p
+                        className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                      >
+                        {reward.description}
+                      </p>
+                      <p
+                        className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                      >
+                        Válido até: {formatDate(reward.expiresAt)}
+                      </p>
+                    </div>
+                    {selectedRewardId === reward.id && (
+                      <Check className="h-5 w-5 text-amber-500" />
+                    )}
+                  </label>
+                ),
+              )}
 
-              {getClientAvailableRewards(selectedClientForRedeem.id).length === 0 && (
-                <p className={`text-center py-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              {getClientAvailableRewards(selectedClientForRedeem.id).length ===
+                0 && (
+                <p
+                  className={`text-center py-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                >
                   Nenhum bônus disponível para este cliente.
                 </p>
               )}
@@ -3695,7 +4781,9 @@ export default function AdminDashboard() {
               <button
                 onClick={() => setShowRedeemModal(false)}
                 className={`flex-1 py-2 rounded-lg font-medium ${
-                  isDark ? "bg-slate-700 text-slate-300 hover:bg-slate-600" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  isDark
+                    ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
                 Cancelar
@@ -3706,7 +4794,9 @@ export default function AdminDashboard() {
                 className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
                   selectedRewardId
                     ? "bg-amber-500 text-slate-900 hover:bg-amber-400"
-                    : isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    : isDark
+                      ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                      : "bg-slate-200 text-slate-400 cursor-not-allowed"
                 }`}
               >
                 Confirmar Resgate
@@ -3719,10 +4809,17 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({ title, value, icon: Icon, isDark, trend, trendUp }: { 
-  title: string; 
-  value: string | number; 
-  icon: React.ElementType; 
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  isDark,
+  trend,
+  trendUp,
+}: {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
   isDark: boolean;
   trend?: string;
   trendUp?: boolean;
@@ -3731,16 +4828,30 @@ function StatCard({ title, value, icon: Icon, isDark, trend, trendUp }: {
     <div className={`rounded-xl p-5 ${isDark ? "bg-slate-800" : "bg-white"}`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>{title}</p>
-          <p className={`text-2xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>{value}</p>
+          <p
+            className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
+          >
+            {title}
+          </p>
+          <p
+            className={`text-2xl font-bold mt-1 ${isDark ? "text-white" : "text-slate-800"}`}
+          >
+            {value}
+          </p>
           {trend && (
-            <p className={`text-xs mt-1 ${trendUp === true ? "text-emerald-500" : trendUp === false ? "text-red-500" : isDark ? "text-slate-500" : "text-slate-400"}`}>
+            <p
+              className={`text-xs mt-1 ${trendUp === true ? "text-emerald-500" : trendUp === false ? "text-red-500" : isDark ? "text-slate-500" : "text-slate-400"}`}
+            >
               {trend}
             </p>
           )}
         </div>
-        <div className={`p-3 rounded-lg ${isDark ? "bg-slate-700" : "bg-amber-50"}`}>
-          <Icon className={`h-6 w-6 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
+        <div
+          className={`p-3 rounded-lg ${isDark ? "bg-slate-700" : "bg-amber-50"}`}
+        >
+          <Icon
+            className={`h-6 w-6 ${isDark ? "text-amber-400" : "text-amber-600"}`}
+          />
         </div>
       </div>
     </div>

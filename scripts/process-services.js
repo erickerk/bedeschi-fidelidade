@@ -11,7 +11,7 @@ const path = require("path");
 const xlsxPath = path.join(
   __dirname,
   "..",
-  "servicos-loja Instituto Bedeschi Beauty Clinic.xlsx"
+  "servicos-loja Instituto Bedeschi Beauty Clinic.xlsx",
 );
 
 // Ler arquivo
@@ -46,10 +46,37 @@ function findColumn(row, aliases) {
 const sampleRow = data[0] || {};
 const columns = {
   code: findColumn(sampleRow, ["código", "codigo", "code", "cod", "id"]),
-  name: findColumn(sampleRow, ["descrição", "descricao", "nome", "name", "servico", "serviço", "produto"]),
-  category: findColumn(sampleRow, ["categoria", "category", "cat", "tipo", "grupo"]),
-  price: findColumn(sampleRow, ["valor", "preço", "preco", "price", "vlr", "venda"]),
-  duration: findColumn(sampleRow, ["tempo", "duração", "duracao", "duration", "min"]),
+  name: findColumn(sampleRow, [
+    "descrição",
+    "descricao",
+    "nome",
+    "name",
+    "servico",
+    "serviço",
+    "produto",
+  ]),
+  category: findColumn(sampleRow, [
+    "categoria",
+    "category",
+    "cat",
+    "tipo",
+    "grupo",
+  ]),
+  price: findColumn(sampleRow, [
+    "valor",
+    "preço",
+    "preco",
+    "price",
+    "vlr",
+    "venda",
+  ]),
+  duration: findColumn(sampleRow, [
+    "tempo",
+    "duração",
+    "duracao",
+    "duration",
+    "min",
+  ]),
 };
 
 console.log("\n🔗 Mapeamento de colunas:");
@@ -152,13 +179,13 @@ export interface CategoryData {
 export const importedCategories: CategoryData[] = ${JSON.stringify(
   Array.from(categories.values()),
   null,
-  2
+  2,
 )};
 
 export const importedServices: ServiceData[] = ${JSON.stringify(
   services,
   null,
-  2
+  2,
 )};
 
 // Funções auxiliares

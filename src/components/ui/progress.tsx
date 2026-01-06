@@ -38,14 +38,16 @@ export function Progress({
         <div className="mb-2 flex items-center justify-between text-sm">
           {label && <span className="text-slate-600">{label}</span>}
           {showLabel && (
-            <span className="font-medium text-slate-700">{roundedPercentage}%</span>
+            <span className="font-medium text-slate-700">
+              {roundedPercentage}%
+            </span>
           )}
         </div>
       )}
       <div
         className={cn(
           "progress-track w-full overflow-hidden rounded-full bg-slate-200",
-          sizeClasses[size]
+          sizeClasses[size],
         )}
       >
         <div
@@ -53,7 +55,7 @@ export function Progress({
             "progress-bar h-full rounded-full transition-all duration-500 ease-out",
             variant === "gold"
               ? "bg-gradient-to-r from-gold-400 to-gold-500"
-              : "bg-slate-600"
+              : "bg-slate-600",
           )}
           data-progress={roundedPercentage}
         />

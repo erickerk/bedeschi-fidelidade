@@ -7,40 +7,40 @@
 ```css
 :root {
   /* Cores Primárias - Instituto Bedeschi */
-  --gold-50: #FDF9F0;
-  --gold-100: #F9EFD8;
-  --gold-200: #F0DDB0;
-  --gold-300: #E5C77D;
-  --gold-400: #D9B256;
-  --gold-500: #C9A962;  /* Principal - Logo */
-  --gold-600: #B08D3E;
-  --gold-700: #8E7132;
-  --gold-800: #6B5526;
-  --gold-900: #4A3A1A;
+  --gold-50: #fdf9f0;
+  --gold-100: #f9efd8;
+  --gold-200: #f0ddb0;
+  --gold-300: #e5c77d;
+  --gold-400: #d9b256;
+  --gold-500: #c9a962; /* Principal - Logo */
+  --gold-600: #b08d3e;
+  --gold-700: #8e7132;
+  --gold-800: #6b5526;
+  --gold-900: #4a3a1a;
 
   /* Cores Secundárias */
-  --slate-50: #F8FAFC;
-  --slate-100: #F1F5F9;
-  --slate-200: #E2E8F0;
-  --slate-300: #CBD5E1;
-  --slate-400: #94A3B8;
-  --slate-500: #64748B;
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
   --slate-600: #475569;
-  --slate-700: #3D4555;  /* Principal - Logo */
-  --slate-800: #1E293B;
-  --slate-900: #0F172A;
+  --slate-700: #3d4555; /* Principal - Logo */
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
 
   /* Feedback */
-  --success: #10B981;
-  --warning: #F59E0B;
-  --error: #EF4444;
-  --info: #3B82F6;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
 
   /* Backgrounds */
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F8FAFC;
-  --bg-dark: #3D4555;
-  --bg-premium: linear-gradient(135deg, #3D4555 0%, #2D3340 100%);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-dark: #3d4555;
+  --bg-premium: linear-gradient(135deg, #3d4555 0%, #2d3340 100%);
 }
 ```
 
@@ -49,27 +49,27 @@
 ```css
 :root {
   /* Font Families */
-  --font-display: 'Playfair Display', Georgia, serif;  /* Títulos premium */
-  --font-body: 'Inter', system-ui, sans-serif;          /* Corpo do texto */
-  
+  --font-display: "Playfair Display", Georgia, serif; /* Títulos premium */
+  --font-body: "Inter", system-ui, sans-serif; /* Corpo do texto */
+
   /* Font Sizes */
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.875rem;  /* 30px */
-  --text-4xl: 2.25rem;   /* 36px */
-  --text-5xl: 3rem;      /* 48px */
-  
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem; /* 36px */
+  --text-5xl: 3rem; /* 48px */
+
   /* Font Weights */
   --font-light: 300;
   --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
-  
+
   /* Line Heights */
   --leading-tight: 1.25;
   --leading-normal: 1.5;
@@ -81,17 +81,17 @@
 
 ```css
 :root {
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-5: 1.25rem;   /* 20px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-  --space-10: 2.5rem;   /* 40px */
-  --space-12: 3rem;     /* 48px */
-  --space-16: 4rem;     /* 64px */
-  --space-20: 5rem;     /* 80px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+  --space-20: 5rem; /* 80px */
 }
 ```
 
@@ -100,13 +100,13 @@
 ```css
 :root {
   /* Border Radius */
-  --radius-sm: 0.25rem;   /* 4px */
-  --radius-md: 0.5rem;    /* 8px */
-  --radius-lg: 0.75rem;   /* 12px */
-  --radius-xl: 1rem;      /* 16px */
-  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
+  --radius-2xl: 1.5rem; /* 24px */
   --radius-full: 9999px;
-  
+
   /* Shadows - Premium feel */
   --shadow-sm: 0 1px 2px rgba(61, 69, 85, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(61, 69, 85, 0.1);
@@ -125,7 +125,7 @@
   --duration-fast: 150ms;
   --duration-normal: 300ms;
   --duration-slow: 500ms;
-  
+
   /* Easings */
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
@@ -210,7 +210,7 @@
 
 ```tsx
 // Input padrão
-<Input 
+<Input
   label="Celular"
   placeholder="(11) 99999-9999"
   mask="phone"
@@ -220,14 +220,14 @@
 // Ring dourado no focus
 
 // Input de busca
-<SearchInput 
+<SearchInput
   placeholder="Buscar cliente..."
   onSearch={handleSearch}
 />
 // Ícone de lupa, clear button
 
 // Input OTP
-<OTPInput 
+<OTPInput
   length={4}
   onComplete={handleVerify}
 />
@@ -239,7 +239,7 @@
 
 ```tsx
 // Componente de avaliação
-<Rating 
+<Rating
   value={4}
   onChange={setRating}
   size="lg"
@@ -256,12 +256,7 @@
 
 ```tsx
 // Barra de progresso para acúmulo
-<ProgressBar 
-  value={85}
-  max={100}
-  label="R$ 850 de R$ 1.000"
-  variant="gold"
-/>
+<ProgressBar value={85} max={100} label="R$ 850 de R$ 1.000" variant="gold" />
 // Barra dourada com animação de preenchimento
 // Label abaixo ou ao lado
 ```
@@ -651,11 +646,11 @@ Total: Destacado, atualiza em tempo real
 // Fade in + slide up suave
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
-  }
+    transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
+  },
 };
 ```
 
@@ -691,10 +686,14 @@ const StarRating = ({ value, onChange }) => {
     <motion.button
       whileHover={{ scale: 1.2 }}
       whileTap={{ scale: 0.9 }}
-      animate={value >= i + 1 ? { 
-        color: '#C9A962',
-        scale: [1, 1.3, 1]
-      } : {}}
+      animate={
+        value >= i + 1
+          ? {
+              color: "#C9A962",
+              scale: [1, 1.3, 1],
+            }
+          : {}
+      }
     />
   ));
 };
@@ -710,13 +709,13 @@ const StarRating = ({ value, onChange }) => {
 <Dialog>
   <motion.div
     initial={{ scale: 0.5, opacity: 0 }}
-    animate={{ 
-      scale: 1, 
+    animate={{
+      scale: 1,
       opacity: 1,
-      transition: { type: "spring", bounce: 0.5 }
+      transition: { type: "spring", bounce: 0.5 },
     }}
   >
-    <Confetti colors={['#C9A962', '#D9B256', '#E5C77D']} />
+    <Confetti colors={["#C9A962", "#D9B256", "#E5C77D"]} />
     <GiftIcon className="animate-bounce" />
     <h2>Parabéns! 🎉</h2>
     <p>Você ganhou 1 Massagem Grátis!</p>
@@ -744,7 +743,9 @@ const StarRating = ({ value, onChange }) => {
 ```tsx
 // Cards em grid
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-  {items.map(item => <Card key={item.id} />)}
+  {items.map((item) => (
+    <Card key={item.id} />
+  ))}
 </div>
 ```
 
@@ -753,7 +754,9 @@ const StarRating = ({ value, onChange }) => {
 ```tsx
 // Mobile: Bottom navigation
 // Desktop: Sidebar ou top navigation
-{isMobile ? <BottomNav /> : <Sidebar />}
+{
+  isMobile ? <BottomNav /> : <Sidebar />;
+}
 ```
 
 ---
@@ -780,4 +783,4 @@ Dourado (#C9A962) sobre slate-700: ✅ 4.8:1
 
 ---
 
-*Design System vivo - atualizar conforme componentes evoluem*
+_Design System vivo - atualizar conforme componentes evoluem_

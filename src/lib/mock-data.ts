@@ -3,7 +3,11 @@
  * Substitui o banco de dados Supabase durante o desenvolvimento
  */
 
-import { importedServices, importedCategories, searchServices as searchImportedServices } from "./services-data";
+import {
+  importedServices,
+  importedCategories,
+  searchServices as searchImportedServices,
+} from "./services-data";
 
 // Re-export serviços importados
 export { importedServices, importedCategories };
@@ -96,7 +100,12 @@ export interface FidelityRule {
   id: string;
   name: string;
   description: string;
-  type: "VALUE_ACCUMULATION" | "QUANTITY_ACCUMULATION" | "POINTS_CONVERSION" | "SERVICE_SPECIFIC" | "COMBO_VALUE";
+  type:
+    | "VALUE_ACCUMULATION"
+    | "QUANTITY_ACCUMULATION"
+    | "POINTS_CONVERSION"
+    | "SERVICE_SPECIFIC"
+    | "COMBO_VALUE";
   categoryId?: string;
   categoryName?: string;
   serviceId?: string; // Para regras de serviço específico
@@ -115,11 +124,31 @@ export interface FidelityRule {
 
 export const mockCategories: Category[] = [
   { id: "cat-1", name: "Massagem", slug: "massagem", servicesCount: 15 },
-  { id: "cat-2", name: "Limpeza de Pele", slug: "limpeza-pele", servicesCount: 8 },
+  {
+    id: "cat-2",
+    name: "Limpeza de Pele",
+    slug: "limpeza-pele",
+    servicesCount: 8,
+  },
   { id: "cat-3", name: "Depilação", slug: "depilacao", servicesCount: 25 },
-  { id: "cat-4", name: "Tratamento Facial", slug: "tratamento-facial", servicesCount: 12 },
-  { id: "cat-5", name: "Tratamento Corporal", slug: "tratamento-corporal", servicesCount: 18 },
-  { id: "cat-6", name: "Manicure e Pedicure", slug: "manicure-pedicure", servicesCount: 10 },
+  {
+    id: "cat-4",
+    name: "Tratamento Facial",
+    slug: "tratamento-facial",
+    servicesCount: 12,
+  },
+  {
+    id: "cat-5",
+    name: "Tratamento Corporal",
+    slug: "tratamento-corporal",
+    servicesCount: 18,
+  },
+  {
+    id: "cat-6",
+    name: "Manicure e Pedicure",
+    slug: "manicure-pedicure",
+    servicesCount: 10,
+  },
 ];
 
 export const mockServices: Service[] = [
@@ -476,7 +505,8 @@ export const mockFidelityRules: FidelityRule[] = [
   {
     id: "rule-1",
     name: "Combo Valor - Massagem Grátis",
-    description: "Gastou R$ 1.000 em qualquer serviço = Massagem Relaxante grátis",
+    description:
+      "Gastou R$ 1.000 em qualquer serviço = Massagem Relaxante grátis",
     type: "COMBO_VALUE",
     thresholdValue: 1000,
     rewardType: "FREE_SERVICE",
@@ -538,7 +568,8 @@ export const mockFidelityRules: FidelityRule[] = [
   {
     id: "rule-6",
     name: "Bônus Primeiro Atendimento",
-    description: "Gastou R$ 300 em qualquer serviço = 10% de desconto no próximo",
+    description:
+      "Gastou R$ 300 em qualquer serviço = 10% de desconto no próximo",
     type: "COMBO_VALUE",
     thresholdValue: 300,
     rewardType: "DISCOUNT_PERCENT",
@@ -608,7 +639,10 @@ export function getClientByPhone(phone: string): Client | undefined {
   return mockClients.find((c) => c.phone === cleanPhone);
 }
 
-export function validateClientPin(phone: string, pin: string): Client | undefined {
+export function validateClientPin(
+  phone: string,
+  pin: string,
+): Client | undefined {
   const client = getClientByPhone(phone);
   if (client && client.pin === pin) {
     return client;
@@ -626,12 +660,16 @@ export function getProfessionalById(id: string): Professional | undefined {
   return mockProfessionals.find((p) => p.id === id);
 }
 
-export function getProfessionalsByRole(role: Professional["role"]): Professional[] {
+export function getProfessionalsByRole(
+  role: Professional["role"],
+): Professional[] {
   return mockProfessionals.filter((p) => p.role === role && p.isActive);
 }
 
 export function getProfessionalsByService(serviceCode: string): Professional[] {
-  return mockProfessionals.filter((p) => p.servicesIds.includes(serviceCode) && p.isActive);
+  return mockProfessionals.filter(
+    (p) => p.servicesIds.includes(serviceCode) && p.isActive,
+  );
 }
 
 export function getAllActiveProfessionals(): Professional[] {
@@ -650,16 +688,18 @@ export function getClientRewards(clientId: string): Reward[] {
   return mockRewards.filter((r) => r.clientId === clientId);
 }
 
-export function getClientPendingReview(clientId: string): Appointment | undefined {
+export function getClientPendingReview(
+  clientId: string,
+): Appointment | undefined {
   return mockAppointments.find(
-    (a) => a.clientId === clientId && a.status === "completed" && !a.hasReview
+    (a) => a.clientId === clientId && a.status === "completed" && !a.hasReview,
   );
 }
 
 export function searchClients(query: string): Client[] {
   const q = query.toLowerCase();
   return mockClients.filter(
-    (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q)
+    (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q),
   );
 }
 

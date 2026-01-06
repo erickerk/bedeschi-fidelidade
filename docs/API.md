@@ -17,6 +17,7 @@ POST /auth/login
 ```
 
 **Request:**
+
 ```json
 {
   "email": "atendente@bedeschi.com.br",
@@ -25,6 +26,7 @@ POST /auth/login
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -54,6 +56,7 @@ POST /auth/otp/send
 ```
 
 **Request:**
+
 ```json
 {
   "tenantSlug": "bedeschi",
@@ -62,6 +65,7 @@ POST /auth/otp/send
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -80,6 +84,7 @@ POST /auth/otp/verify
 ```
 
 **Request:**
+
 ```json
 {
   "tenantSlug": "bedeschi",
@@ -89,6 +94,7 @@ POST /auth/otp/verify
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -117,10 +123,12 @@ GET /clients/search?q={query}
 **Headers:** `Authorization: Bearer {token}`
 
 **Query Params:**
+
 - `q` - Busca por nome ou telefone
 - `limit` - Máximo de resultados (default: 10)
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -147,6 +155,7 @@ POST /clients
 ```
 
 **Request:**
+
 ```json
 {
   "name": "Maria Silva",
@@ -159,6 +168,7 @@ POST /clients
 ```
 
 **Response 201:**
+
 ```json
 {
   "success": true,
@@ -181,6 +191,7 @@ GET /clients/{clientId}
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -197,7 +208,7 @@ GET /clients/{clientId}
     "summary": {
       "pointsBalance": 1250,
       "totalAppointments": 15,
-      "totalSpent": 2850.00,
+      "totalSpent": 2850.0,
       "lastVisit": "2025-12-28",
       "avgRating": 4.8
     },
@@ -205,8 +216,8 @@ GET /clients/{clientId}
       {
         "categoryId": "uuid",
         "categoryName": "Massagem",
-        "totalSpent": 850.00,
-        "threshold": 1000.00,
+        "totalSpent": 850.0,
+        "threshold": 1000.0,
         "progress": 85
       }
     ],
@@ -234,12 +245,14 @@ GET /clients/{clientId}/appointments
 ```
 
 **Query Params:**
+
 - `page` - Página (default: 1)
 - `limit` - Itens por página (default: 10)
 - `startDate` - Data inicial
 - `endDate` - Data final
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -251,10 +264,10 @@ GET /clients/{clientId}/appointments
         "services": [
           {
             "name": "Massagem Relaxante 60min",
-            "price": 180.00
+            "price": 180.0
           }
         ],
-        "total": 180.00,
+        "total": 180.0,
         "pointsEarned": 180,
         "review": {
           "rating": 5,
@@ -283,6 +296,7 @@ POST /appointments
 ```
 
 **Request:**
+
 ```json
 {
   "clientId": "uuid",
@@ -292,13 +306,13 @@ POST /appointments
     {
       "serviceId": "uuid",
       "quantity": 1,
-      "unitPrice": 180.00,
+      "unitPrice": 180.0,
       "discount": 0
     },
     {
       "serviceId": "uuid",
       "quantity": 1,
-      "unitPrice": 120.00,
+      "unitPrice": 120.0,
       "discount": 0
     }
   ],
@@ -308,6 +322,7 @@ POST /appointments
 ```
 
 **Response 201:**
+
 ```json
 {
   "success": true,
@@ -317,9 +332,9 @@ POST /appointments
       "clientId": "uuid",
       "date": "2026-01-03",
       "time": "14:30",
-      "subtotal": 300.00,
+      "subtotal": 300.0,
       "discount": 0,
-      "total": 300.00,
+      "total": 300.0,
       "status": "completed"
     },
     "pointsEarned": 300,
@@ -343,12 +358,14 @@ GET /appointments
 ```
 
 **Query Params:**
+
 - `date` - Data específica
 - `startDate` / `endDate` - Range
 - `clientId` - Filtro por cliente
 - `status` - Filtro por status
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -363,7 +380,7 @@ GET /appointments
         },
         "date": "2026-01-03",
         "time": "14:30",
-        "total": 300.00,
+        "total": 300.0,
         "status": "completed",
         "hasReview": false
       }
@@ -387,11 +404,13 @@ GET /services
 ```
 
 **Query Params:**
+
 - `categoryId` - Filtro por categoria
 - `search` - Busca por nome/código
 - `active` - Apenas ativos (default: true)
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -405,7 +424,7 @@ GET /services
           "id": "uuid",
           "name": "Massagem"
         },
-        "price": 180.00,
+        "price": 180.0,
         "durationMinutes": 60,
         "isActive": true
       }
@@ -423,9 +442,11 @@ Content-Type: multipart/form-data
 ```
 
 **Request:**
+
 - `file` - Arquivo XLSX
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -451,6 +472,7 @@ GET /categories
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -486,6 +508,7 @@ GET /clients/{clientId}/points
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -520,6 +543,7 @@ POST /clients/{clientId}/points/adjust
 ```
 
 **Request:**
+
 ```json
 {
   "amount": 100,
@@ -529,6 +553,7 @@ POST /clients/{clientId}/points/adjust
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -555,9 +580,11 @@ GET /clients/{clientId}/rewards
 ```
 
 **Query Params:**
+
 - `status` - available, redeemed, expired, all
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -588,6 +615,7 @@ POST /rewards/{rewardId}/redeem
 ```
 
 **Request:**
+
 ```json
 {
   "appointmentId": "uuid"
@@ -595,6 +623,7 @@ POST /rewards/{rewardId}/redeem
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -620,6 +649,7 @@ GET /clients/{clientId}/pending-review
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -651,6 +681,7 @@ POST /reviews
 ```
 
 **Request:**
+
 ```json
 {
   "appointmentId": "uuid",
@@ -667,6 +698,7 @@ POST /reviews
 ```
 
 **Response 201:**
+
 ```json
 {
   "success": true,
@@ -688,6 +720,7 @@ POST /reviews/skip
 ```
 
 **Request:**
+
 ```json
 {
   "appointmentId": "uuid"
@@ -695,6 +728,7 @@ POST /reviews/skip
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -716,6 +750,7 @@ GET /admin/fidelity-rules
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -729,7 +764,7 @@ GET /admin/fidelity-rules
         "trigger": {
           "categoryId": "uuid",
           "categoryName": "Massagem",
-          "thresholdValue": 1000.00
+          "thresholdValue": 1000.0
         },
         "reward": {
           "type": "FREE_SERVICE",
@@ -751,6 +786,7 @@ POST /admin/fidelity-rules
 ```
 
 **Request:**
+
 ```json
 {
   "name": "Massagem Grátis por Acúmulo",
@@ -758,7 +794,7 @@ POST /admin/fidelity-rules
   "ruleType": "VALUE_ACCUMULATION",
   "triggerConfig": {
     "categoryId": "uuid",
-    "thresholdValue": 1000.00
+    "thresholdValue": 1000.0
   },
   "rewardConfig": {
     "type": "FREE_SERVICE",
@@ -781,10 +817,12 @@ GET /admin/dashboard/kpis
 ```
 
 **Query Params:**
+
 - `period` - today, week, month, year, custom
 - `startDate` / `endDate` - Para custom
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -797,7 +835,7 @@ GET /admin/dashboard/kpis
       "activeClients": 150,
       "activeClientsChange": 5.2,
       "newClients": 12,
-      "totalRevenue": 15250.00,
+      "totalRevenue": 15250.0,
       "revenueChange": 8.5,
       "appointmentsCount": 45,
       "avgTicket": 338.89,
@@ -819,6 +857,7 @@ GET /admin/reports/services
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -829,7 +868,7 @@ GET /admin/reports/services
         "serviceName": "Massagem Relaxante 60min",
         "categoryName": "Massagem",
         "totalAppointments": 120,
-        "totalRevenue": 21600.00,
+        "totalRevenue": 21600.0,
         "avgRating": 4.8,
         "reviewsCount": 95
       }
@@ -863,18 +902,18 @@ GET /admin/reports/services
 
 ### Códigos de Erro
 
-| Código | HTTP | Descrição |
-|--------|------|-----------|
-| `VALIDATION_ERROR` | 400 | Dados inválidos |
-| `UNAUTHORIZED` | 401 | Não autenticado |
-| `FORBIDDEN` | 403 | Sem permissão |
-| `NOT_FOUND` | 404 | Recurso não encontrado |
-| `CONFLICT` | 409 | Conflito (ex: cliente já existe) |
-| `RATE_LIMITED` | 429 | Muitas requisições |
-| `OTP_INVALID` | 400 | Código OTP inválido |
-| `OTP_EXPIRED` | 400 | Código OTP expirado |
-| `REWARD_EXPIRED` | 400 | Recompensa expirada |
-| `REWARD_ALREADY_REDEEMED` | 400 | Já resgatada |
+| Código                    | HTTP | Descrição                        |
+| ------------------------- | ---- | -------------------------------- |
+| `VALIDATION_ERROR`        | 400  | Dados inválidos                  |
+| `UNAUTHORIZED`            | 401  | Não autenticado                  |
+| `FORBIDDEN`               | 403  | Sem permissão                    |
+| `NOT_FOUND`               | 404  | Recurso não encontrado           |
+| `CONFLICT`                | 409  | Conflito (ex: cliente já existe) |
+| `RATE_LIMITED`            | 429  | Muitas requisições               |
+| `OTP_INVALID`             | 400  | Código OTP inválido              |
+| `OTP_EXPIRED`             | 400  | Código OTP expirado              |
+| `REWARD_EXPIRED`          | 400  | Recompensa expirada              |
+| `REWARD_ALREADY_REDEEMED` | 400  | Já resgatada                     |
 
 ---
 
@@ -911,15 +950,16 @@ GET /admin/reports/services
 
 ## 13. Rate Limiting
 
-| Endpoint | Limite |
-|----------|--------|
-| `POST /auth/otp/send` | 5/min por IP |
-| `POST /auth/otp/verify` | 10/min por IP |
-| `GET /clients/*` | 100/min por user |
-| `POST /appointments` | 30/min por user |
-| `POST /admin/*` | 60/min por user |
+| Endpoint                | Limite           |
+| ----------------------- | ---------------- |
+| `POST /auth/otp/send`   | 5/min por IP     |
+| `POST /auth/otp/verify` | 10/min por IP    |
+| `GET /clients/*`        | 100/min por user |
+| `POST /appointments`    | 30/min por user  |
+| `POST /admin/*`         | 60/min por user  |
 
 **Headers de Resposta:**
+
 ```
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
@@ -928,4 +968,4 @@ X-RateLimit-Reset: 1704293400
 
 ---
 
-*API versionada - Breaking changes apenas em major versions*
+_API versionada - Breaking changes apenas em major versions_

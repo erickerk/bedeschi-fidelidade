@@ -3,25 +3,26 @@
  * Usa pg (node-postgres) para conexão direta
  */
 
-require('dotenv').config({ path: '.env.local' });
-const { Client } = require('pg');
+require("dotenv").config({ path: ".env.local" });
+const { Client } = require("pg");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 if (!supabaseUrl) {
-  console.error('❌ Configure NEXT_PUBLIC_SUPABASE_URL no .env.local');
+  console.error("❌ Configure NEXT_PUBLIC_SUPABASE_URL no .env.local");
   process.exit(1);
 }
 
 // Extrair project ref da URL
-const projectRef = supabaseUrl.replace('https://', '').split('.')[0];
+const projectRef = supabaseUrl.replace("https://", "").split(".")[0];
 
 // Connection string do Supabase (usando transaction pooler)
 // Formato: postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-const DATABASE_URL = process.env.DATABASE_URL || 
-  `postgresql://postgres.${projectRef}:${process.env.SUPABASE_DB_PASSWORD || 'YOUR_PASSWORD'}@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`;
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  `postgresql://postgres.${projectRef}:${process.env.SUPABASE_DB_PASSWORD || "YOUR_PASSWORD"}@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`;
 
-console.log('📦 Project Ref:', projectRef);
+console.log("📦 Project Ref:", projectRef);
 
 const migrationSQL = `
 -- TABELA DE CLIENTES
@@ -145,44 +146,54 @@ CREATE POLICY "allow_all_apt_services" ON public.fidelity_appointment_services F
 
 async function runMigration() {
   if (!process.env.DATABASE_URL && !process.env.SUPABASE_DB_PASSWORD) {
-    console.log('\n⚠️  Para executar a migration via PostgreSQL direto, adicione ao .env.local:');
-    console.log('');
-    console.log('   DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:6543/postgres');
-    console.log('');
-    console.log('   Ou: SUPABASE_DB_PASSWORD=sua_senha_do_banco');
-    console.log('');
-    console.log('Você pode encontrar a connection string em:');
-    console.log(`   https://supabase.com/dashboard/project/${projectRef}/settings/database`);
-    console.log('');
-    console.log('═'.repeat(60));
-    console.log('\nAlternativamente, execute o SQL manualmente:');
-    console.log(`   https://supabase.com/dashboard/project/${projectRef}/sql/new`);
-    console.log('\nCole o conteúdo de: supabase/migrations/006_create_fidelity_tables.sql');
-    console.log('═'.repeat(60));
+    console.log(
+      "\n⚠️  Para executar a migration via PostgreSQL direto, adicione ao .env.local:",
+    );
+    console.log("");
+    console.log(
+      "   DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:6543/postgres",
+    );
+    console.log("");
+    console.log("   Ou: SUPABASE_DB_PASSWORD=sua_senha_do_banco");
+    console.log("");
+    console.log("Você pode encontrar a connection string em:");
+    console.log(
+      `   https://supabase.com/dashboard/project/${projectRef}/settings/database`,
+    );
+    console.log("");
+    console.log("═".repeat(60));
+    console.log("\nAlternativamente, execute o SQL manualmente:");
+    console.log(
+      `   https://supabase.com/dashboard/project/${projectRef}/sql/new`,
+    );
+    console.log(
+      "\nCole o conteúdo de: supabase/migrations/006_create_fidelity_tables.sql",
+    );
+    console.log("═".repeat(60));
     return;
   }
 
   const client = new Client({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
   });
 
   try {
-    console.log('🔗 Conectando ao PostgreSQL...');
+    console.log("🔗 Conectando ao PostgreSQL...");
     await client.connect();
-    console.log('✅ Conectado!\n');
+    console.log("✅ Conectado!\n");
 
-    console.log('📝 Executando migration...');
+    console.log("📝 Executando migration...");
     await client.query(migrationSQL);
-    console.log('✅ Tabelas criadas!\n');
+    console.log("✅ Tabelas criadas!\n");
 
-    console.log('🔒 Configurando RLS...');
+    console.log("🔒 Configurando RLS...");
     await client.query(rlsSQL);
-    console.log('✅ RLS configurado!\n');
+    console.log("✅ RLS configurado!\n");
 
-    console.log('🎉 Migration concluída com sucesso!');
+    console.log("🎉 Migration concluída com sucesso!");
   } catch (error) {
-    console.error('❌ Erro:', error.message);
+    console.error("❌ Erro:", error.message);
   } finally {
     await client.end();
   }

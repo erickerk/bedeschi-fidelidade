@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+} from "react";
 import {
   mockClients as initialClients,
   mockAppointments as initialAppointments,
@@ -55,7 +62,14 @@ function evaluateFidelityRulesForAppointment(params: {
   rules: FidelityRule[];
   onReward: (reward: Reward) => void;
 }) {
-  const { appointment, clientBefore, clientAfter, allAppointmentsBefore, rules, onReward } = params;
+  const {
+    appointment,
+    clientBefore,
+    clientAfter,
+    allAppointmentsBefore,
+    rules,
+    onReward,
+  } = params;
 
   if (!rules.length) return;
 
@@ -72,7 +86,10 @@ function evaluateFidelityRulesForAppointment(params: {
     if (rule.type === "COMBO_VALUE" && rule.thresholdValue) {
       const beforeTotal = clientBefore.totalSpent;
       const afterTotal = clientAfter.totalSpent;
-      if (beforeTotal < rule.thresholdValue && afterTotal >= rule.thresholdValue) {
+      if (
+        beforeTotal < rule.thresholdValue &&
+        afterTotal >= rule.thresholdValue
+      ) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -80,8 +97,16 @@ function evaluateFidelityRulesForAppointment(params: {
           title: rule.rewardServiceName || rule.name,
           description: rule.description,
           type: rule.rewardType,
-          value: rule.rewardType === "CREDIT" || rule.rewardType === "DISCOUNT_FIXED" || rule.rewardType === "DISCOUNT_PERCENT" ? rule.rewardValue : undefined,
-          serviceName: rule.rewardType === "FREE_SERVICE" ? rule.rewardServiceName : undefined,
+          value:
+            rule.rewardType === "CREDIT" ||
+            rule.rewardType === "DISCOUNT_FIXED" ||
+            rule.rewardType === "DISCOUNT_PERCENT"
+              ? rule.rewardValue
+              : undefined,
+          serviceName:
+            rule.rewardType === "FREE_SERVICE"
+              ? rule.rewardServiceName
+              : undefined,
           status: "available",
           expiresAt,
           createdAt: baseDateIso,
@@ -91,10 +116,17 @@ function evaluateFidelityRulesForAppointment(params: {
       continue;
     }
 
-    if (rule.type === "POINTS_CONVERSION" && rule.thresholdValue && rule.rewardValue) {
+    if (
+      rule.type === "POINTS_CONVERSION" &&
+      rule.thresholdValue &&
+      rule.rewardValue
+    ) {
       const beforePoints = clientBefore.pointsBalance;
       const afterPoints = clientAfter.pointsBalance;
-      if (beforePoints < rule.thresholdValue && afterPoints >= rule.thresholdValue) {
+      if (
+        beforePoints < rule.thresholdValue &&
+        afterPoints >= rule.thresholdValue
+      ) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -134,7 +166,10 @@ function evaluateFidelityRulesForAppointment(params: {
         }
       }
 
-      if (matchesBefore < rule.thresholdQuantity && matchesBefore + matchesInNew >= rule.thresholdQuantity) {
+      if (
+        matchesBefore < rule.thresholdQuantity &&
+        matchesBefore + matchesInNew >= rule.thresholdQuantity
+      ) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -182,7 +217,10 @@ function evaluateFidelityRulesForAppointment(params: {
         }
       }
 
-      if (matchesBefore < rule.thresholdQuantity && matchesBefore + matchesInNew >= rule.thresholdQuantity) {
+      if (
+        matchesBefore < rule.thresholdQuantity &&
+        matchesBefore + matchesInNew >= rule.thresholdQuantity
+      ) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -282,7 +320,9 @@ function mapSupabaseRewardToReward(sr: RewardsAPI.FidelityReward): Reward {
   };
 }
 
-function mapSupabaseAppointmentToAppointment(sa: AppointmentsAPI.FidelityAppointment): Appointment {
+function mapSupabaseAppointmentToAppointment(
+  sa: AppointmentsAPI.FidelityAppointment,
+): Appointment {
   return {
     id: sa.id,
     clientId: sa.client_id,
@@ -328,9 +368,11 @@ function mapSupabaseRuleToRule(sr: RulesAPI.FidelityRuleDB): FidelityRule {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [clients, setClients] = useState<Client[]>(initialClients);
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const [appointments, setAppointments] =
+    useState<Appointment[]>(initialAppointments);
   const [rewards, setRewards] = useState<Reward[]>(initialRewards);
-  const [professionals, setProfessionals] = useState<Professional[]>(initialProfessionals);
+  const [professionals, setProfessionals] =
+    useState<Professional[]>(initialProfessionals);
   const [rules, setRules] = useState<FidelityRule[]>(initialRules);
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [supabaseLoaded, setSupabaseLoaded] = useState(false);
@@ -345,34 +387,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const supaClients = await ClientsAPI.getClients();
         if (supaClients.length > 0) {
           setClients(supaClients.map(mapSupabaseClientToClient));
-          console.log(`[AppContext] ${supaClients.length} clientes carregados do Supabase`);
+          console.log(
+            `[AppContext] ${supaClients.length} clientes carregados do Supabase`,
+          );
         } else {
           console.log("[AppContext] Nenhum cliente no Supabase, usando mocks");
         }
 
         // Carregar agendamentos
-        const supaAppointments = await AppointmentsAPI.getAppointmentsWithServices();
+        const supaAppointments =
+          await AppointmentsAPI.getAppointmentsWithServices();
         if (supaAppointments.length > 0) {
-          setAppointments(supaAppointments.map(mapSupabaseAppointmentToAppointment));
-          console.log(`[AppContext] ${supaAppointments.length} agendamentos carregados do Supabase`);
+          setAppointments(
+            supaAppointments.map(mapSupabaseAppointmentToAppointment),
+          );
+          console.log(
+            `[AppContext] ${supaAppointments.length} agendamentos carregados do Supabase`,
+          );
         } else {
-          console.log("[AppContext] Nenhum agendamento no Supabase, usando mocks");
+          console.log(
+            "[AppContext] Nenhum agendamento no Supabase, usando mocks",
+          );
         }
 
         // Carregar recompensas
         const supaRewards = await RewardsAPI.getRewards();
         if (supaRewards.length > 0) {
           setRewards(supaRewards.map(mapSupabaseRewardToReward));
-          console.log(`[AppContext] ${supaRewards.length} recompensas carregadas do Supabase`);
+          console.log(
+            `[AppContext] ${supaRewards.length} recompensas carregadas do Supabase`,
+          );
         } else {
-          console.log("[AppContext] Nenhuma recompensa no Supabase, usando mocks");
+          console.log(
+            "[AppContext] Nenhuma recompensa no Supabase, usando mocks",
+          );
         }
 
         // Carregar regras
         const supaRules = await RulesAPI.getRules();
         if (supaRules.length > 0) {
           setRules(supaRules.map(mapSupabaseRuleToRule));
-          console.log(`[AppContext] ${supaRules.length} regras carregadas do Supabase`);
+          console.log(
+            `[AppContext] ${supaRules.length} regras carregadas do Supabase`,
+          );
         } else {
           console.log("[AppContext] Nenhuma regra no Supabase, usando mocks");
         }
@@ -389,15 +446,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
             createdAt: sr.created_at,
           }));
           setReviews(mappedReviews);
-          console.log(`[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`);
+          console.log(
+            `[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`,
+          );
         } else {
-          console.log("[AppContext] Nenhuma avaliação no Supabase, usando mocks");
+          console.log(
+            "[AppContext] Nenhuma avaliação no Supabase, usando mocks",
+          );
         }
 
         setSupabaseLoaded(true);
-        console.log("[AppContext] Dados carregados com sucesso do Supabase Bedeschi!");
+        console.log(
+          "[AppContext] Dados carregados com sucesso do Supabase Bedeschi!",
+        );
       } catch (error) {
-        console.error("[AppContext] Erro ao carregar do Supabase, usando mocks:", error);
+        console.error(
+          "[AppContext] Erro ao carregar do Supabase, usando mocks:",
+          error,
+        );
         setSupabaseLoaded(true); // Marca como carregado mesmo com erro para não travar
       }
     }
@@ -406,18 +472,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Clientes
-  const getClientById = useCallback((id: string) => {
-    return clients.find((c) => c.id === id);
-  }, [clients]);
+  const getClientById = useCallback(
+    (id: string) => {
+      return clients.find((c) => c.id === id);
+    },
+    [clients],
+  );
 
-  const getClientByPhone = useCallback((phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, "");
-    return clients.find((c) => c.phone === cleanPhone);
-  }, [clients]);
+  const getClientByPhone = useCallback(
+    (phone: string) => {
+      const cleanPhone = phone.replace(/\D/g, "");
+      return clients.find((c) => c.phone === cleanPhone);
+    },
+    [clients],
+  );
 
   const updateClient = useCallback((client: Client) => {
     setClients((prev) => prev.map((c) => (c.id === client.id ? client : c)));
-    
+
     // Persistir no Supabase
     ClientsAPI.updateClient(client.id, {
       name: client.name,
@@ -429,12 +501,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       total_spent: client.totalSpent,
       total_appointments: client.totalAppointments,
       last_visit: client.lastVisit,
-    }).catch((err) => console.error("[AppContext] Erro ao atualizar cliente no Supabase:", err));
+    }).catch((err) =>
+      console.error("[AppContext] Erro ao atualizar cliente no Supabase:", err),
+    );
   }, []);
 
   const addClient = useCallback((client: Client) => {
     setClients((prev) => [...prev, client]);
-    
+
     // Persistir no Supabase
     ClientsAPI.createClient({
       name: client.name,
@@ -442,40 +516,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
       pin: client.pin,
       email: client.email,
       birth_date: client.birthDate,
-    }).then((created) => {
-      if (created) {
-        // Atualizar o ID local com o ID real do Supabase
-        setClients((prev) => prev.map((c) => c.id === client.id ? { ...c, id: created.id } : c));
-        console.log(`[AppContext] Cliente ${client.name} criado no Supabase`);
-      }
-    }).catch((err) => console.error("[AppContext] Erro ao criar cliente no Supabase:", err));
+    })
+      .then((created) => {
+        if (created) {
+          // Atualizar o ID local com o ID real do Supabase
+          setClients((prev) =>
+            prev.map((c) =>
+              c.id === client.id ? { ...c, id: created.id } : c,
+            ),
+          );
+          console.log(`[AppContext] Cliente ${client.name} criado no Supabase`);
+        }
+      })
+      .catch((err) =>
+        console.error("[AppContext] Erro ao criar cliente no Supabase:", err),
+      );
   }, []);
 
   // Recompensas
-  const getClientRewards = useCallback((clientId: string) => {
-    return rewards.filter((r) => r.clientId === clientId && r.status === "available");
-  }, [rewards]);
+  const getClientRewards = useCallback(
+    (clientId: string) => {
+      return rewards.filter(
+        (r) => r.clientId === clientId && r.status === "available",
+      );
+    },
+    [rewards],
+  );
 
   const redeemReward = useCallback((rewardId: string) => {
     setRewards((prev) =>
       prev.map((r) =>
-        r.id === rewardId ? { ...r, status: "redeemed" as const } : r
-      )
+        r.id === rewardId ? { ...r, status: "redeemed" as const } : r,
+      ),
     );
-    
+
     // Persistir no Supabase
     RewardsAPI.redeemReward(rewardId)
       .then((result) => {
         if (result) {
-          console.log(`[AppContext] Recompensa ${rewardId} resgatada no Supabase`);
+          console.log(
+            `[AppContext] Recompensa ${rewardId} resgatada no Supabase`,
+          );
         }
       })
-      .catch((err) => console.error("[AppContext] Erro ao resgatar recompensa no Supabase:", err));
+      .catch((err) =>
+        console.error(
+          "[AppContext] Erro ao resgatar recompensa no Supabase:",
+          err,
+        ),
+      );
   }, []);
 
   const addReward = useCallback((reward: Reward) => {
     setRewards((prev) => [...prev, reward]);
-    
+
     // Persistir no Supabase
     RewardsAPI.createReward({
       client_id: reward.clientId,
@@ -485,131 +579,167 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value: reward.value,
       service_name: reward.serviceName,
       expires_at: reward.expiresAt,
-    }).catch((err) => console.error("[AppContext] Erro ao criar recompensa no Supabase:", err));
+    }).catch((err) =>
+      console.error("[AppContext] Erro ao criar recompensa no Supabase:", err),
+    );
   }, []);
 
   // Atendimentos
-  const getClientAppointments = useCallback((clientId: string) => {
-    return appointments
-      .filter((a) => a.clientId === clientId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [appointments]);
+  const getClientAppointments = useCallback(
+    (clientId: string) => {
+      return appointments
+        .filter((a) => a.clientId === clientId)
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        );
+    },
+    [appointments],
+  );
 
-  const addAppointment = useCallback((appointment: Appointment) => {
-    setAppointments((prev) => [appointment, ...prev]);
+  const addAppointment = useCallback(
+    (appointment: Appointment) => {
+      setAppointments((prev) => [appointment, ...prev]);
 
-    const client = clients.find((c) => c.id === appointment.clientId);
-    if (!client) {
-      return;
-    }
+      const client = clients.find((c) => c.id === appointment.clientId);
+      if (!client) {
+        return;
+      }
 
-    const clientBefore = client;
-    const clientAfter: Client = {
-      ...clientBefore,
-      pointsBalance: clientBefore.pointsBalance + appointment.pointsEarned,
-      totalSpent: clientBefore.totalSpent + appointment.total,
-      totalAppointments: clientBefore.totalAppointments + 1,
-      lastVisit: appointment.date,
-    };
+      const clientBefore = client;
+      const clientAfter: Client = {
+        ...clientBefore,
+        pointsBalance: clientBefore.pointsBalance + appointment.pointsEarned,
+        totalSpent: clientBefore.totalSpent + appointment.total,
+        totalAppointments: clientBefore.totalAppointments + 1,
+        lastVisit: appointment.date,
+      };
 
-    // Persistir agendamento no Supabase
-    AppointmentsAPI.createAppointment({
-      client_id: appointment.clientId,
-      client_name: appointment.clientName,
-      professional_id: appointment.professionalId,
-      professional_name: appointment.professionalName,
-      date: appointment.date,
-      time: appointment.time,
-      status: appointment.status,
-      total: appointment.total,
-      points_earned: appointment.pointsEarned,
-      services: appointment.services.map((s) => ({
-        service_name: s.name,
-        price: s.price,
-      })),
-    }).catch((err) => console.error("[AppContext] Erro ao criar agendamento no Supabase:", err));
+      // Persistir agendamento no Supabase
+      AppointmentsAPI.createAppointment({
+        client_id: appointment.clientId,
+        client_name: appointment.clientName,
+        professional_id: appointment.professionalId,
+        professional_name: appointment.professionalName,
+        date: appointment.date,
+        time: appointment.time,
+        status: appointment.status,
+        total: appointment.total,
+        points_earned: appointment.pointsEarned,
+        services: appointment.services.map((s) => ({
+          service_name: s.name,
+          price: s.price,
+        })),
+      }).catch((err) =>
+        console.error(
+          "[AppContext] Erro ao criar agendamento no Supabase:",
+          err,
+        ),
+      );
 
-    evaluateFidelityRulesForAppointment({
-      appointment,
-      clientBefore,
-      clientAfter,
-      allAppointmentsBefore: appointments,
-      rules,
-      onReward: (reward) => {
-        setRewards((prev) => [...prev, reward]);
-        // Persistir recompensa gerada no Supabase
-        RewardsAPI.createReward({
-          client_id: reward.clientId,
-          title: reward.title,
-          description: reward.description,
-          type: reward.type,
-          value: reward.value,
-          service_name: reward.serviceName,
-          expires_at: reward.expiresAt,
-        }).catch((err) => console.error("[AppContext] Erro ao criar recompensa no Supabase:", err));
-      },
-    });
+      evaluateFidelityRulesForAppointment({
+        appointment,
+        clientBefore,
+        clientAfter,
+        allAppointmentsBefore: appointments,
+        rules,
+        onReward: (reward) => {
+          setRewards((prev) => [...prev, reward]);
+          // Persistir recompensa gerada no Supabase
+          RewardsAPI.createReward({
+            client_id: reward.clientId,
+            title: reward.title,
+            description: reward.description,
+            type: reward.type,
+            value: reward.value,
+            service_name: reward.serviceName,
+            expires_at: reward.expiresAt,
+          }).catch((err) =>
+            console.error(
+              "[AppContext] Erro ao criar recompensa no Supabase:",
+              err,
+            ),
+          );
+        },
+      });
 
-    updateClient(clientAfter);
-  }, [clients, appointments, rules, updateClient]);
+      updateClient(clientAfter);
+    },
+    [clients, appointments, rules, updateClient],
+  );
 
   const updateAppointment = useCallback((appointment: Appointment) => {
     setAppointments((prev) =>
-      prev.map((a) => (a.id === appointment.id ? appointment : a))
+      prev.map((a) => (a.id === appointment.id ? appointment : a)),
     );
-    
+
     // Persistir no Supabase
     AppointmentsAPI.updateAppointment(appointment.id, {
       status: appointment.status,
       has_review: appointment.hasReview,
       review_rating: appointment.review?.rating,
       review_comment: appointment.review?.comment,
-    }).catch((err) => console.error("[AppContext] Erro ao atualizar agendamento no Supabase:", err));
+    }).catch((err) =>
+      console.error(
+        "[AppContext] Erro ao atualizar agendamento no Supabase:",
+        err,
+      ),
+    );
   }, []);
 
-  const getClientPendingReview = useCallback((clientId: string) => {
-    return appointments.find(
-      (a) => a.clientId === clientId && a.status === "completed" && !a.hasReview
-    );
-  }, [appointments]);
+  const getClientPendingReview = useCallback(
+    (clientId: string) => {
+      return appointments.find(
+        (a) =>
+          a.clientId === clientId && a.status === "completed" && !a.hasReview,
+      );
+    },
+    [appointments],
+  );
 
   // Avaliações
-  const addReview = useCallback((review: Review) => {
-    const existingForAppointment = reviews.find(
-      (r) => r.appointmentId === review.appointmentId && r.clientId === review.clientId,
-    );
-    if (existingForAppointment) {
-      return;
-    }
+  const addReview = useCallback(
+    (review: Review) => {
+      const existingForAppointment = reviews.find(
+        (r) =>
+          r.appointmentId === review.appointmentId &&
+          r.clientId === review.clientId,
+      );
+      if (existingForAppointment) {
+        return;
+      }
 
-    const apt = appointments.find((a) => a.id === review.appointmentId);
-    if (apt?.hasReview) {
-      return;
-    }
+      const apt = appointments.find((a) => a.id === review.appointmentId);
+      if (apt?.hasReview) {
+        return;
+      }
 
-    setReviews((prev) => [...prev, review]);
-    
-    // Persistir avaliação no Supabase com staff_id
-    ReviewsAPI.createReview({
-      client_id: review.clientId,
-      appointment_id: review.appointmentId,
-      staff_id: review.professionalId,
-      rating: review.rating,
-      comment: review.comment,
-    }).catch((err) => console.error("[AppContext] Erro ao criar avaliação no Supabase:", err));
-    
-    // Marca atendimento como avaliado
-    if (apt) {
-      updateAppointment({
-        ...apt,
-        hasReview: true,
-        review: {
-          rating: review.rating,
-          comment: review.comment,
-        },
-      });
-    }
-  }, [appointments, reviews, updateAppointment]);
+      setReviews((prev) => [...prev, review]);
+
+      // Persistir avaliação no Supabase com staff_id
+      ReviewsAPI.createReview({
+        client_id: review.clientId,
+        appointment_id: review.appointmentId,
+        staff_id: review.professionalId,
+        rating: review.rating,
+        comment: review.comment,
+      }).catch((err) =>
+        console.error("[AppContext] Erro ao criar avaliação no Supabase:", err),
+      );
+
+      // Marca atendimento como avaliado
+      if (apt) {
+        updateAppointment({
+          ...apt,
+          hasReview: true,
+          review: {
+            rating: review.rating,
+            comment: review.comment,
+          },
+        });
+      }
+    },
+    [appointments, reviews, updateAppointment],
+  );
 
   // Profissionais
   const getProfessionals = useCallback(() => {
@@ -622,7 +752,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateProfessional = useCallback((professional: Professional) => {
     setProfessionals((prev) =>
-      prev.map((p) => (p.id === professional.id ? professional : p))
+      prev.map((p) => (p.id === professional.id ? professional : p)),
     );
   }, []);
 
@@ -637,7 +767,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addRule = useCallback((rule: FidelityRule) => {
     setRules((prev) => [...prev, rule]);
-    
+
     // Persistir no Supabase
     RulesAPI.createRule({
       name: rule.name,
@@ -654,12 +784,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reward_service_id: rule.rewardServiceId,
       reward_service_name: rule.rewardServiceName,
       validity_days: rule.validityDays,
-    }).catch((err) => console.error("[AppContext] Erro ao criar regra no Supabase:", err));
+    }).catch((err) =>
+      console.error("[AppContext] Erro ao criar regra no Supabase:", err),
+    );
   }, []);
 
   const updateRule = useCallback((rule: FidelityRule) => {
     setRules((prev) => prev.map((r) => (r.id === rule.id ? rule : r)));
-    
+
     // Persistir no Supabase
     RulesAPI.updateRule(rule.id, {
       name: rule.name,
@@ -677,14 +809,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reward_service_name: rule.rewardServiceName,
       validity_days: rule.validityDays,
       is_active: rule.isActive,
-    }).catch((err) => console.error("[AppContext] Erro ao atualizar regra no Supabase:", err));
+    }).catch((err) =>
+      console.error("[AppContext] Erro ao atualizar regra no Supabase:", err),
+    );
   }, []);
 
   const toggleRule = useCallback((id: string) => {
     setRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, isActive: !r.isActive } : r))
+      prev.map((r) => (r.id === id ? { ...r, isActive: !r.isActive } : r)),
     );
-    
+
     // Persistir no Supabase
     RulesAPI.toggleRule(id)
       .then((result) => {
@@ -692,15 +826,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.log(`[AppContext] Regra ${id} alternada no Supabase`);
         }
       })
-      .catch((err) => console.error("[AppContext] Erro ao alternar regra no Supabase:", err));
+      .catch((err) =>
+        console.error("[AppContext] Erro ao alternar regra no Supabase:", err),
+      );
   }, []);
 
   // Refresh - Recarregar do Supabase
   const refreshData = useCallback(async () => {
     try {
       console.log("[AppContext] Recarregando dados do Supabase...");
-      
-      const [supaClients, supaAppointments, supaRewards, supaRules, supaReviews] = await Promise.all([
+
+      const [
+        supaClients,
+        supaAppointments,
+        supaRewards,
+        supaRules,
+        supaReviews,
+      ] = await Promise.all([
         ClientsAPI.getClients(),
         AppointmentsAPI.getAppointmentsWithServices(),
         RewardsAPI.getRewards(),
@@ -715,7 +857,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       if (supaAppointments.length > 0) {
-        setAppointments(supaAppointments.map(mapSupabaseAppointmentToAppointment));
+        setAppointments(
+          supaAppointments.map(mapSupabaseAppointmentToAppointment),
+        );
       } else {
         setAppointments([...initialAppointments]);
       }
@@ -734,7 +878,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Profissionais em mock
       setProfessionals([...initialProfessionals]);
-      
+
       // Reviews do Supabase
       if (supaReviews.length > 0) {
         const mappedReviews = supaReviews.map((sr) => ({
@@ -746,11 +890,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           createdAt: sr.created_at,
         }));
         setReviews(mappedReviews);
-        console.log(`[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`);
+        console.log(
+          `[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`,
+        );
       } else {
         setReviews([...initialReviews]);
       }
-      
+
       console.log("[AppContext] Dados recarregados com sucesso!");
     } catch (error) {
       console.error("[AppContext] Erro ao recarregar, usando mocks:", error);
@@ -806,8 +952,13 @@ export function useApp() {
 
 // Hook específico para cliente
 export function useClientData(clientId: string) {
-  const { getClientById, getClientRewards, getClientAppointments, getClientPendingReview } = useApp();
-  
+  const {
+    getClientById,
+    getClientRewards,
+    getClientAppointments,
+    getClientPendingReview,
+  } = useApp();
+
   return {
     client: getClientById(clientId),
     rewards: getClientRewards(clientId),

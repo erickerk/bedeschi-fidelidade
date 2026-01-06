@@ -68,40 +68,40 @@
 
 ### 2.1 Frontend
 
-| Tecnologia | Justificativa |
-|------------|---------------|
-| **Next.js 14** | SSR, App Router, Server Components, API Routes integradas |
-| **TypeScript** | Tipagem forte, menos bugs, melhor DX |
-| **TailwindCSS** | Utility-first, design system consistente, rápido |
-| **shadcn/ui** | Componentes acessíveis, customizáveis, sem vendor lock |
-| **Framer Motion** | Animações cinematográficas premium |
-| **React Hook Form + Zod** | Forms performáticos com validação |
-| **TanStack Query** | Cache e sync de dados server state |
+| Tecnologia                | Justificativa                                             |
+| ------------------------- | --------------------------------------------------------- |
+| **Next.js 14**            | SSR, App Router, Server Components, API Routes integradas |
+| **TypeScript**            | Tipagem forte, menos bugs, melhor DX                      |
+| **TailwindCSS**           | Utility-first, design system consistente, rápido          |
+| **shadcn/ui**             | Componentes acessíveis, customizáveis, sem vendor lock    |
+| **Framer Motion**         | Animações cinematográficas premium                        |
+| **React Hook Form + Zod** | Forms performáticos com validação                         |
+| **TanStack Query**        | Cache e sync de dados server state                        |
 
 ### 2.2 Backend
 
-| Tecnologia | Justificativa |
-|------------|---------------|
-| **Next.js API Routes** | Simplicidade, mesmo deploy, typed end-to-end |
-| **Supabase** | Auth, DB, RLS, Edge Functions, Storage - tudo integrado |
-| **PostgreSQL** | Robusto, RLS nativo, JSONB para flexibilidade |
-| **Drizzle ORM** | Type-safe, migrations, performance |
+| Tecnologia             | Justificativa                                           |
+| ---------------------- | ------------------------------------------------------- |
+| **Next.js API Routes** | Simplicidade, mesmo deploy, typed end-to-end            |
+| **Supabase**           | Auth, DB, RLS, Edge Functions, Storage - tudo integrado |
+| **PostgreSQL**         | Robusto, RLS nativo, JSONB para flexibilidade           |
+| **Drizzle ORM**        | Type-safe, migrations, performance                      |
 
 ### 2.3 Infraestrutura
 
-| Tecnologia | Justificativa |
-|------------|---------------|
-| **Vercel** | Deploy simplificado, edge network, preview deploys |
-| **Supabase Cloud** | Managed Postgres, backups automáticos |
-| **Upstash** | Rate limiting, Redis serverless |
+| Tecnologia         | Justificativa                                      |
+| ------------------ | -------------------------------------------------- |
+| **Vercel**         | Deploy simplificado, edge network, preview deploys |
+| **Supabase Cloud** | Managed Postgres, backups automáticos              |
+| **Upstash**        | Rate limiting, Redis serverless                    |
 
 ### 2.4 Serviços Externos
 
-| Serviço | Uso |
-|---------|-----|
+| Serviço                    | Uso                         |
+| -------------------------- | --------------------------- |
 | **Twilio / Evolution API** | WhatsApp OTP e notificações |
-| **Resend** | Emails transacionais |
-| **QRCode.react** | Geração de QR Codes |
+| **Resend**                 | Emails transacionais        |
+| **QRCode.react**           | Geração de QR Codes         |
 
 ---
 
@@ -120,11 +120,13 @@ CREATE POLICY "tenant_isolation" ON clients
 ```
 
 **Prós:**
+
 - Custo menor (1 banco para todos)
 - Migrations simplificadas
 - Queries cross-tenant fáceis para analytics
 
 **Contras:**
+
 - Precisa de cuidado extremo com RLS
 - Performance pode degradar em escala muito grande
 
@@ -174,6 +176,7 @@ client_points_balance AS
 ```
 
 **Benefícios:**
+
 - Auditoria completa
 - Recálculo possível
 - Histórico preservado
@@ -326,7 +329,7 @@ bedeschi-fidelidade/
 
 interface FidelityRule {
   id: string;
-  type: 'VALUE_ACCUMULATION' | 'QUANTITY_ACCUMULATION' | 'POINTS';
+  type: "VALUE_ACCUMULATION" | "QUANTITY_ACCUMULATION" | "POINTS";
   trigger: {
     categoryId?: string;
     serviceId?: string;
@@ -334,7 +337,7 @@ interface FidelityRule {
     minQuantity?: number;
   };
   reward: {
-    type: 'FREE_SERVICE' | 'DISCOUNT_FIXED' | 'DISCOUNT_PERCENT' | 'CREDIT';
+    type: "FREE_SERVICE" | "DISCOUNT_FIXED" | "DISCOUNT_PERCENT" | "CREDIT";
     serviceId?: string;
     value?: number;
     validityDays: number;
@@ -346,22 +349,22 @@ interface FidelityRule {
 async function processAppointment(appointment: Appointment) {
   const rules = await getActiveRules(appointment.tenant_id);
   const clientAccumulation = await getClientAccumulation(appointment.client_id);
-  
+
   const earnedRewards: Reward[] = [];
-  
+
   for (const rule of rules) {
     const eligible = checkEligibility(rule, appointment, clientAccumulation);
-    
+
     if (eligible) {
       const reward = createReward(rule, appointment.client_id);
       earnedRewards.push(reward);
-      
+
       if (rule.resetAfterReward) {
         await resetAccumulation(appointment.client_id, rule);
       }
     }
   }
-  
+
   return earnedRewards;
 }
 ```
@@ -372,27 +375,27 @@ async function processAppointment(appointment: Appointment) {
 
 ### 6.1 Camadas de Segurança
 
-| Camada | Implementação |
-|--------|---------------|
-| **Transport** | HTTPS only, HSTS |
-| **Auth** | JWT + Refresh tokens, OTP |
-| **Authorization** | RLS + Middleware |
-| **Input** | Zod validation, sanitização |
-| **Rate Limiting** | Upstash, por IP e por user |
-| **Audit** | Log de todas as ações sensíveis |
+| Camada            | Implementação                   |
+| ----------------- | ------------------------------- |
+| **Transport**     | HTTPS only, HSTS                |
+| **Auth**          | JWT + Refresh tokens, OTP       |
+| **Authorization** | RLS + Middleware                |
+| **Input**         | Zod validation, sanitização     |
+| **Rate Limiting** | Upstash, por IP e por user      |
+| **Audit**         | Log de todas as ações sensíveis |
 
 ### 6.2 Headers de Segurança
 
 ```typescript
 // next.config.js
 const securityHeaders = [
-  { key: 'X-DNS-Prefetch-Control', value: 'on' },
-  { key: 'Strict-Transport-Security', value: 'max-age=63072000' },
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'X-XSS-Protection', value: '1; mode=block' },
-  { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=()' },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  { key: "Strict-Transport-Security", value: "max-age=63072000" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-XSS-Protection", value: "1; mode=block" },
+  { key: "Referrer-Policy", value: "origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=()" },
 ];
 ```
 
@@ -413,12 +416,12 @@ POST /api/appointments      30/min por user
 
 ### 7.1 Métricas
 
-| Métrica | Ferramenta | Alerta |
-|---------|------------|--------|
-| Uptime | Vercel Analytics | < 99% |
-| Response Time | Vercel | p95 > 2s |
-| Error Rate | Sentry | > 1% |
-| DB Connections | Supabase | > 80% |
+| Métrica        | Ferramenta       | Alerta   |
+| -------------- | ---------------- | -------- |
+| Uptime         | Vercel Analytics | < 99%    |
+| Response Time  | Vercel           | p95 > 2s |
+| Error Rate     | Sentry           | > 1%     |
+| DB Connections | Supabase         | > 80%    |
 
 ### 7.2 Logs
 
@@ -454,18 +457,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: "20"
+
       - name: Install & Test
         run: |
           npm ci
           npm run lint
           npm run test
-          
+
       - name: Deploy to Vercel
         uses: vercel/actions@v1
         with:
@@ -476,16 +479,16 @@ jobs:
 
 ## 9. Estimativa de Custos (MVP)
 
-| Serviço | Plano | Custo/mês |
-|---------|-------|-----------|
-| Vercel | Pro | ~$20 |
-| Supabase | Pro | ~$25 |
-| Twilio (WhatsApp) | Pay-as-go | ~$10-30 |
-| Resend | Free tier | $0 |
-| Upstash | Free tier | $0 |
-| Domínio | .com.br | ~R$ 40/ano |
-| **Total MVP** | | **~$55-75/mês** |
+| Serviço           | Plano     | Custo/mês       |
+| ----------------- | --------- | --------------- |
+| Vercel            | Pro       | ~$20            |
+| Supabase          | Pro       | ~$25            |
+| Twilio (WhatsApp) | Pay-as-go | ~$10-30         |
+| Resend            | Free tier | $0              |
+| Upstash           | Free tier | $0              |
+| Domínio           | .com.br   | ~R$ 40/ano      |
+| **Total MVP**     |           | **~$55-75/mês** |
 
 ---
 
-*Arquitetura revisável conforme crescimento e necessidades*
+_Arquitetura revisável conforme crescimento e necessidades_
