@@ -1,13 +1,14 @@
 # 🚀 GUIA DE DEPLOY - VERCEL
 
 **Projeto**: Bedeschi Fidelidade/Estética
-**Repositório**: https://github.com/erickerk/bedeschi-fidelidade.git
+**Repositório**: <https://github.com/erickerk/bedeschi-fidelidade.git>
 
 ---
 
 ## ✅ STATUS ATUAL
 
 ### Commit Mais Recente
+
 ```
 2886a9f - Versão atualizada da aplicação MVP Pronto 3.0
 ```
@@ -22,6 +23,7 @@
 
 **Status Git**:
 ```bash
+
 ✅ Branch: main
 ✅ Remote: origin (GitHub)
 ✅ Push Status: Everything up-to-date
@@ -40,7 +42,7 @@ O Vercel está conectado ao repositório GitHub e faz deploy automático quando:
 
 ### Verificar Conexão Vercel
 
-1. Acesse: https://vercel.com/dashboard
+1. Acesse: <https://vercel.com/dashboard>
 2. Vá no projeto: **bedeschi-fidelidade** (ou nome configurado)
 3. Em **Settings → Git**, verifique:
    - ✅ **GitHub Repository**: erickerk/bedeschi-fidelidade
@@ -60,6 +62,7 @@ Se o deploy automático não disparou, você pode forçar manualmente:
 4. Clique no botão **Redeploy** no último deploy
 
 ### Opção 2: Via CLI Vercel
+
 ```bash
 # Instalar Vercel CLI (se não tiver)
 npm i -g vercel
@@ -72,6 +75,7 @@ vercel --prod
 ```
 
 ### Opção 3: Empty Commit + Push
+
 ```bash
 git commit --allow-empty -m "chore: trigger vercel redeploy"
 git push origin main
@@ -102,6 +106,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### Boas Práticas
 
 1. **Sempre commitar antes de testar em produção**
+
    ```bash
    git add .
    git commit -m "feat: descrição da mudança"
@@ -109,12 +114,14 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
    ```
 
 2. **Verificar status antes de desenvolver**
+
    ```bash
    git status
    git pull origin main
    ```
 
 3. **Usar branches para features grandes**
+
    ```bash
    git checkout -b feature/nome-da-feature
    # desenvolver...
@@ -179,8 +186,8 @@ Antes de cada deploy importante:
 ### URLs Importantes
 
 - **Produção**: Verificar no Vercel Dashboard
-- **GitHub**: https://github.com/erickerk/bedeschi-fidelidade
-- **Vercel Dashboard**: https://vercel.com/dashboard
+- **GitHub**: <https://github.com/erickerk/bedeschi-fidelidade>
+- **Vercel Dashboard**: <https://vercel.com/dashboard>
 
 ### Validação Pós-Deploy
 
