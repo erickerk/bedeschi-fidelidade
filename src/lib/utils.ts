@@ -24,16 +24,20 @@ export function formatPhone(phone: string): string {
 }
 
 export function formatDate(date: string): string {
+  // Adiciona T12:00:00 para evitar problemas de fuso horário
+  const dateObj = new Date(date.includes("T") ? date : `${date}T12:00:00`);
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(date));
+  }).format(dateObj);
 }
 
 export function formatDateRelative(date: string): string {
   const now = new Date();
-  const d = new Date(date);
+  now.setHours(12, 0, 0, 0);
+  // Adiciona T12:00:00 para evitar problemas de fuso horário
+  const d = new Date(date.includes("T") ? date : `${date}T12:00:00`);
   const diffDays = Math.floor(
     (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24),
   );

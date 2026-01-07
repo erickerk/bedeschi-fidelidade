@@ -882,18 +882,6 @@ export default function RecepcaoDashboard() {
                         <td className="p-4">
                           <div className="flex gap-2 justify-end flex-wrap">
                             <button
-                              onClick={() => handleOpenClientHistory(client.id)}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
-                                isDark
-                                  ? "bg-purple-500/10 text-purple-300"
-                                  : "bg-purple-50 text-purple-700"
-                              }`}
-                              title="Ver histórico completo de atendimentos"
-                            >
-                              <History className="h-3 w-3 inline mr-1" />
-                              Histórico ({getClientAppointmentsHistory(client.id).length})
-                            </button>
-                            <button
                               onClick={() => handleEditClient(client)}
                               className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
                                 isDark
@@ -1274,6 +1262,57 @@ export default function RecepcaoDashboard() {
                         </div>
                       </div>
                     )}
+
+                    {/* Histórico de Atendimentos */}
+                    <div className="mt-6">
+                      <h4
+                        className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}
+                      >
+                        <History className="h-4 w-4" />
+                        Histórico de Atendimentos ({getClientAppointmentsHistory(selectedClient.id).length})
+                      </h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {getClientAppointmentsHistory(selectedClient.id).length > 0 ? (
+                          getClientAppointmentsHistory(selectedClient.id).map((apt) => (
+                            <div
+                              key={apt.id}
+                              className={`p-3 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-100"}`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p
+                                    className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-800"}`}
+                                  >
+                                    {apt.services.map((s) => s.name).join(" • ")}
+                                  </p>
+                                  <p
+                                    className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                                  >
+                                    📅 {formatDate(apt.date)} • 🕐 {apt.time || "—"} • 👨‍⚕️ {apt.professionalName}
+                                  </p>
+                                </div>
+                                <div className="text-right ml-3">
+                                  <p
+                                    className={`font-bold text-sm ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                                  >
+                                    {formatCurrency(apt.total)}
+                                  </p>
+                                  <p
+                                    className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                                  >
+                                    +{apt.pointsEarned} pts
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className={`text-sm text-center py-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                            Nenhum atendimento registrado
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })()}

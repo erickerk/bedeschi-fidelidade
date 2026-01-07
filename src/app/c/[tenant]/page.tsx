@@ -96,16 +96,7 @@ export default function ClientAccessPage() {
 
   // Mostrar loading enquanto não está montado para evitar erro de hidratação
   if (!mounted) {
-    return (
-      <main className="relative h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-amber-400/70 text-sm">Carregando...</p>
-          </div>
-        </div>
-      </main>
-    );
+    return null;
   }
 
   if (step === "dashboard" && clientId) {
@@ -160,7 +151,7 @@ export default function ClientAccessPage() {
         {step === "login" && (
           <div className="w-full max-w-md text-center">
             {/* Logo Premium - Maior e mais destaque */}
-            <div className="mx-auto mb-8 relative">
+            <div className="mx-auto mb-6 relative">
               {/* Efeito de brilho circular */}
               <div
                 className={`absolute inset-0 blur-3xl opacity-20 ${isDark ? "bg-amber-500" : "bg-amber-400"}`}
@@ -170,7 +161,7 @@ export default function ClientAccessPage() {
                 alt="Instituto Bedeschi"
                 width={200}
                 height={128}
-                className={`h-32 w-auto mx-auto object-contain relative z-10 ${
+                className={`h-28 w-auto mx-auto object-contain relative z-10 ${
                   isDark
                     ? "drop-shadow-[0_0_40px_rgba(251,191,36,0.6)]"
                     : "drop-shadow-[0_0_35px_rgba(217,119,6,0.4)]"
@@ -180,7 +171,7 @@ export default function ClientAccessPage() {
             </div>
 
             {/* Título Premium */}
-            <div className="mb-8">
+            <div className="mb-6">
               <h1
                 className={`text-2xl font-light mb-2 ${isDark ? "text-white" : "text-slate-800"}`}
               >
@@ -195,37 +186,44 @@ export default function ClientAccessPage() {
               <p
                 className={`text-xs uppercase tracking-[0.25em] font-light ${isDark ? "text-amber-400/70" : "text-amber-700/80"}`}
               >
-                Programa de Fidelidade
+                Programa de Fidelidade Exclusivo
               </p>
             </div>
 
-            {/* QR Code Premium */}
-            <div className="my-6 flex justify-center">
-              <div className="relative">
-                {/* Border dourado animado */}
-                <div
-                  className={`absolute -inset-1 rounded-2xl blur-sm ${isDark ? "bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500" : "bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400"} opacity-50`}
-                />
-                <div
-                  className={`relative rounded-2xl p-4 ${isDark ? "bg-slate-900 shadow-2xl" : "bg-white shadow-xl"}  border ${isDark ? "border-slate-800" : "border-amber-100"}`}
-                >
-                  <QRCodeSVG
-                    value="https://bedeschi-fidelidade-app.vercel.app"
-                    size={120}
-                    level="H"
-                    includeMargin={false}
-                    fgColor="#1e293b"
-                    bgColor="#ffffff"
-                  />
+            {/* Card de Benefícios */}
+            <div
+              className={`mb-6 p-4 rounded-2xl ${
+                isDark 
+                  ? "bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50" 
+                  : "bg-gradient-to-br from-white/90 to-amber-50/90 border border-amber-100 shadow-lg"
+              }`}
+            >
+              <p className={`text-sm font-medium mb-3 ${isDark ? "text-amber-400" : "text-amber-700"}`}>
+                ✨ Seus Benefícios Exclusivos
+              </p>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className={`p-2 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-amber-50"}`}>
+                  <span className="text-lg">💰</span>
+                  <p className={`text-[10px] mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>Acumule Pontos</p>
+                </div>
+                <div className={`p-2 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-amber-50"}`}>
+                  <span className="text-lg">🎁</span>
+                  <p className={`text-[10px] mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>Ganhe Bônus</p>
+                </div>
+                <div className={`p-2 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-amber-50"}`}>
+                  <span className="text-lg">⭐</span>
+                  <p className={`text-[10px] mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>Descontos VIP</p>
                 </div>
               </div>
             </div>
-            <p
-              className={`text-xs mb-6 font-light ${isDark ? "text-slate-400" : "text-slate-600"}`}
-            >
-              <span className="inline-block mr-2">📱</span>
-              Escaneie o QR Code ou digite seu celular
-            </p>
+
+            {/* Instrução de Login */}
+            <div className={`mb-4 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
+              <p className="text-sm font-medium mb-1">📲 Acesse sua conta</p>
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Digite o celular cadastrado para consultar seus pontos e benefícios
+              </p>
+            </div>
 
             {/* Form Login Premium */}
             <form onSubmit={handlePhoneSubmit} className="space-y-4">
@@ -292,9 +290,43 @@ export default function ClientAccessPage() {
               </button>
             </form>
 
+            {/* Seletor de Tema */}
+            <div className={`mt-6 flex items-center justify-center gap-2`}>
+              <button
+                onClick={() => setTheme("light")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  !isDark
+                    ? "bg-amber-500 text-white shadow-md"
+                    : "bg-slate-700/50 text-slate-400 hover:bg-slate-700"
+                }`}
+              >
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Claro
+              </button>
+              <button
+                onClick={() => setTheme("dark")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  isDark
+                    ? "bg-amber-500 text-slate-900 shadow-md"
+                    : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                }`}
+              >
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+                Escuro
+              </button>
+            </div>
+
             {/* Footer Premium */}
             <div
-              className={`mt-8 pt-6 border-t ${isDark ? "border-slate-800" : "border-slate-200"}`}
+              className={`mt-6 pt-4 border-t ${isDark ? "border-slate-800" : "border-slate-200"}`}
             >
               <p
                 className={`text-xs font-light ${isDark ? "text-slate-600" : "text-slate-500"}`}
