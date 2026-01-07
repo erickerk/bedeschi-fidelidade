@@ -7,13 +7,23 @@ import Image from "next/image";
 import { useApp } from "@/lib/app-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
-  importedServices,
-  importedCategories,
   type Service as DomainService,
   type Professional,
   type FidelityRule,
   type Client,
 } from "@/lib/mock-data";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
 import {
   getServices as getServicesFromSupabase,
   createService as createSupabaseService,
@@ -27,6 +37,7 @@ import {
   deleteStaffUser,
   type StaffUser,
 } from "@/lib/staff-users-api";
+import { getReviewsForReport } from "@/lib/reviews-api";
 import {
   Sun,
   Moon,
@@ -113,7 +124,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [services, setServices] = useState<DomainService[]>(importedServices);
+  const [services, setServices] = useState<DomainService[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [showAddProfessional, setShowAddProfessional] = useState(false);
@@ -127,6 +138,19 @@ export default function AdminDashboard() {
   const [editingRule, setEditingRule] = useState<FidelityRule | null>(null);
   const [showRulesHelp, setShowRulesHelp] = useState(false);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
+
+  // Categorias dinâmicas extraídas dos serviços
+  const categories = useMemo(() => {
+    const uniqueCats = new Map<string, { id: string; name: string }>();
+    services.forEach((s) => {
+      if (s.categoryId && s.categoryName) {
+        uniqueCats.set(s.categoryId, { id: s.categoryId, name: s.categoryName });
+      }
+    });
+    return Array.from(uniqueCats.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [services]);
 
   // Filtros
   const [clientFilter, setClientFilter] = useState<
@@ -394,6 +418,23 @@ export default function AdminDashboard() {
   // Filtrar atendimentos por período
   const getFilteredAppointments = useCallback(
     (period: string) => {
+      // Priorizar filtro de data personalizado se preenchido
+      if (dateFrom && dateTo) {
+        const start = new Date(dateFrom);
+        // Ajustar fuso horário adicionando o offset ou definindo a hora para 00:00:00 local
+        start.setHours(0, 0, 0, 0);
+        
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+
+        return appointments.filter((a) => {
+          const d = new Date(a.date);
+          // Adicionar o timezone offset para garantir comparação correta da data string (YYYY-MM-DD)
+          // Ou simplesmente comparar as strings de data se a.date for YYYY-MM-DD
+          return d >= start && d <= end;
+        });
+      }
+
       const now = new Date();
       let startDate: Date;
 
@@ -407,13 +448,18 @@ export default function AdminDashboard() {
         case "90d":
           startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
           break;
+        case "all":
+          return appointments; // Retorna todos para "all"
         default:
           return appointments;
       }
+      
+      // Zerar horas para comparação justa
+      startDate.setHours(0, 0, 0, 0);
 
       return appointments.filter((a) => new Date(a.date) >= startDate);
     },
-    [appointments],
+    [appointments, dateFrom, dateTo],
   );
 
   // Analytics calculados com filtros
@@ -578,24 +624,69 @@ export default function AdminDashboard() {
 
     // Receita diária baseada no período filtrado
     const dailyRevenue: { date: string; revenue: number }[] = [];
-    let daysToShow = 7;
-    if (analyticsPeriodFilter === "30d") daysToShow = 30;
-    else if (analyticsPeriodFilter === "90d") daysToShow = 90;
-    else if (analyticsPeriodFilter === "all") daysToShow = 90; // Limitar a 90 dias para visualização
+    
+    let loopStartDate: Date;
+    let loopEndDate: Date = new Date(); // Default to now
 
-    for (let i = daysToShow - 1; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const dateStr = date.toISOString().split("T")[0];
+    if (dateFrom && dateTo) {
+      loopStartDate = new Date(dateFrom);
+      // Ajustar start para 00:00:00 local (ou utc dependendo de como é salvo)
+      // Como estamos lidando com strings YYYY-MM-DD, o new Date("YYYY-MM-DD") cria em UTC meia noite.
+      // Vamos garantir que lidamos com dias inteiros.
+      loopStartDate.setUTCHours(0, 0, 0, 0); 
+      
+      loopEndDate = new Date(dateTo);
+      loopEndDate.setUTCHours(23, 59, 59, 999);
+    } else {
+      let daysBack = 30;
+      if (analyticsPeriodFilter === "7d") daysBack = 7;
+      else if (analyticsPeriodFilter === "90d") daysBack = 90;
+      else if (analyticsPeriodFilter === "all") daysBack = 90; // Default limit
+      
+      loopStartDate = new Date();
+      loopStartDate.setDate(loopStartDate.getDate() - daysBack);
+      loopStartDate.setHours(0, 0, 0, 0);
+    }
+
+    // Iterar dia a dia
+    const currentIter = new Date(loopStartDate);
+    // Ajuste simples para loop: enquanto data atual <= data final
+    // Usando getTime para comparação segura
+    while (currentIter <= loopEndDate) {
+      const dateStr = currentIter.toISOString().split("T")[0]; // YYYY-MM-DD
+      
       const dayRevenue = filteredApts
         .filter((a) => a.date === dateStr)
         .reduce((sum, a) => sum + a.total, 0);
+        
       dailyRevenue.push({ date: dateStr, revenue: dayRevenue });
+      
+      // Avançar 1 dia
+      currentIter.setDate(currentIter.getDate() + 1);
     }
 
     // Avaliações do período filtrado
     const reviewsInPeriod = reviews.filter((r) => {
-      const reviewDate = new Date(r.createdAt);
-      return filteredApts.some((a) => a.id === r.appointmentId);
+      // 1. Tentar filtrar pelo vínculo com agendamento no período
+      const linkedToPeriod = filteredApts.some((a) => a.id === r.appointmentId);
+      if (linkedToPeriod) return true;
+
+      // 2. Fallback: Filtrar pela data de criação da avaliação
+      if (dateFrom && dateTo) {
+        const rDate = new Date(r.createdAt);
+        const start = new Date(dateFrom);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        return rDate >= start && rDate <= end;
+      } else if (analyticsPeriodFilter !== "all") {
+        const days = analyticsPeriodFilter === "7d" ? 7 : analyticsPeriodFilter === "30d" ? 30 : 90;
+        const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        const rDate = new Date(r.createdAt);
+        return rDate >= cutoff;
+      }
+      
+      return true; // Se for "all" e não tiver datas, retorna tudo
     });
 
     const avgRatingPeriod =
@@ -634,7 +725,7 @@ export default function AdminDashboard() {
       mostActiveProfessionals,
       worstProfessionals,
       revenueByCategory,
-      dailyRevenue,
+      dailyRevenue, // Dados já estão em ordem cronológica (antigo -> recente)
       clientsThisMonth: clients.filter((c) => {
         const d = new Date(c.createdAt);
         return (
@@ -663,16 +754,26 @@ export default function AdminDashboard() {
     analyticsPeriodFilter,
     analyticsCategoryFilter,
     services,
+    dateFrom,
+    dateTo,
   ]);
 
   // Exportar para CSV
   const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
-    if (data.length === 0) return;
+    if (data.length === 0) {
+      alert("Não há dados para exportar neste período.");
+      return;
+    }
     const headers = Object.keys(data[0]);
     const csv = [
       headers.join(","),
       ...data.map((row) =>
-        headers.map((h) => JSON.stringify(row[h] ?? "")).join(","),
+        headers.map((h) => {
+          const val = row[h];
+          if (val === null || val === undefined) return '""';
+          const stringVal = String(val).replace(/"/g, '""');
+          return `"${stringVal}"`;
+        }).join(","),
       ),
     ].join("\n");
 
@@ -821,7 +922,7 @@ export default function AdminDashboard() {
   const handleAddService = async () => {
     if (!newService.name || !newService.categoryId) return;
 
-    const category = importedCategories.find(
+    const category = categories.find(
       (c) => c.id === newService.categoryId,
     );
     const categoryName = category?.name ?? "Outros";
@@ -944,7 +1045,7 @@ export default function AdminDashboard() {
       description: newRule.description,
       type: newRule.type,
       categoryId: newRule.categoryId || undefined,
-      categoryName: importedCategories.find((c) => c.id === newRule.categoryId)
+      categoryName: categories.find((c) => c.id === newRule.categoryId)
         ?.name,
       thresholdValue: newRule.thresholdValue,
       rewardType: newRule.rewardType,
@@ -1137,7 +1238,7 @@ export default function AdminDashboard() {
             >
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Filter
+                  <Calendar
                     className={`h-4 w-4 ${
                       isDark ? "text-slate-400" : "text-slate-500"
                     }`}
@@ -1147,9 +1248,49 @@ export default function AdminDashboard() {
                       isDark ? "text-slate-300" : "text-slate-600"
                     }`}
                   >
-                    Visão geral por período e tipo de procedimento
+                    Período:
                   </span>
                 </div>
+                
+                {/* Filtros de Data Personalizada */}
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col">
+                    <label htmlFor="dashboard-date-from" className="sr-only">Data Inicial</label>
+                    <input
+                      id="dashboard-date-from"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      title="Data inicial"
+                      placeholder="Data inicial"
+                      className={`rounded-lg border px-2 py-1.5 text-xs md:text-sm ${
+                        isDark
+                          ? "bg-slate-900 border-slate-700 text-slate-200"
+                          : "bg-white border-slate-200 text-slate-700"
+                      }`}
+                    />
+                  </div>
+                  <span className={isDark ? "text-slate-500" : "text-slate-400"}>até</span>
+                  <div className="flex flex-col">
+                    <label htmlFor="dashboard-date-to" className="sr-only">Data Final</label>
+                    <input
+                      id="dashboard-date-to"
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      title="Data final"
+                      placeholder="Data final"
+                      className={`rounded-lg border px-2 py-1.5 text-xs md:text-sm ${
+                        isDark
+                          ? "bg-slate-900 border-slate-700 text-slate-200"
+                          : "bg-white border-slate-200 text-slate-700"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2 hidden md:block" />
+
                 <div className="flex gap-2">
                   {[
                     { value: "7d", label: "7 dias" },
@@ -1159,13 +1300,16 @@ export default function AdminDashboard() {
                   ].map((period) => (
                     <button
                       key={period.value}
-                      onClick={() =>
+                      onClick={() => {
                         setAnalyticsPeriodFilter(
                           period.value as typeof analyticsPeriodFilter,
-                        )
-                      }
+                        );
+                        // Limpar datas personalizadas ao selecionar um preset
+                        setDateFrom("");
+                        setDateTo("");
+                      }}
                       className={`px-3 py-1.5 rounded-lg text-xs md:text-sm transition-colors ${
-                        analyticsPeriodFilter === period.value
+                        analyticsPeriodFilter === period.value && !dateFrom
                           ? "bg-amber-500 text-white"
                           : isDark
                             ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
@@ -1177,6 +1321,11 @@ export default function AdminDashboard() {
                   ))}
                 </div>
                 <div className="flex items-center gap-2 ml-auto">
+                  <Filter
+                    className={`h-4 w-4 ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  />
                   <span
                     id="dashboard-category-label"
                     className={`text-xs ${
@@ -1197,7 +1346,7 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <option value="all">Todos</option>
-                    {importedCategories.map((cat) => (
+                    {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>
@@ -1246,7 +1395,7 @@ export default function AdminDashboard() {
 
             {/* Gráficos em Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico de Receita Premium - Linha */}
+              {/* Gráfico de Receita Premium - Linha (Recharts) */}
               <div
                 className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
               >
@@ -1255,13 +1404,15 @@ export default function AdminDashboard() {
                     <h3
                       className={`text-lg font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
                     >
-                      📈 Receita no período (
-                      {PERIOD_LABEL[analyticsPeriodFilter]})
+                      📈 Receita no Período
                     </h3>
                     <p
                       className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
                     >
-                      Valores filtrados por período e tipo de procedimento
+                      {dateFrom && dateTo 
+                        ? `${new Date(dateFrom).toLocaleDateString('pt-BR')} até ${new Date(dateTo).toLocaleDateString('pt-BR')}`
+                        : PERIOD_LABEL[analyticsPeriodFilter]
+                      }
                     </p>
                   </div>
                   <div className="text-right">
@@ -1277,184 +1428,101 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-                {analytics.dailyRevenue.some((d) => d.revenue > 0) ? (
-                  <div className="relative h-64 w-full flex gap-3">
-                    {/* Eixo Y - Valores */}
-                    <div className="flex flex-col justify-between text-right py-4">
-                      {(() => {
-                        const maxRevenue = Math.max(
-                          ...analytics.dailyRevenue.map((d) => d.revenue),
-                          1,
-                        );
-                        const steps = 5;
-                        return Array.from({ length: steps }, (_, i) => {
-                          const value = maxRevenue * (1 - i / (steps - 1));
-                          return (
-                            <span
-                              key={i}
-                              className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}
-                            >
-                              {formatCurrency(value)}
-                            </span>
-                          );
-                        });
-                      })()}
-                    </div>
-
-                    {/* Gráfico */}
-                    <div className="flex-1 relative">
-                      <svg
-                        className="w-full h-full"
-                        viewBox="0 0 100 100"
-                        preserveAspectRatio="none"
+                
+                <div className="h-[300px] w-full">
+                  {analytics.dailyRevenue.some((d) => d.revenue > 0) ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={analytics.dailyRevenue}
+                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                       >
                         <defs>
-                          <linearGradient
-                            id="revenueGradient"
-                            x1="0%"
-                            y1="0%"
-                            x2="0%"
-                            y2="100%"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="rgb(251 191 36 / 0.3)"
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="rgb(251 191 36 / 0)"
-                            />
+                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-
-                        {/* Grid horizontal */}
-                        {[0, 25, 50, 75, 100].map((y) => (
-                          <line
-                            key={y}
-                            x1="0"
-                            y1={y}
-                            x2="100"
-                            y2={y}
-                            className={
-                              isDark ? "stroke-slate-700" : "stroke-slate-200"
-                            }
-                            strokeWidth="0.3"
-                            vectorEffect="non-scaling-stroke"
-                          />
-                        ))}
-
-                        {(() => {
-                          const maxRevenue = Math.max(
-                            ...analytics.dailyRevenue.map((d) => d.revenue),
-                            1,
-                          );
-                          const padding = 2;
-                          const points = analytics.dailyRevenue
-                            .map((day, i) => {
-                              const x =
-                                (i /
-                                  Math.max(
-                                    analytics.dailyRevenue.length - 1,
-                                    1,
-                                  )) *
-                                  (100 - 2 * padding) +
-                                padding;
-                              const y =
-                                100 -
-                                ((day.revenue / maxRevenue) *
-                                  (100 - 2 * padding) +
-                                  padding);
-                              return `${x},${y}`;
-                            })
-                            .join(" ");
-                          const areaPoints = `${padding},100 ${points} ${100 - padding},100`;
-
-                          return (
-                            <>
-                              <polygon
-                                points={areaPoints}
-                                fill="url(#revenueGradient)"
-                              />
-                              <polyline
-                                points={points}
-                                fill="none"
-                                className={
-                                  isDark
-                                    ? "stroke-amber-400"
-                                    : "stroke-amber-500"
-                                }
-                                strokeWidth="0.8"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                vectorEffect="non-scaling-stroke"
-                              />
-                              {analytics.dailyRevenue.map((day, i) => {
-                                const x =
-                                  (i /
-                                    Math.max(
-                                      analytics.dailyRevenue.length - 1,
-                                      1,
-                                    )) *
-                                    (100 - 2 * padding) +
-                                  padding;
-                                const y =
-                                  100 -
-                                  ((day.revenue / maxRevenue) *
-                                    (100 - 2 * padding) +
-                                    padding);
-                                return day.revenue > 0 ? (
-                                  <circle
-                                    key={day.date}
-                                    cx={x}
-                                    cy={y}
-                                    r="1.2"
-                                    className={
-                                      isDark
-                                        ? "fill-amber-400"
-                                        : "fill-amber-500"
-                                    }
-                                    vectorEffect="non-scaling-stroke"
-                                  />
-                                ) : null;
-                              })}
-                            </>
-                          );
-                        })()}
-                      </svg>
-
-                      {/* Eixo X - Datas */}
-                      <div className="absolute -bottom-6 left-0 right-0 flex justify-between px-1">
-                        {analytics.dailyRevenue
-                          .filter((_, i) => {
-                            const step = Math.ceil(
-                              analytics.dailyRevenue.length / 6,
-                            );
-                            return (
-                              i % step === 0 ||
-                              i === analytics.dailyRevenue.length - 1
-                            );
-                          })
-                          .map((day) => (
-                            <span
-                              key={day.date}
-                              className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}
-                            >
-                              {new Date(day.date).toLocaleDateString("pt-BR", {
-                                day: "2-digit",
-                                month: "2-digit",
-                              })}
-                            </span>
-                          ))}
-                      </div>
+                        <CartesianGrid 
+                          strokeDasharray="3 3" 
+                          vertical={false} 
+                          stroke={isDark ? "#334155" : "#e2e8f0"} 
+                        />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                            });
+                          }}
+                          stroke={isDark ? "#94a3b8" : "#64748b"}
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          minTickGap={30}
+                        />
+                        <YAxis
+                          tickFormatter={(value) => 
+                            new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                              notation: "compact",
+                              maximumFractionDigits: 1,
+                            }).format(value)
+                          }
+                          stroke={isDark ? "#94a3b8" : "#64748b"}
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? "#1e293b" : "#ffffff",
+                            borderColor: isDark ? "#334155" : "#e2e8f0",
+                            borderRadius: "0.5rem",
+                            boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                          }}
+                          itemStyle={{
+                            color: isDark ? "#f59e0b" : "#d97706",
+                          }}
+                          labelStyle={{
+                            color: isDark ? "#e2e8f0" : "#1e293b",
+                            marginBottom: "0.25rem",
+                          }}
+                          formatter={(value: number) => [
+                            formatCurrency(value),
+                            "Receita",
+                          ]}
+                          labelFormatter={(label) => {
+                            const date = new Date(label);
+                            return date.toLocaleDateString("pt-BR", {
+                              weekday: "long",
+                              day: "numeric",
+                              month: "long",
+                            });
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#f59e0b"
+                          fillOpacity={1}
+                          fill="url(#colorRevenue)"
+                          strokeWidth={3}
+                          dot={false}
+                          activeDot={{ r: 6, strokeWidth: 0, fill: "#f59e0b" }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div
+                      className={`h-full flex items-center justify-center ${isDark ? "text-slate-500" : "text-slate-400"}`}
+                    >
+                      Nenhuma receita no período selecionado
                     </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`h-56 flex items-center justify-center ${isDark ? "text-slate-500" : "text-slate-400"}`}
-                  >
-                    Nenhuma receita no período selecionado
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Top 5 Procedimentos */}
@@ -1804,7 +1872,135 @@ export default function AdminDashboard() {
         {/* Analytics - Análises Avançadas */}
         {tab === "analytics" && (
           <div className="space-y-6">
-            {/* Comparativo Mensal - MOVIDO PARA O TOPO */}
+            {/* Filtros de Período - MOVIDO PARA O TOPO */}
+            <div
+              className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Calendar
+                    className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                  >
+                    Período:
+                  </span>
+                </div>
+
+                {/* Filtros de Data Personalizada */}
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col">
+                    <label htmlFor="analytics-date-from" className="sr-only">Data Inicial de Análise</label>
+                    <input
+                      id="analytics-date-from"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      title="Data inicial"
+                      placeholder="Data inicial"
+                      className={`rounded-lg border px-2 py-1.5 text-xs md:text-sm ${
+                        isDark
+                          ? "bg-slate-900 border-slate-700 text-slate-200"
+                          : "bg-white border-slate-200 text-slate-700"
+                      }`}
+                    />
+                  </div>
+                  <span
+                    className={isDark ? "text-slate-500" : "text-slate-400"}
+                  >
+                    até
+                  </span>
+                  <div className="flex flex-col">
+                    <label htmlFor="analytics-date-to" className="sr-only">Data Final de Análise</label>
+                    <input
+                      id="analytics-date-to"
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      title="Data final"
+                      placeholder="Data final"
+                      className={`rounded-lg border px-2 py-1.5 text-xs md:text-sm ${
+                        isDark
+                          ? "bg-slate-900 border-slate-700 text-slate-200"
+                          : "bg-white border-slate-200 text-slate-700"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2 hidden md:block" />
+
+                <div className="flex gap-2">
+                  {[
+                    { value: "7d", label: "7 dias" },
+                    { value: "30d", label: "30 dias" },
+                    { value: "90d", label: "90 dias" },
+                    { value: "all", label: "Todo período" },
+                  ].map((period) => (
+                    <button
+                      key={period.value}
+                      onClick={() => {
+                        setAnalyticsPeriodFilter(
+                          period.value as typeof analyticsPeriodFilter,
+                        );
+                        setDateFrom("");
+                        setDateTo("");
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        analyticsPeriodFilter === period.value && !dateFrom
+                          ? "bg-amber-500 text-white"
+                          : isDark
+                            ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 ml-auto">
+                  <select
+                    value={analyticsCategoryFilter}
+                    onChange={(e) => setAnalyticsCategoryFilter(e.target.value)}
+                    aria-label="Filtrar por categoria de procedimento"
+                    className={`rounded-lg border px-3 py-1.5 text-sm ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <option value="all">Todos os tipos</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={analyticsProfessionalFilter}
+                    onChange={(e) =>
+                      setAnalyticsProfessionalFilter(e.target.value)
+                    }
+                    aria-label="Filtrar por profissional"
+                    className={`rounded-lg border px-3 py-1.5 text-sm ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <option value="all">Todos os profissionais</option>
+                    {professionals.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Comparativo Mensal */}
             <div
               className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
             >
@@ -1897,88 +2093,6 @@ export default function AdminDashboard() {
                       Mês anterior sem receita
                     </p>
                   )}
-                </div>
-              </div>
-            </div>
-
-            {/* Filtros de Período */}
-            <div
-              className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white"}`}
-            >
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Filter
-                    className={`h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}
-                  >
-                    Período:
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  {[
-                    { value: "7d", label: "7 dias" },
-                    { value: "30d", label: "30 dias" },
-                    { value: "90d", label: "90 dias" },
-                    { value: "all", label: "Todo período" },
-                  ].map((period) => (
-                    <button
-                      key={period.value}
-                      onClick={() =>
-                        setAnalyticsPeriodFilter(
-                          period.value as typeof analyticsPeriodFilter,
-                        )
-                      }
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                        analyticsPeriodFilter === period.value
-                          ? "bg-amber-500 text-white"
-                          : isDark
-                            ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {period.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 ml-auto">
-                  <select
-                    value={analyticsCategoryFilter}
-                    onChange={(e) => setAnalyticsCategoryFilter(e.target.value)}
-                    aria-label="Filtrar por categoria de procedimento"
-                    className={`rounded-lg border px-3 py-1.5 text-sm ${
-                      isDark
-                        ? "bg-slate-700 border-slate-600 text-slate-200"
-                        : "bg-white border-slate-200 text-slate-700"
-                    }`}
-                  >
-                    <option value="all">Todos os tipos</option>
-                    {importedCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={analyticsProfessionalFilter}
-                    onChange={(e) =>
-                      setAnalyticsProfessionalFilter(e.target.value)
-                    }
-                    aria-label="Filtrar por profissional"
-                    className={`rounded-lg border px-3 py-1.5 text-sm ${
-                      isDark
-                        ? "bg-slate-700 border-slate-600 text-slate-200"
-                        : "bg-white border-slate-200 text-slate-700"
-                    }`}
-                  >
-                    <option value="all">Todos os profissionais</option>
-                    {professionals.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
             </div>
@@ -3128,7 +3242,7 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <option value="all">Todas as categorias</option>
-                    {importedCategories.map((cat) => (
+                    {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>
@@ -3329,7 +3443,7 @@ export default function AdminDashboard() {
                           }`}
                         >
                           <option value="">Selecione uma categoria</option>
-                          {importedCategories.map((cat) => (
+                          {categories.map((cat) => (
                             <option key={cat.id} value={cat.id}>
                               {cat.name}
                             </option>
@@ -3478,7 +3592,7 @@ export default function AdminDashboard() {
                           title="Categoria do serviço"
                           value={editingService.categoryId}
                           onChange={(e) => {
-                            const cat = importedCategories.find(
+                            const cat = categories.find(
                               (c) => c.id === e.target.value,
                             );
                             setEditingService({
@@ -3494,7 +3608,7 @@ export default function AdminDashboard() {
                               : "bg-white border-slate-300 text-slate-900"
                           }`}
                         >
-                          {importedCategories.map((cat) => (
+                          {categories.map((cat) => (
                             <option key={cat.id} value={cat.id}>
                               {cat.name}
                             </option>
@@ -3972,7 +4086,7 @@ export default function AdminDashboard() {
                           }`}
                         >
                           <option value="">Todas as categorias</option>
-                          {importedCategories.map((cat) => (
+                          {categories.map((cat) => (
                             <option key={cat.id} value={cat.id}>
                               {cat.name}
                             </option>
@@ -4341,7 +4455,7 @@ export default function AdminDashboard() {
               >
                 Exportar Relatórios
               </h3>
-              <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-6">
                 <span
                   className={`text-xs ${
                     isDark ? "text-slate-400" : "text-slate-500"
@@ -4349,17 +4463,22 @@ export default function AdminDashboard() {
                 >
                   Período (para agendamentos e resumo)
                 </span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  aria-label="Data inicial do filtro de relatórios"
-                  className={`rounded-lg border px-2 py-1 text-xs ${
-                    isDark
-                      ? "bg-slate-900 border-slate-700 text-slate-200"
-                      : "bg-white border-slate-200 text-slate-700"
-                  }`}
-                />
+                <div className="flex flex-col">
+                  <label htmlFor="report-date-from" className="sr-only">Data Inicial do Relatório</label>
+                  <input
+                    id="report-date-from"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    title="Data inicial para relatórios"
+                    placeholder="Data inicial"
+                    className={`rounded-lg border px-2 py-1 text-xs ${
+                      isDark
+                        ? "bg-slate-900 border-slate-700 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  />
+                </div>
                 <span
                   className={`text-xs ${
                     isDark ? "text-slate-500" : "text-slate-400"
@@ -4367,17 +4486,22 @@ export default function AdminDashboard() {
                 >
                   até
                 </span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  aria-label="Data final do filtro de relatórios"
-                  className={`rounded-lg border px-2 py-1 text-xs ${
-                    isDark
-                      ? "bg-slate-900 border-slate-700 text-slate-200"
-                      : "bg-white border-slate-200 text-slate-700"
-                  }`}
-                />
+                <div className="flex flex-col">
+                  <label htmlFor="report-date-to" className="sr-only">Data Final do Relatório</label>
+                  <input
+                    id="report-date-to"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    title="Data final para relatórios"
+                    placeholder="Data final"
+                    className={`rounded-lg border px-2 py-1 text-xs ${
+                      isDark
+                        ? "bg-slate-900 border-slate-700 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  />
+                </div>
                 {(dateFrom || dateTo) && (
                   <button
                     type="button"
@@ -4403,6 +4527,7 @@ export default function AdminDashboard() {
                         Nome: c.name,
                         Telefone: c.phone,
                         Email: c.email || "",
+                        Nascimento: c.birthDate ? new Date(c.birthDate).toLocaleDateString('pt-BR') : "",
                         Pontos: c.pointsBalance,
                         TotalGasto: c.totalSpent,
                         Visitas: c.totalAppointments,
@@ -4637,18 +4762,35 @@ export default function AdminDashboard() {
                 </button>
 
                 <button
-                  onClick={() =>
-                    exportToCSV(
-                      reviews.map((r) => ({
-                        Cliente:
-                          clients.find((c) => c.id === r.clientId)?.name || "",
+                  onClick={async () => {
+                    try {
+                      const toastId = "export-reviews"; // Simples feedback visual se tivesse toast
+                      document.body.style.cursor = "wait";
+                      
+                      const reportData = await getReviewsForReport();
+                      
+                      if (!reportData || reportData.length === 0) {
+                        alert("Nenhuma avaliação encontrada para exportar.");
+                        document.body.style.cursor = "default";
+                        return;
+                      }
+
+                      const csvData = reportData.map((r) => ({
+                        Cliente: r.clientName,
+                        Telefone: r.clientPhone,
                         Nota: r.rating,
                         Comentario: r.comment || "",
-                        Data: r.createdAt,
-                      })),
-                      "avaliacoes",
-                    )
-                  }
+                        Data: new Date(r.created_at).toLocaleString("pt-BR"),
+                      }));
+
+                      exportToCSV(csvData, "avaliacoes_completo");
+                    } catch (error) {
+                      console.error("Erro ao exportar avaliações:", error);
+                      alert("Erro ao exportar avaliações. Tente novamente.");
+                    } finally {
+                      document.body.style.cursor = "default";
+                    }
+                  }}
                   className={`p-4 rounded-xl text-left ${
                     isDark
                       ? "bg-slate-700 hover:bg-slate-600"

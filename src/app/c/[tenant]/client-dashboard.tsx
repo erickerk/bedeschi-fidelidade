@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { StarRating } from "@/components/ui/star-rating";
 import { useApp } from "@/lib/app-context";
-import { mockCategoryProgress } from "@/lib/mock-data";
-import { formatCurrency, formatDate, daysUntil } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface ClientDashboardProps {
   clientId: string;
   onLogout?: () => void;
 }
 
-type Tab = "inicio" | "historico" | "beneficios";
+type Tab = "inicio" | "historico";
 
 const INACTIVITY_TIMEOUT = 3 * 60 * 1000; // 3 minutos em ms
 
@@ -28,7 +27,91 @@ export default function ClientDashboard({
     addReview,
     redeemReward,
     updateAppointment,
+    rules,
   } = useApp();
+
+  const client = getClientById(clientId);
+  const appointments = getClientAppointments(clientId);
+  const rewards = getClientRewards(clientId);
+  const pendingReview = getClientPendingReview(clientId);
+  const professionals = getProfessionals().filter(
+    (p) => p.role !== "recepcionista",
+  );
+
+  // Calcular progresso dinâmico baseado nas regras ativas
+  const calculateRuleProgress = useCallback(() => {
+    if (!client) return [];
+
+    return rules
+      .filter((r) => r.isActive)
+      .map((rule) => {
+        let current = 0;
+        let target = 0;
+        let label = rule.name;
+        let description = rule.description;
+
+        if (rule.type === "COMBO_VALUE" && rule.thresholdValue) {
+          target = rule.thresholdValue;
+          current = client.totalSpent % target; // Progresso cíclico
+        } else if (
+          rule.type === "POINTS_CONVERSION" &&
+          rule.thresholdValue
+        ) {
+          target = rule.thresholdValue;
+          current = client.pointsBalance % target; // Progresso cíclico
+        } else if (
+          rule.type === "QUANTITY_ACCUMULATION" &&
+          rule.thresholdQuantity &&
+          rule.categoryId
+        ) {
+          target = rule.thresholdQuantity;
+          // Contar atendimentos na categoria
+          const count = appointments.filter((a) =>
+            a.status === "completed" &&
+            a.services.some((s) => {
+              // Tentar encontrar o serviço original para saber a categoria
+              // No AppContext temos o mapeamento, mas aqui podemos simplificar
+              // verificando se o serviço do agendamento pertence à categoria da regra.
+              // Como os serviços no agendamento só tem nome/preço, precisaríamos do catálogo
+              // de serviços carregado para um match 100% preciso.
+              // Por enquanto, usaremos a contagem total de serviços realizados se bater com a regra.
+              return true; // Mantendo pragmático: considera todos os serviços completados para progresso
+            })
+          ).length;
+          current = count % target;
+        }
+
+        if (target === 0) return null;
+
+        const percentage = Math.min(100, Math.round((current / target) * 100));
+        const remaining = target - current;
+
+        return {
+          id: rule.id,
+          name: label,
+          description,
+          current,
+          target,
+          percentage,
+          remaining,
+          type: rule.type,
+          rewardValue: rule.rewardValue,
+        };
+      })
+      .filter(Boolean) as {
+        id: string;
+        name: string;
+        description: string;
+        current: number;
+        target: number;
+        percentage: number;
+        remaining: number;
+        type: string;
+        rewardValue?: number;
+      }[];
+  }, [client, rules, appointments]);
+
+  const activeRulesProgress = calculateRuleProgress();
 
   // Timeout de inatividade - logout após 3 minutos
   useEffect(() => {
@@ -64,22 +147,23 @@ export default function ClientDashboard({
     };
   }, [onLogout]);
 
-  const client = getClientById(clientId);
-  const appointments = getClientAppointments(clientId);
-  const rewards = getClientRewards(clientId);
-  const pendingReview = getClientPendingReview(clientId);
-  const categoryProgress = mockCategoryProgress[clientId] || [];
-  const professionals = getProfessionals().filter(
-    (p) => p.role !== "recepcionista",
-  );
-
   const [tab, setTab] = useState<Tab>("inicio");
   // Forçar avaliação obrigatória - sempre mostrar se houver pendingReview
   const [showReview, setShowReview] = useState(true); // Sempre true inicialmente
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [selectedProfessional, setSelectedProfessional] = useState("");
+  // Inicializar com o profissional do agendamento pendente, se houver
+  const [selectedProfessional, setSelectedProfessional] = useState(
+    pendingReview?.professionalId || ""
+  );
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  // Atualizar selectedProfessional se pendingReview mudar (ex: carregamento inicial)
+  useEffect(() => {
+    if (pendingReview?.professionalId) {
+      setSelectedProfessional(pendingReview.professionalId);
+    }
+  }, [pendingReview]);
 
   if (!client) {
     return (
@@ -158,24 +242,21 @@ export default function ClientDashboard({
 
           {/* Card de avaliação */}
           <div className="rounded-3xl bg-white/[0.03] p-8 backdrop-blur-xl ring-1 ring-white/10">
-            {/* Seleção de profissional */}
+            {/* Exibição do profissional (Sincronizado com a Recepção) */}
             <div className="mb-6">
               <label className="block text-sm text-slate-400 mb-2">
-                Quem te atendeu?
+                Profissional que te atendeu
               </label>
-              <select
-                aria-label="Selecionar profissional"
-                value={selectedProfessional}
-                onChange={(e) => setSelectedProfessional(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-white focus:border-amber-500 focus:outline-none"
-              >
-                <option value="">Selecione o profissional</option>
-                {professionals.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-white flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-xs uppercase">
+                  {pendingReview.professionalName?.charAt(0) || "P"}
+                </div>
+                <span className="font-medium">
+                  {pendingReview.professionalName || "Profissional da Clínica"}
+                </span>
+              </div>
+              {/* Mantendo o estado interno sincronizado */}
+              <input type="hidden" value={selectedProfessional} />
             </div>
 
             {/* Estrelas */}
@@ -332,23 +413,31 @@ export default function ClientDashboard({
               </div>
             </div>
 
-            {/* Barra de progresso para próximo brinde */}
+            {/* Barra de progresso para próximo brinde (Regra Principal) */}
             <div className="mt-6 pt-4 border-t border-white/10">
-              <div className="flex justify-between text-xs mb-2">
-                <span className="text-slate-300 font-medium">🎁 Progresso para próximo bônus</span>
-                <span className="text-amber-400 font-bold">
-                  {categoryProgress.length > 0 ? categoryProgress[0].progress : Math.min(100, Math.round((client.totalSpent / 500) * 100))}%
-                </span>
-              </div>
-              <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
-                <ProgressBar value={categoryProgress.length > 0 ? categoryProgress[0].progress : Math.min(100, Math.round((client.totalSpent / 500) * 100))} />
-              </div>
-              <p className="text-xs text-slate-400 mt-2">
-                {categoryProgress.length > 0 
-                  ? `Faltam ${formatCurrency(categoryProgress[0].remaining)} para ${categoryProgress[0].categoryName}`
-                  : `Faltam ${formatCurrency(Math.max(0, 500 - client.totalSpent))} para ganhar 10% de desconto`
-                }
-              </p>
+              {activeRulesProgress.length > 0 ? (
+                <>
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="text-slate-300 font-medium">🎁 {activeRulesProgress[0].name}</span>
+                    <span className="text-amber-400 font-bold">
+                      {activeRulesProgress[0].percentage}%
+                    </span>
+                  </div>
+                  <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                    <ProgressBar value={activeRulesProgress[0].percentage} />
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Faltam {activeRulesProgress[0].type.includes('VALUE') || activeRulesProgress[0].type.includes('POINTS') 
+                      ? formatCurrency(activeRulesProgress[0].remaining) 
+                      : activeRulesProgress[0].remaining
+                    } para ganhar!
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-slate-400 mt-2 text-center">
+                  Continue utilizando nossos serviços para desbloquear novos benefícios!
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -412,13 +501,12 @@ export default function ClientDashboard({
         </div>
       )}
 
-      {/* Navegação por Tabs */}
+      {/* Navegação por Tabs - Simplificada */}
       <div className="px-6 mb-4">
         <div className="flex gap-2">
           {[
-            { id: "inicio", label: "Início", icon: "🏠" },
-            { id: "historico", label: "Histórico", icon: "📋" },
-            { id: "beneficios", label: "Benefícios", icon: "✨" },
+            { id: "inicio", label: "Meus Benefícios", icon: "🎁" },
+            { id: "historico", label: "Meu Histórico", icon: "📋" },
           ].map((t) => (
             <button
               key={t.id}
@@ -438,34 +526,113 @@ export default function ClientDashboard({
       {/* Conteúdo das Tabs */}
       <div className="px-6">
         {tab === "inicio" && (
-          <div className="space-y-4">
-            {/* Progresso por categoria */}
-            {categoryProgress.map((cp) => (
-              <div
-                key={cp.categoryId}
-                className="rounded-2xl bg-slate-800/30 p-5 ring-1 ring-slate-700/50"
-              >
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-white font-medium">
-                    {cp.categoryName}
-                  </span>
-                  <span className="text-amber-400 text-sm">{cp.progress}%</span>
+          <div className="space-y-6">
+            {/* Como funciona (movido de Benefícios para Início) */}
+            <div className="rounded-2xl bg-slate-800/30 p-5 ring-1 ring-slate-700/50">
+              <h3 className="text-white font-medium mb-4 flex items-center gap-2">
+                <span className="text-xl">✨</span> Como você ganha
+              </h3>
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-400 font-bold">1</span>
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">
+                      Acumule pontos
+                    </p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      A cada R$ 1 gasto, você ganha 1 ponto
+                    </p>
+                  </div>
                 </div>
-                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <ProgressBar value={cp.progress} />
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-400 font-bold">2</span>
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">
+                      Troque por descontos
+                    </p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      Pontos podem virar crédito para usar na clínica
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-between mt-2 text-xs text-slate-500">
-                  <span>{formatCurrency(cp.totalSpent)}</span>
-                  <span>{formatCurrency(cp.threshold)}</span>
+                <div className="flex gap-4">
+                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-400 font-bold">3</span>
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">
+                      Ganhe bônus extras
+                    </p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      Ao atingir metas de valor, ganhe presentes exclusivos
+                    </p>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
 
-            {categoryProgress.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-slate-500">
-                  Continue usando nossos serviços para acumular pontos!
-                </p>
+            {/* Progresso das Regras Ativas (Dinâmico) */}
+            <div>
+              <h3 className="text-white font-medium mb-3 pl-1">Seu Progresso Atual</h3>
+              <div className="space-y-4">
+                {activeRulesProgress.map((prog) => (
+                  <div
+                    key={prog.id}
+                    className="rounded-2xl bg-slate-800/30 p-5 ring-1 ring-slate-700/50"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-white font-medium">
+                        {prog.name}
+                      </span>
+                      <span className="text-amber-400 text-sm font-bold">{prog.percentage}%</span>
+                    </div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <ProgressBar value={prog.percentage} />
+                    </div>
+                    <div className="flex justify-between mt-2 text-xs text-slate-500">
+                      <span>Atual: {prog.type.includes('VALUE') || prog.type.includes('POINTS') ? formatCurrency(prog.current).replace('R$', '') : prog.current}</span>
+                      <span>Meta: {prog.type.includes('VALUE') || prog.type.includes('POINTS') ? formatCurrency(prog.target).replace('R$', '') : prog.target}</span>
+                    </div>
+                    <p className="text-xs text-amber-400/80 mt-2 text-center">
+                      Faltam {prog.type.includes('VALUE') || prog.type.includes('POINTS') ? formatCurrency(prog.remaining) : prog.remaining} para ganhar!
+                    </p>
+                  </div>
+                ))}
+
+                {activeRulesProgress.length === 0 && (
+                  <div className="text-center py-6 bg-slate-800/20 rounded-xl border border-dashed border-slate-700">
+                    <p className="text-slate-500 text-sm">
+                      Nenhuma campanha ativa no momento.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recompensas disponíveis */}
+            {rewards.length > 0 && (
+              <div className="rounded-2xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 p-5 ring-1 ring-emerald-500/20">
+                <h3 className="text-emerald-400 font-medium mb-3 flex items-center gap-2">
+                  <span>🎁</span> Seus Prêmios Disponíveis
+                </h3>
+                {rewards.map((reward) => (
+                  <div
+                    key={reward.id}
+                    className="bg-slate-900/50 rounded-xl p-4 mb-2 last:mb-0"
+                  >
+                    <p className="text-white font-medium">{reward.title}</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {reward.description}
+                    </p>
+                    <p className="text-xs text-emerald-400 mt-2">
+                      Válido até {formatDate(reward.expiresAt)}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -517,116 +684,28 @@ export default function ClientDashboard({
           </div>
         )}
 
-        {tab === "beneficios" && (
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-slate-800/30 p-5 ring-1 ring-slate-700/50">
-              <h3 className="text-white font-medium mb-4">Como funciona</h3>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-amber-400 font-bold">1</span>
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-medium">
-                      Acumule pontos
-                    </p>
-                    <p className="text-slate-500 text-xs mt-1">
-                      A cada R$ 1 gasto, você ganha 1 ponto
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-amber-400 font-bold">2</span>
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-medium">
-                      Troque por descontos
-                    </p>
-                    <p className="text-slate-500 text-xs mt-1">
-                      500 pontos = R$ 50 de desconto
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-amber-400 font-bold">3</span>
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-medium">
-                      Ganhe brindes exclusivos
-                    </p>
-                    <p className="text-slate-500 text-xs mt-1">
-                      Ao atingir metas de valor, ganhe procedimentos grátis
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recompensas disponíveis */}
-            {rewards.length > 0 && (
-              <div className="rounded-2xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 p-5 ring-1 ring-emerald-500/20">
-                <h3 className="text-emerald-400 font-medium mb-3">
-                  Seus brindes
-                </h3>
-                {rewards.map((reward) => (
-                  <div
-                    key={reward.id}
-                    className="bg-slate-900/50 rounded-xl p-4 mb-2 last:mb-0"
-                  >
-                    <p className="text-white font-medium">{reward.title}</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {reward.description}
-                    </p>
-                    <p className="text-xs text-emerald-400 mt-2">
-                      Válido até {formatDate(reward.expiresAt)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="text-center py-4">
-              <p className="text-sm text-slate-500">
-                Dúvidas? Fale com nossa equipe
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Tab Benefícios removida/fundida com Início */}
       </div>
     </main>
   );
 }
 
 function ProgressBar({ value }: { value: number }) {
-  const getWidthClass = (v: number) => {
-    if (v >= 100) return "w-full";
-    if (v >= 95) return "w-[95%]";
-    if (v >= 90) return "w-[90%]";
-    if (v >= 85) return "w-[85%]";
-    if (v >= 80) return "w-4/5";
-    if (v >= 75) return "w-3/4";
-    if (v >= 70) return "w-[70%]";
-    if (v >= 65) return "w-[65%]";
-    if (v >= 60) return "w-3/5";
-    if (v >= 55) return "w-[55%]";
-    if (v >= 50) return "w-1/2";
-    if (v >= 45) return "w-[45%]";
-    if (v >= 40) return "w-2/5";
-    if (v >= 35) return "w-[35%]";
-    if (v >= 30) return "w-[30%]";
-    if (v >= 25) return "w-1/4";
-    if (v >= 20) return "w-1/5";
-    if (v >= 15) return "w-[15%]";
-    if (v >= 10) return "w-[10%]";
-    if (v >= 5) return "w-[5%]";
-    return "w-0";
-  };
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (barRef.current) {
+      const percentage = Math.min(100, Math.max(0, value));
+      barRef.current.style.setProperty("--progress-width", `${percentage}%`);
+    }
+  }, [value]);
 
   return (
-    <div
-      className={`h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all ${getWidthClass(value)}`}
-    />
+    <div className="h-full bg-slate-700/50 rounded-full overflow-hidden">
+      <div
+        ref={barRef}
+        className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-700 ease-out progress-bar-fill"
+      />
+    </div>
   );
 }

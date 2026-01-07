@@ -297,6 +297,11 @@
     width: 100%;
   }
 
+  /* Progress bar width via CSS Variable from data attribute */
+  .chart-progress-bar {
+    width: var(--progress-width, 0%);
+  }
+
   /* Animation utilities */
   .animate-in {
     animation: fade-in 0.5s ease-out;
@@ -622,4 +627,9 @@
   background-size: 200% 100%;
   animation: premium-shimmer 1.5s infinite;
   border-radius: 0.5rem;
+}
+
+/* Progress bar with CSS variable for width */
+.progress-bar-fill {
+  width: var(--progress-width, 0%);
 }

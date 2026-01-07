@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useApp } from "@/lib/app-context";
 import { formatCurrency, formatDate, formatPhone } from "@/lib/utils";
-import { getServices, type Service } from "@/lib/services-api";
-import { getStaffUsers, type StaffUser } from "@/lib/staff-users-api";
+import { type Service } from "@/lib/services-api";
 import {
   Sun,
   Moon,
@@ -49,8 +48,6 @@ export default function RecepcaoDashboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("atendimentos");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [services, setServices] = useState<Service[]>([]);
-  const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [procedureSearchTerm, setProcedureSearchTerm] = useState("");
@@ -86,6 +83,7 @@ export default function RecepcaoDashboard() {
     name: "",
     phone: "",
     email: "",
+    birthDate: "",
   });
 
   // Formulário novo atendimento
@@ -102,6 +100,7 @@ export default function RecepcaoDashboard() {
     appointments,
     rewards,
     professionals,
+    services, // Usando services do contexto global
     addClient,
     addAppointment,
     getClientRewards,
@@ -137,26 +136,7 @@ export default function RecepcaoDashboard() {
     setLoading(false);
   }, [router]);
 
-  // Carregar serviços e profissionais do Supabase
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [servicesData, staffData] = await Promise.all([
-          getServices(),
-          getStaffUsers(),
-        ]);
-        setServices(servicesData);
-        setStaffUsers(
-          staffData.filter(
-            (u) => u.role === "profissional" || u.role === "medico",
-          ),
-        );
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-      }
-    };
-    loadData();
-  }, []);
+  // Profissionais vêm do contexto global (AppContext já carrega do Supabase)
 
   const handleLogout = () => {
     localStorage.removeItem("staffSession");
@@ -220,6 +200,7 @@ export default function RecepcaoDashboard() {
       name: newClient.name,
       phone: cleanPhone,
       email: newClient.email || "",
+      birthDate: newClient.birthDate || undefined,
       pin: generatedPin,
       pointsBalance: 0,
       totalSpent: 0,
@@ -231,7 +212,7 @@ export default function RecepcaoDashboard() {
     alert(
       `Cliente cadastrado com sucesso!\n\nPIN de acesso: ${generatedPin}\n\nAnote este PIN para o cliente.`,
     );
-    setNewClient({ name: "", phone: "", email: "" });
+    setNewClient({ name: "", phone: "", email: "", birthDate: "" });
     setShowNewClient(false);
   };
 
@@ -252,6 +233,7 @@ export default function RecepcaoDashboard() {
     updateClient({
       ...editingClient,
       phone: cleanPhone,
+      birthDate: editingClient.birthDate || undefined,
     });
 
     setShowEditClient(false);
@@ -299,7 +281,7 @@ export default function RecepcaoDashboard() {
     }
 
     const total = selectedServicesData.reduce((sum, s) => sum + s.price, 0);
-    const professional = staffUsers.find(
+    const professional = professionals.find(
       (p) => p.id === newAppointment.professionalId,
     );
 
@@ -841,6 +823,9 @@ export default function RecepcaoDashboard() {
                     <th className="text-left p-4 text-sm font-medium">
                       Telefone
                     </th>
+                    <th className="text-left p-4 text-sm font-medium">
+                      Nascimento
+                    </th>
                     <th className="text-left p-4 text-sm font-medium">PIN</th>
                     <th className="text-left p-4 text-sm font-medium">
                       Pontos
@@ -877,6 +862,11 @@ export default function RecepcaoDashboard() {
                           className={`p-4 ${isDark ? "text-slate-300" : "text-slate-600"}`}
                         >
                           {formatPhone(client.phone)}
+                        </td>
+                        <td className="p-4">
+                          <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                            {client.birthDate ? formatDate(client.birthDate) : "-"}
+                          </span>
                         </td>
                         <td className="p-4">
                           <span
@@ -1537,6 +1527,23 @@ export default function RecepcaoDashboard() {
                 />
               </div>
 
+              <div>
+                <label
+                  className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}
+                >
+                  Data de Nascimento
+                </label>
+                <input
+                  type="date"
+                  value={newClient.birthDate}
+                  onChange={(e) =>
+                    setNewClient({ ...newClient, birthDate: e.target.value })
+                  }
+                  title="Data de nascimento do cliente"
+                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                />
+              </div>
+
               <div
                 className={`p-3 rounded-lg ${isDark ? "bg-blue-500/10 border border-blue-500/30" : "bg-blue-50 border border-blue-200"}`}
               >
@@ -1645,6 +1652,26 @@ export default function RecepcaoDashboard() {
                     })
                   }
                   placeholder="email@cliente.com"
+                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
+                />
+              </div>
+
+              <div>
+                <label
+                  className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}
+                >
+                  Data de Nascimento
+                </label>
+                <input
+                  type="date"
+                  value={editingClient.birthDate || ""}
+                  onChange={(e) =>
+                    setEditingClient({
+                      ...editingClient,
+                      birthDate: e.target.value,
+                    })
+                  }
+                  title="Data de nascimento do cliente"
                   className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
                 />
               </div>
@@ -1827,7 +1854,7 @@ export default function RecepcaoDashboard() {
                   className={`w-full px-3 py-2 rounded-lg border ${isDark ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-800"}`}
                 >
                   <option value="">Selecione o profissional</option>
-                  {staffUsers.map((p) => (
+                  {professionals.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} - {p.specialty || "Sem especialidade"}
                     </option>
@@ -1915,7 +1942,7 @@ export default function RecepcaoDashboard() {
                           service.name
                             .toLowerCase()
                             .includes(procedureSearchTerm.toLowerCase()) ||
-                          service.category_name
+                          service.categoryName
                             ?.toLowerCase()
                             .includes(procedureSearchTerm.toLowerCase())
                         );

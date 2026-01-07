@@ -9,19 +9,13 @@ import {
   ReactNode,
 } from "react";
 import {
-  mockClients as initialClients,
-  mockAppointments as initialAppointments,
-  mockRewards as initialRewards,
-  mockProfessionals as initialProfessionals,
-  mockFidelityRules as initialRules,
-  mockReviews as initialReviews,
-  importedServices,
   type Client,
   type Appointment,
   type Reward,
   type Professional,
   type FidelityRule,
   type Review,
+  type Service,
 } from "./mock-data";
 
 // APIs do Supabase Bedeschi
@@ -30,19 +24,10 @@ import * as AppointmentsAPI from "./appointments-api";
 import * as RewardsAPI from "./rewards-api";
 import * as RulesAPI from "./rules-api";
 import * as ReviewsAPI from "./reviews-api";
+import * as ServicesAPI from "./services-api";
+import { getStaffUsers } from "./staff-users-api";
 
-const serviceNameToCategoryId: Record<string, string> = {};
-const serviceNameToId: Record<string, string> = {};
-
-for (const svc of importedServices) {
-  if (!serviceNameToCategoryId[svc.name]) {
-    serviceNameToCategoryId[svc.name] = svc.categoryId;
-  }
-  if (!serviceNameToId[svc.name]) {
-    serviceNameToId[svc.name] = svc.id;
-  }
-}
-
+// Helper para adicionar dias a uma data ISO
 function addDays(baseDateIso: string, days: number): string {
   const base = new Date(baseDateIso);
   if (Number.isNaN(base.getTime())) {
@@ -54,12 +39,14 @@ function addDays(baseDateIso: string, days: number): string {
   return base.toISOString().slice(0, 10);
 }
 
+// Helper para avaliar regras de fidelidade
 function evaluateFidelityRulesForAppointment(params: {
   appointment: Appointment;
   clientBefore: Client;
   clientAfter: Client;
   allAppointmentsBefore: Appointment[];
   rules: FidelityRule[];
+  services: Service[];
   onReward: (reward: Reward) => void;
 }) {
   const {
@@ -68,10 +55,23 @@ function evaluateFidelityRulesForAppointment(params: {
     clientAfter,
     allAppointmentsBefore,
     rules,
+    services,
     onReward,
   } = params;
 
   if (!rules.length) return;
+
+  const serviceNameToCategoryId: Record<string, string> = {};
+  const serviceNameToId: Record<string, string> = {};
+
+  for (const svc of services) {
+    if (!serviceNameToCategoryId[svc.name]) {
+      serviceNameToCategoryId[svc.name] = svc.categoryId;
+    }
+    if (!serviceNameToId[svc.name]) {
+      serviceNameToId[svc.name] = svc.id;
+    }
+  }
 
   const clientId = clientBefore.id;
   const baseDateIso = appointment.date || new Date().toISOString().slice(0, 10);
@@ -86,10 +86,12 @@ function evaluateFidelityRulesForAppointment(params: {
     if (rule.type === "COMBO_VALUE" && rule.thresholdValue) {
       const beforeTotal = clientBefore.totalSpent;
       const afterTotal = clientAfter.totalSpent;
-      if (
-        beforeTotal < rule.thresholdValue &&
-        afterTotal >= rule.thresholdValue
-      ) {
+      
+      // Lógica cíclica: verifica se completou um novo ciclo do valor (ex: a cada 1000)
+      const cyclesBefore = Math.floor(beforeTotal / rule.thresholdValue);
+      const cyclesAfter = Math.floor(afterTotal / rule.thresholdValue);
+
+      if (cyclesAfter > cyclesBefore) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -123,10 +125,12 @@ function evaluateFidelityRulesForAppointment(params: {
     ) {
       const beforePoints = clientBefore.pointsBalance;
       const afterPoints = clientAfter.pointsBalance;
-      if (
-        beforePoints < rule.thresholdValue &&
-        afterPoints >= rule.thresholdValue
-      ) {
+      
+      // Lógica cíclica para pontos
+      const cyclesBefore = Math.floor(beforePoints / rule.thresholdValue);
+      const cyclesAfter = Math.floor(afterPoints / rule.thresholdValue);
+
+      if (cyclesAfter > cyclesBefore) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -166,10 +170,11 @@ function evaluateFidelityRulesForAppointment(params: {
         }
       }
 
-      if (
-        matchesBefore < rule.thresholdQuantity &&
-        matchesBefore + matchesInNew >= rule.thresholdQuantity
-      ) {
+      const totalMatchesAfter = matchesBefore + matchesInNew;
+      const cyclesBefore = Math.floor(matchesBefore / rule.thresholdQuantity);
+      const cyclesAfter = Math.floor(totalMatchesAfter / rule.thresholdQuantity);
+
+      if (cyclesAfter > cyclesBefore) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -217,10 +222,11 @@ function evaluateFidelityRulesForAppointment(params: {
         }
       }
 
-      if (
-        matchesBefore < rule.thresholdQuantity &&
-        matchesBefore + matchesInNew >= rule.thresholdQuantity
-      ) {
+      const totalMatchesAfter = matchesBefore + matchesInNew;
+      const cyclesBefore = Math.floor(matchesBefore / rule.thresholdQuantity);
+      const cyclesAfter = Math.floor(totalMatchesAfter / rule.thresholdQuantity);
+
+      if (cyclesAfter > cyclesBefore) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -249,6 +255,7 @@ interface AppContextType {
   professionals: Professional[];
   rules: FidelityRule[];
   reviews: Review[];
+  services: Service[];
 
   // Ações de Clientes
   getClientById: (id: string) => Client | undefined;
@@ -367,15 +374,27 @@ function mapSupabaseRuleToRule(sr: RulesAPI.FidelityRuleDB): FidelityRule {
   };
 }
 
+function mapSupabaseServiceToService(ss: ServicesAPI.Service): Service {
+  return {
+    id: ss.id,
+    externalCode: ss.external_code,
+    name: ss.name,
+    categoryId: ss.category_id,
+    categoryName: ss.category_name,
+    price: ss.price,
+    durationMinutes: ss.duration_minutes,
+    isActive: ss.is_active,
+  };
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [clients, setClients] = useState<Client[]>(initialClients);
-  const [appointments, setAppointments] =
-    useState<Appointment[]>(initialAppointments);
-  const [rewards, setRewards] = useState<Reward[]>(initialRewards);
-  const [professionals, setProfessionals] =
-    useState<Professional[]>(initialProfessionals);
-  const [rules, setRules] = useState<FidelityRule[]>(initialRules);
-  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [rules, setRules] = useState<FidelityRule[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [supabaseLoaded, setSupabaseLoaded] = useState(false);
 
   // Carregar dados do Supabase na inicialização
@@ -436,7 +455,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
       } catch (error) {
         console.error(
-          "[AppContext] Erro ao carregar do Supabase, usando mocks:",
+          "[AppContext] Erro ao carregar do Supabase:",
           error,
         );
         setSupabaseLoaded(true); // Marca como carregado mesmo com erro para não travar
@@ -670,6 +689,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         clientAfter,
         allAppointmentsBefore: appointments,
         rules,
+        services,
         onReward: (reward) => {
           setRewards((prev) => [...prev, reward]);
           // Persistir recompensa gerada no Supabase
@@ -692,7 +712,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
       });
     },
-    [clients, appointments, rules],
+    [clients, appointments, rules, services],
   );
 
   const updateAppointment = useCallback((appointment: Appointment) => {
@@ -870,42 +890,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supaRewards,
         supaRules,
         supaReviews,
+        supaServices,
       ] = await Promise.all([
         ClientsAPI.getClients(),
         AppointmentsAPI.getAppointmentsWithServices(),
         RewardsAPI.getRewards(),
         RulesAPI.getRules(),
         ReviewsAPI.getReviews(),
+        ServicesAPI.getServices(),
       ]);
 
       if (supaClients.length > 0) {
         setClients(supaClients.map(mapSupabaseClientToClient));
-      } else {
-        setClients([...initialClients]);
       }
 
       if (supaAppointments.length > 0) {
         setAppointments(
           supaAppointments.map(mapSupabaseAppointmentToAppointment),
         );
-      } else {
-        setAppointments([...initialAppointments]);
       }
 
       if (supaRewards.length > 0) {
         setRewards(supaRewards.map(mapSupabaseRewardToReward));
-      } else {
-        setRewards([...initialRewards]);
       }
 
       if (supaRules.length > 0) {
         setRules(supaRules.map(mapSupabaseRuleToRule));
-      } else {
-        setRules([...initialRules]);
       }
 
-      // Profissionais em mock
-      setProfessionals([...initialProfessionals]);
+      if (supaServices.length > 0) {
+        setServices(supaServices.map(mapSupabaseServiceToService));
+      }
+
+      // Profissionais do Supabase
+      const supaStaff = await getStaffUsers();
+      if (supaStaff.length > 0) {
+        const mappedStaff: Professional[] = supaStaff
+          .filter((u) => u.role === "profissional" || u.role === "medico")
+          .map((u) => ({
+            id: u.id,
+            name: u.name,
+            role: u.role as "profissional" | "medico",
+            specialty: u.specialty,
+            email: u.email,
+            servicesIds: [], // Informação não disponível no staff_users por padrão
+            rating: 5.0,
+            totalAppointments: 0,
+            isActive: u.is_active,
+            createdAt: u.created_at,
+          }));
+        setProfessionals(mappedStaff);
+      }
 
       // Reviews do Supabase
       if (supaReviews.length > 0) {
@@ -918,22 +953,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           createdAt: sr.created_at,
         }));
         setReviews(mappedReviews);
-        console.log(
-          `[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`,
-        );
-      } else {
-        setReviews([...initialReviews]);
       }
 
       console.log("[AppContext] Dados recarregados com sucesso!");
     } catch (error) {
-      console.error("[AppContext] Erro ao recarregar, usando mocks:", error);
-      setClients([...initialClients]);
-      setAppointments([...initialAppointments]);
-      setRewards([...initialRewards]);
-      setProfessionals([...initialProfessionals]);
-      setRules([...initialRules]);
-      setReviews([...initialReviews]);
+      console.error("[AppContext] Erro ao recarregar:", error);
     }
   }, []);
 
@@ -944,6 +968,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     professionals,
     rules,
     reviews,
+    services,
     getClientById,
     getClientByPhone,
     updateClient,

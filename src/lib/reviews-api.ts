@@ -59,3 +59,32 @@ export async function createReview(review: {
     return null;
   }
 }
+
+export async function getReviewsForReport() {
+  try {
+    const { data, error } = await supabase
+      .from("fidelity_reviews")
+      .select(`
+        *,
+        fidelity_clients (
+          name,
+          phone
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[ReviewsAPI] Erro ao buscar avaliações para relatório:", error);
+      return [];
+    }
+
+    return data.map(item => ({
+      ...item,
+      clientName: item.fidelity_clients?.name || "Cliente não encontrado",
+      clientPhone: item.fidelity_clients?.phone || ""
+    }));
+  } catch (err) {
+    console.error("[ReviewsAPI] Erro ao buscar avaliações para relatório:", err);
+    return [];
+  }
+}

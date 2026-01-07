@@ -45,110 +45,6 @@ function generateExternalCode(categoryName: string): string {
   return `${prefix}${random}`;
 }
 
-// Serviços mock para fallback quando tabela não existe
-const MOCK_SERVICES: Service[] = [
-  {
-    id: "svc-1",
-    external_code: "MA001",
-    name: "Massagem Relaxante 60min",
-    category_id: "cat-1",
-    category_name: "Massagens",
-    price: 180,
-    duration_minutes: 60,
-    is_active: true,
-  },
-  {
-    id: "svc-2",
-    external_code: "MA002",
-    name: "Massagem Modeladora",
-    category_id: "cat-1",
-    category_name: "Massagens",
-    price: 220,
-    duration_minutes: 60,
-    is_active: true,
-  },
-  {
-    id: "svc-3",
-    external_code: "FA001",
-    name: "Limpeza de Pele",
-    category_id: "cat-2",
-    category_name: "Facial",
-    price: 150,
-    duration_minutes: 45,
-    is_active: true,
-  },
-  {
-    id: "svc-4",
-    external_code: "FA002",
-    name: "Peeling Facial",
-    category_id: "cat-2",
-    category_name: "Facial",
-    price: 200,
-    duration_minutes: 60,
-    is_active: true,
-  },
-  {
-    id: "svc-5",
-    external_code: "DE001",
-    name: "Depilação Perna Completa",
-    category_id: "cat-3",
-    category_name: "Depilação",
-    price: 120,
-    duration_minutes: 45,
-    is_active: true,
-  },
-  {
-    id: "svc-6",
-    external_code: "DE002",
-    name: "Depilação Virilha",
-    category_id: "cat-3",
-    category_name: "Depilação",
-    price: 80,
-    duration_minutes: 30,
-    is_active: true,
-  },
-  {
-    id: "svc-7",
-    external_code: "SO001",
-    name: "Design de Sobrancelhas",
-    category_id: "cat-4",
-    category_name: "Sobrancelhas",
-    price: 65,
-    duration_minutes: 30,
-    is_active: true,
-  },
-  {
-    id: "svc-8",
-    external_code: "MI001",
-    name: "Micropigmentação Sobrancelha",
-    category_id: "cat-5",
-    category_name: "Micropigmentação",
-    price: 450,
-    duration_minutes: 120,
-    is_active: true,
-  },
-  {
-    id: "svc-9",
-    external_code: "CI001",
-    name: "Alongamento de Cílios",
-    category_id: "cat-6",
-    category_name: "Cílios",
-    price: 280,
-    duration_minutes: 90,
-    is_active: true,
-  },
-  {
-    id: "svc-10",
-    external_code: "MN001",
-    name: "Manicure Completa",
-    category_id: "cat-7",
-    category_name: "Manicure",
-    price: 45,
-    duration_minutes: 45,
-    is_active: true,
-  },
-];
-
 // Buscar todos os serviços
 export async function getServices(): Promise<Service[]> {
   const { data, error } = await supabase
@@ -158,16 +54,11 @@ export async function getServices(): Promise<Service[]> {
     .order("name");
 
   if (error) {
-    // Fallback para mock quando tabela não existe
-    if (error.code === "PGRST204" || error.message?.includes("not find")) {
-      console.warn("Tabela services não existe, usando dados mock");
-      return MOCK_SERVICES;
-    }
     console.error("Erro ao buscar serviços:", error);
-    return MOCK_SERVICES;
+    return [];
   }
 
-  return data?.length ? data : MOCK_SERVICES;
+  return data || [];
 }
 
 // Buscar serviço por ID
