@@ -435,12 +435,14 @@ export default function RecepcaoDashboard() {
     setShowClientHistory(true);
   };
 
-  if (loading) {
+  // Mostrar loading enquanto não está montado ou carregando para evitar erro de hidratação
+  if (!mounted || loading) {
     return (
-      <div
-        className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-amber-50"}`}
-      >
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto mb-3" />
+          <p className="text-amber-400/70 text-sm">Carregando...</p>
+        </div>
       </div>
     );
   }

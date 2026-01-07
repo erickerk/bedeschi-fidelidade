@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { useApp } from "@/lib/app-context";
@@ -12,6 +12,7 @@ type Theme = "light" | "dark";
 
 export default function ClientAccessPage() {
   const { getClientByPhone, clients } = useApp();
+  const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<Step>("login");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -19,6 +20,11 @@ export default function ClientAccessPage() {
   const [loading, setLoading] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>("dark");
+
+  // Garantir que o componente só renderize conteúdo dinâmico após montar no cliente
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
   const isDark = theme === "dark";
@@ -88,6 +94,20 @@ export default function ClientAccessPage() {
     setError("");
   };
 
+  // Mostrar loading enquanto não está montado para evitar erro de hidratação
+  if (!mounted) {
+    return (
+      <main className="relative h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="flex h-full items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-amber-400/70 text-sm">Carregando...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (step === "dashboard" && clientId) {
     return (
       <Suspense fallback={<LoadingScreen isDark={isDark} />}>
@@ -98,7 +118,6 @@ export default function ClientAccessPage() {
 
   return (
     <main
-      suppressHydrationWarning
       className={`relative h-screen overflow-hidden transition-colors duration-300 ${
         isDark
           ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
@@ -112,7 +131,6 @@ export default function ClientAccessPage() {
 
       {/* Toggle Tema */}
       <button
-        suppressHydrationWarning
         onClick={toggleTheme}
         className={`absolute top-4 right-4 z-20 p-2 rounded-full transition-all ${
           isDark
@@ -165,7 +183,6 @@ export default function ClientAccessPage() {
             <div className="mb-8">
               <h1
                 className={`text-2xl font-light mb-2 ${isDark ? "text-white" : "text-slate-800"}`}
-                suppressHydrationWarning
               >
                 <span>Instituto</span>{" "}
                 <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
@@ -281,7 +298,6 @@ export default function ClientAccessPage() {
             >
               <p
                 className={`text-xs font-light ${isDark ? "text-slate-600" : "text-slate-500"}`}
-                suppressHydrationWarning
               >
                 © 2026 Instituto Bedeschi • Todos os direitos reservados
               </p>
@@ -390,7 +406,6 @@ export default function ClientAccessPage() {
       <div className="absolute bottom-2 left-2 z-50">
         <span
           className={`text-[8px] opacity-30 ${isDark ? "text-white" : "text-slate-600"}`}
-          suppressHydrationWarning
         >
           v1.2.1-PREMIUM
         </span>

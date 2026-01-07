@@ -84,11 +84,11 @@ export async function GET() {
 
     // 1. Limpar dados antigos
     console.log("🗑️  Limpando dados antigos...");
-    await supabase.from("fidelity_reviews").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("fidelity_appointment_services").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("fidelity_appointments").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("fidelity_rewards").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await supabase.from("fidelity_clients").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("fidelity_reviews").delete().gte("created_at", "1900-01-01");
+    await supabase.from("fidelity_appointment_services").delete().gte("created_at", "1900-01-01");
+    await supabase.from("fidelity_appointments").delete().gte("created_at", "1900-01-01");
+    await supabase.from("fidelity_rewards").delete().gte("created_at", "1900-01-01");
+    await supabase.from("fidelity_clients").delete().gte("created_at", "1900-01-01");
 
     // 2. Criar clientes
     console.log("👥 Criando clientes de teste...");
