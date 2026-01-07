@@ -163,12 +163,21 @@ export default function RecepcaoDashboard() {
     router.push("/staff/login");
   };
 
-  // Filtrar clientes
-  const filteredClients = clients.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phone.replace(/\D/g, "").includes(searchTerm.replace(/\D/g, "")),
-  );
+  // Filtrar clientes (por nome ou telefone)
+  const filteredClients = clients.filter((c) => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true; // Mostrar todos se não houver termo de busca
+    
+    // Busca por nome
+    const nameMatch = c.name.toLowerCase().includes(term);
+    
+    // Busca por telefone (apenas se o termo contiver dígitos)
+    const searchDigits = searchTerm.replace(/\D/g, "");
+    const phoneMatch = searchDigits.length > 0 && 
+      c.phone.replace(/\D/g, "").includes(searchDigits);
+    
+    return nameMatch || phoneMatch;
+  });
 
   // Filtrar clientes para bônus (por nome ou telefone)
   const filteredBonusClients = clients.filter((c) => {
@@ -774,7 +783,7 @@ export default function RecepcaoDashboard() {
                       onClick={() => setShowNewAppointment(true)}
                       className="mt-4 px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors"
                     >
-                      + Registrar Atendimento
+                      + Novo Atendimento
                     </button>
                   </div>
                 )}
@@ -1728,15 +1737,20 @@ export default function RecepcaoDashboard() {
                     className={`absolute z-50 w-full mt-1 max-h-48 overflow-y-auto rounded-lg border shadow-lg ${isDark ? "bg-slate-700 border-slate-600" : "bg-white border-slate-200"}`}
                   >
                     {clients
-                      .filter(
-                        (c) =>
-                          c.name
-                            .toLowerCase()
-                            .includes(clientSearchTerm.toLowerCase()) ||
-                          c.phone
-                            .replace(/\D/g, "")
-                            .includes(clientSearchTerm.replace(/\D/g, "")),
-                      )
+                      .filter((c) => {
+                        const term = clientSearchTerm.toLowerCase().trim();
+                        if (!term) return true;
+                        
+                        // Busca por nome
+                        const nameMatch = c.name.toLowerCase().includes(term);
+                        
+                        // Busca por telefone (apenas se o termo contiver dígitos)
+                        const searchDigits = clientSearchTerm.replace(/\D/g, "");
+                        const phoneMatch = searchDigits.length > 0 && 
+                          c.phone.replace(/\D/g, "").includes(searchDigits);
+                        
+                        return nameMatch || phoneMatch;
+                      })
                       .map((c) => (
                         <button
                           key={c.id}
