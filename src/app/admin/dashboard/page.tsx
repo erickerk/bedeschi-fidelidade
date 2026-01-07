@@ -482,22 +482,24 @@ export default function AdminDashboard() {
           .length,
       }));
 
-    // Performance da equipe - considerar TODOS os atendimentos para avaliações
+    // Performance da equipe - usar avaliações dos appointments diretamente
     const professionalPerformance = professionals
       .map((p) => {
         const profAppointments = filteredApts.filter(
           (a) => a.professionalId === p.id,
         );
-        // Buscar avaliações de TODOS os atendimentos (não apenas filtrados)
-        const profReviews = reviews.filter((r) => {
-          const apt = appointments.find((a) => a.id === r.appointmentId);
-          return apt?.professionalId === p.id;
-        });
+        // Buscar avaliações dos appointments (hasReview e review.rating)
+        const allProfAppointments = appointments.filter(
+          (a) => a.professionalId === p.id,
+        );
+        const appointmentsWithReview = allProfAppointments.filter(
+          (a) => a.hasReview && a.review?.rating,
+        );
         const avgRating =
-          profReviews.length > 0
+          appointmentsWithReview.length > 0
             ? (
-                profReviews.reduce((sum, r) => sum + r.rating, 0) /
-                profReviews.length
+                appointmentsWithReview.reduce((sum, a) => sum + (a.review?.rating || 0), 0) /
+                appointmentsWithReview.length
               ).toFixed(1)
             : "N/A";
         const totalRevenue = profAppointments.reduce(
@@ -510,7 +512,7 @@ export default function AdminDashboard() {
           appointmentsCount: profAppointments.length,
           revenue: totalRevenue,
           avgRating,
-          reviewsCount: profReviews.length,
+          reviewsCount: appointmentsWithReview.length,
         };
       })
       .sort((a, b) => b.revenue - a.revenue);
