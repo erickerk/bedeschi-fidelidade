@@ -386,75 +386,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Carregar clientes
         const supaClients = await ClientsAPI.getClients();
-        if (supaClients.length > 0) {
-          setClients(supaClients.map(mapSupabaseClientToClient));
-          console.log(
-            `[AppContext] ${supaClients.length} clientes carregados do Supabase`,
-          );
-        } else {
-          console.log("[AppContext] Nenhum cliente no Supabase, usando mocks");
-        }
+        setClients(supaClients.map(mapSupabaseClientToClient));
+        console.log(
+          `[AppContext] ${supaClients.length} clientes carregados do Supabase`,
+        );
 
         // Carregar agendamentos
         const supaAppointments =
           await AppointmentsAPI.getAppointmentsWithServices();
-        if (supaAppointments.length > 0) {
-          setAppointments(
-            supaAppointments.map(mapSupabaseAppointmentToAppointment),
-          );
-          console.log(
-            `[AppContext] ${supaAppointments.length} agendamentos carregados do Supabase`,
-          );
-        } else {
-          console.log(
-            "[AppContext] Nenhum agendamento no Supabase, usando mocks",
-          );
-        }
+        setAppointments(
+          supaAppointments.map(mapSupabaseAppointmentToAppointment),
+        );
+        console.log(
+          `[AppContext] ${supaAppointments.length} agendamentos carregados do Supabase`,
+        );
 
         // Carregar recompensas
         const supaRewards = await RewardsAPI.getRewards();
-        if (supaRewards.length > 0) {
-          setRewards(supaRewards.map(mapSupabaseRewardToReward));
-          console.log(
-            `[AppContext] ${supaRewards.length} recompensas carregadas do Supabase`,
-          );
-        } else {
-          console.log(
-            "[AppContext] Nenhuma recompensa no Supabase, usando mocks",
-          );
-        }
+        setRewards(supaRewards.map(mapSupabaseRewardToReward));
+        console.log(
+          `[AppContext] ${supaRewards.length} recompensas carregadas do Supabase`,
+        );
 
         // Carregar regras
         const supaRules = await RulesAPI.getRules();
-        if (supaRules.length > 0) {
-          setRules(supaRules.map(mapSupabaseRuleToRule));
-          console.log(
-            `[AppContext] ${supaRules.length} regras carregadas do Supabase`,
-          );
-        } else {
-          console.log("[AppContext] Nenhuma regra no Supabase, usando mocks");
-        }
+        setRules(supaRules.map(mapSupabaseRuleToRule));
+        console.log(
+          `[AppContext] ${supaRules.length} regras carregadas do Supabase`,
+        );
 
         // Carregar avaliações
         const supaReviews = await ReviewsAPI.getReviews();
-        if (supaReviews.length > 0) {
-          const mappedReviews = supaReviews.map((sr) => ({
-            id: sr.id,
-            clientId: sr.client_id,
-            appointmentId: sr.appointment_id,
-            rating: sr.rating,
-            comment: sr.comment || "",
-            createdAt: sr.created_at,
-          }));
-          setReviews(mappedReviews);
-          console.log(
-            `[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`,
-          );
-        } else {
-          console.log(
-            "[AppContext] Nenhuma avaliação no Supabase, usando mocks",
-          );
-        }
+        const mappedReviews = supaReviews.map((sr) => ({
+          id: sr.id,
+          clientId: sr.client_id,
+          appointmentId: sr.appointment_id,
+          rating: sr.rating,
+          comment: sr.comment || "",
+          createdAt: sr.created_at,
+        }));
+        setReviews(mappedReviews);
+        console.log(
+          `[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`,
+        );
 
         setSupabaseLoaded(true);
         console.log(

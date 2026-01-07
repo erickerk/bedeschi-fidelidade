@@ -37,23 +37,22 @@ export async function createReview(review: {
   comment?: string;
 }): Promise<FidelityReview | null> {
   try {
-    const { data, error } = await supabase
-      .from("fidelity_reviews")
-      .insert({
-        client_id: review.client_id,
-        appointment_id: review.appointment_id,
-        staff_id: review.staff_id || null,
-        rating: review.rating,
-        comment: review.comment || null,
-      })
-      .select()
-      .single();
+    // Usar endpoint da API para criar avaliação com privilégios admin (bypass RLS)
+    const response = await fetch("/api/reviews/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(review),
+    });
 
-    if (error) {
-      console.error("[ReviewsAPI] Erro ao criar avaliação:", error);
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("[ReviewsAPI] Erro ao criar avaliação via API:", errorData);
       return null;
     }
 
+    const data = await response.json();
     return data;
   } catch (err) {
     console.error("[ReviewsAPI] Erro ao criar avaliação:", err);
