@@ -171,13 +171,20 @@ export default function RecepcaoDashboard() {
   );
 
   // Filtrar clientes para bônus (por nome ou telefone)
-  const filteredBonusClients = clients.filter(
-    (c) =>
-      c.name.toLowerCase().includes(bonusClientSearchTerm.toLowerCase()) ||
-      c.phone
-        .replace(/\D/g, "")
-        .includes(bonusClientSearchTerm.replace(/\D/g, "")),
-  );
+  const filteredBonusClients = clients.filter((c) => {
+    const searchTerm = bonusClientSearchTerm.toLowerCase().trim();
+    if (!searchTerm) return false;
+    
+    // Busca por nome
+    const nameMatch = c.name.toLowerCase().includes(searchTerm);
+    
+    // Busca por telefone (apenas se o termo contiver dígitos)
+    const searchDigits = bonusClientSearchTerm.replace(/\D/g, "");
+    const phoneMatch = searchDigits.length > 0 && 
+      c.phone.replace(/\D/g, "").includes(searchDigits);
+    
+    return nameMatch || phoneMatch;
+  });
 
   // Formatar input de telefone em tempo real
   const handlePhoneInput = (value: string): string => {

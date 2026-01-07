@@ -244,20 +244,27 @@ export default function ClientDashboard({
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pb-24">
-      {/* Header Premium */}
-      <header className="relative px-6 pt-6 pb-4">
-        <div className="flex items-center justify-between">
+      {/* Header Premium Luxuoso */}
+      <header className="relative px-6 pt-8 pb-6">
+        {/* Efeito de brilho de fundo */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-amber-600/5 rounded-full blur-2xl" />
+        </div>
+        
+        <div className="relative flex items-center justify-between">
           <div>
-            <p className="text-slate-500 text-sm">Olá,</p>
-            <h1 className="text-2xl font-light text-white">
-              {client.name.split(" ")[0]}
+            <p className="text-amber-400/70 text-xs uppercase tracking-widest mb-1">Bem-vinda de volta</p>
+            <h1 className="text-3xl font-light text-white">
+              {client.name.split(" ")[0]} <span className="text-amber-400">✨</span>
             </h1>
+            <p className="text-slate-500 text-sm mt-1">Cliente desde {new Date().getFullYear()}</p>
           </div>
           <div className="flex items-center gap-3">
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                className="p-2.5 rounded-xl bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition-all border border-slate-700/50"
                 aria-label="Sair"
               >
                 <svg
@@ -275,8 +282,8 @@ export default function ClientDashboard({
                 </svg>
               </button>
             )}
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-600/30 flex items-center justify-center ring-1 ring-amber-500/30">
-              <span className="text-amber-400 font-semibold text-sm">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <span className="text-slate-900 font-bold text-base">
                 {client.name
                   .split(" ")
                   .map((n) => n[0])
@@ -288,88 +295,117 @@ export default function ClientDashboard({
         </div>
       </header>
 
-      {/* Card de Pontos Premium */}
+      {/* Card de Pontos Premium Luxuoso */}
       <div className="px-6 mb-6">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/10 to-amber-600/5 p-6 ring-1 ring-amber-500/20">
-          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-500/10 blur-2xl" />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-amber-600/10 to-slate-900 p-6 ring-1 ring-amber-500/30 shadow-2xl shadow-amber-500/10">
+          {/* Efeitos decorativos */}
+          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-amber-500/20 blur-3xl" />
+          <div className="absolute -left-4 -bottom-4 h-24 w-24 rounded-full bg-amber-600/10 blur-2xl" />
+          
           <div className="relative">
+            {/* Badge de Status */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium border border-amber-500/30">
+                💎 Cliente VIP
+              </span>
+              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium border border-emerald-500/30">
+                {appointments.length} atendimentos
+              </span>
+            </div>
+            
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-amber-400/70 text-sm uppercase tracking-wider">
-                  Seus Pontos
+                <p className="text-amber-400/70 text-xs uppercase tracking-[0.2em] mb-1">
+                  Seus Pontos Acumulados
                 </p>
-                <p className="text-5xl font-light text-white mt-2">
+                <p className="text-6xl font-light text-white">
                   {client.pointsBalance.toLocaleString()}
                 </p>
+                <p className="text-slate-400 text-sm mt-1">pontos disponíveis</p>
               </div>
-              <div className="text-right">
-                <p className="text-slate-500 text-xs">Total investido</p>
-                <p className="text-xl font-light text-white">
+              <div className="text-right bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50">
+                <p className="text-slate-400 text-xs uppercase tracking-wider">Total investido</p>
+                <p className="text-2xl font-semibold text-white mt-1">
                   {formatCurrency(client.totalSpent)}
                 </p>
+                <p className="text-emerald-400 text-xs mt-1">🎯 +{Math.round(client.totalSpent * 0.1)} em benefícios</p>
               </div>
             </div>
 
             {/* Barra de progresso para próximo brinde */}
-            {categoryProgress.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-white/10">
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="text-slate-400">Próximo brinde</span>
-                  <span className="text-amber-400">
-                    {categoryProgress[0].progress}%
-                  </span>
-                </div>
-                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <ProgressBar value={categoryProgress[0].progress} />
-                </div>
-                <p className="text-xs text-slate-500 mt-2">
-                  Faltam {formatCurrency(categoryProgress[0].remaining)} para{" "}
-                  {categoryProgress[0].categoryName}
-                </p>
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-slate-300 font-medium">🎁 Progresso para próximo bônus</span>
+                <span className="text-amber-400 font-bold">
+                  {categoryProgress.length > 0 ? categoryProgress[0].progress : Math.min(100, Math.round((client.totalSpent / 500) * 100))}%
+                </span>
               </div>
-            )}
+              <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                <ProgressBar value={categoryProgress.length > 0 ? categoryProgress[0].progress : Math.min(100, Math.round((client.totalSpent / 500) * 100))} />
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                {categoryProgress.length > 0 
+                  ? `Faltam ${formatCurrency(categoryProgress[0].remaining)} para ${categoryProgress[0].categoryName}`
+                  : `Faltam ${formatCurrency(Math.max(0, 500 - client.totalSpent))} para ganhar 10% de desconto`
+                }
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recompensas Disponíveis */}
+      {/* Resumo Rápido */}
+      <div className="px-6 mb-6">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl bg-slate-800/50 p-4 text-center border border-slate-700/50">
+            <p className="text-2xl font-bold text-white">{appointments.length}</p>
+            <p className="text-xs text-slate-400 mt-1">Atendimentos</p>
+          </div>
+          <div className="rounded-2xl bg-slate-800/50 p-4 text-center border border-slate-700/50">
+            <p className="text-2xl font-bold text-emerald-400">{rewards.length}</p>
+            <p className="text-xs text-slate-400 mt-1">Bônus</p>
+          </div>
+          <div className="rounded-2xl bg-slate-800/50 p-4 text-center border border-slate-700/50">
+            <p className="text-2xl font-bold text-amber-400">{client.pointsBalance}</p>
+            <p className="text-xs text-slate-400 mt-1">Pontos</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Recompensas Disponíveis - Destaque Premium */}
       {rewards.length > 0 && (
         <div className="px-6 mb-6">
-          <div className="rounded-2xl bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 p-5 ring-1 ring-emerald-500/20">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <svg
-                  className="h-5 w-5 text-emerald-400"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z"
-                    clipRule="evenodd"
-                  />
-                  <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z" />
-                </svg>
+          <div className="rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-600/10 to-slate-900 p-5 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <span className="text-2xl">🎁</span>
               </div>
               <div>
-                <p className="text-emerald-400 font-medium">
-                  {rewards.length} brinde{rewards.length > 1 ? "s" : ""}{" "}
-                  disponível
+                <p className="text-emerald-300 font-semibold text-lg">
+                  {rewards.length} bônus disponível{rewards.length > 1 ? "is" : ""}!
                 </p>
-                <p className="text-xs text-slate-500">
-                  Resgate na sua próxima visita
+                <p className="text-sm text-slate-400">
+                  Informe na recepção para resgatar
                 </p>
               </div>
             </div>
-            {rewards.slice(0, 1).map((reward) => (
+            {rewards.map((reward) => (
               <div
                 key={reward.id}
-                className="bg-slate-900/50 rounded-xl p-4 mt-3"
+                className="bg-slate-900/70 rounded-xl p-4 mb-2 last:mb-0 border border-emerald-500/20"
               >
-                <p className="text-white font-medium">{reward.title}</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Válido até {formatDate(reward.expiresAt)}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-medium">{reward.title}</p>
+                    <p className="text-xs text-slate-400 mt-1">{reward.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-emerald-400 font-medium">✓ Disponível</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Até {formatDate(reward.expiresAt)}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
