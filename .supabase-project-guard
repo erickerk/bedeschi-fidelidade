@@ -1,0 +1,37 @@
+# ⚠️ PROTEÇÃO DE PROJETO SUPABASE
+
+## PROJETO CORRETO
+✅ Bedeschi Fidelidade/Estética
+   - Project ID: lvqcualqeevdenghexjm
+   - URL: https://lvqcualqeevdenghexjm.supabase.co
+   - Organização: Bedeschi
+
+## PROJETO BLOQUEADO - NUNCA USAR
+❌ Elite_Blidagem
+   - Project ID: rlaxbloitiknjikrpbim
+   - Status: BLOQUEADO
+   - Motivo: Projeto de outro cliente, não tem relação com Bedeschi Fidelidade
+
+## VERIFICAÇÕES OBRIGATÓRIAS
+
+Antes de qualquer operação no Supabase, SEMPRE verificar:
+
+1. ✅ URL contém "lvqcualqeevdenghexjm"
+2. ✅ Variáveis de ambiente apontam para Bedeschi
+3. ❌ NUNCA usar "rlaxbloitiknjikrpbim"
+4. ❌ NUNCA conectar em Elite_Blidagem
+
+## CONFIGURAÇÃO CORRETA (.env.local)
+
+NEXT_PUBLIC_SUPABASE_URL=https://lvqcualqeevdenghexjm.supabase.co
+SUPABASE_PROJECT_ID=lvqcualqeevdenghexjm
+
+## EM CASO DE DÚVIDA
+
+Se houver qualquer menção a Elite_Blidagem:
+- PARE imediatamente
+- Verifique as configurações
+- Use APENAS Bedeschi Fidelidade
+
+---
+Arquivo de proteção criado em: 2026-01-07

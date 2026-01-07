@@ -480,37 +480,79 @@ export default function AdminDashboard() {
             }),
           );
 
-    // Filtrar por mês atual e anterior considerando filtro de categoria
-    const thisMonth = appointments.filter((a) => {
-      const d = new Date(a.date);
-      const isThisMonth =
-        d.getMonth() === now.getMonth() &&
-        d.getFullYear() === now.getFullYear();
-      if (!isThisMonth) return false;
+    // Filtrar por mês atual e anterior OU pelo período customizado se definido
+    let thisMonth: typeof appointments;
+    let lastMonth: typeof appointments;
 
-      // Aplicar filtro de categoria se selecionado
-      if (analyticsCategoryFilter === "all") return true;
-      return a.services.some((s) => {
-        const serviceData = services.find((srv) => srv.name === s.name);
-        return serviceData?.categoryId === analyticsCategoryFilter;
+    if (dateFrom && dateTo) {
+      // Se há filtro de data customizado, usar o período selecionado como "mês atual"
+      // e comparar com o mês anterior ao período inicial
+      const customStart = new Date(dateFrom);
+      customStart.setHours(0, 0, 0, 0);
+      const customEnd = new Date(dateTo);
+      customEnd.setHours(23, 59, 59, 999);
+
+      thisMonth = appointments.filter((a) => {
+        const d = new Date(a.date);
+        if (d < customStart || d > customEnd) return false;
+
+        // Aplicar filtro de categoria se selecionado
+        if (analyticsCategoryFilter === "all") return true;
+        return a.services.some((s) => {
+          const serviceData = services.find((srv) => srv.name === s.name);
+          return serviceData?.categoryId === analyticsCategoryFilter;
+        });
       });
-    });
 
-    const lastMonth = appointments.filter((a) => {
-      const d = new Date(a.date);
-      const lastM = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const isLastMonth =
-        d.getMonth() === lastM.getMonth() &&
-        d.getFullYear() === lastM.getFullYear();
-      if (!isLastMonth) return false;
+      // Calcular período anterior com mesma duração
+      const periodDays = Math.ceil((customEnd.getTime() - customStart.getTime()) / (1000 * 60 * 60 * 24));
+      const prevStart = new Date(customStart.getTime() - periodDays * 24 * 60 * 60 * 1000);
+      const prevEnd = new Date(customStart.getTime() - 1);
 
-      // Aplicar filtro de categoria se selecionado
-      if (analyticsCategoryFilter === "all") return true;
-      return a.services.some((s) => {
-        const serviceData = services.find((srv) => srv.name === s.name);
-        return serviceData?.categoryId === analyticsCategoryFilter;
+      lastMonth = appointments.filter((a) => {
+        const d = new Date(a.date);
+        if (d < prevStart || d > prevEnd) return false;
+
+        // Aplicar filtro de categoria se selecionado
+        if (analyticsCategoryFilter === "all") return true;
+        return a.services.some((s) => {
+          const serviceData = services.find((srv) => srv.name === s.name);
+          return serviceData?.categoryId === analyticsCategoryFilter;
+        });
       });
-    });
+    } else {
+      // Usar mês corrente e anterior
+      thisMonth = appointments.filter((a) => {
+        const d = new Date(a.date);
+        const isThisMonth =
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear();
+        if (!isThisMonth) return false;
+
+        // Aplicar filtro de categoria se selecionado
+        if (analyticsCategoryFilter === "all") return true;
+        return a.services.some((s) => {
+          const serviceData = services.find((srv) => srv.name === s.name);
+          return serviceData?.categoryId === analyticsCategoryFilter;
+        });
+      });
+
+      lastMonth = appointments.filter((a) => {
+        const d = new Date(a.date);
+        const lastM = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const isLastMonth =
+          d.getMonth() === lastM.getMonth() &&
+          d.getFullYear() === lastM.getFullYear();
+        if (!isLastMonth) return false;
+
+        // Aplicar filtro de categoria se selecionado
+        if (analyticsCategoryFilter === "all") return true;
+        return a.services.some((s) => {
+          const serviceData = services.find((srv) => srv.name === s.name);
+          return serviceData?.categoryId === analyticsCategoryFilter;
+        });
+      });
+    }
 
     const revenueThisMonth = thisMonth.reduce((sum, a) => sum + a.total, 0);
     const revenueLastMonth = lastMonth.reduce((sum, a) => sum + a.total, 0);

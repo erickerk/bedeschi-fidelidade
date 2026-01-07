@@ -900,60 +900,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ServicesAPI.getServices(),
       ]);
 
-      if (supaClients.length > 0) {
-        setClients(supaClients.map(mapSupabaseClientToClient));
-      }
-
-      if (supaAppointments.length > 0) {
-        setAppointments(
-          supaAppointments.map(mapSupabaseAppointmentToAppointment),
-        );
-      }
-
-      if (supaRewards.length > 0) {
-        setRewards(supaRewards.map(mapSupabaseRewardToReward));
-      }
-
-      if (supaRules.length > 0) {
-        setRules(supaRules.map(mapSupabaseRuleToRule));
-      }
-
-      if (supaServices.length > 0) {
-        setServices(supaServices.map(mapSupabaseServiceToService));
-      }
+      // SEMPRE atualizar o estado com os dados do Supabase, mesmo que vazio
+      // Isso garante sincronização total entre banco e aplicação
+      setClients(supaClients.map(mapSupabaseClientToClient));
+      setAppointments(
+        supaAppointments.map(mapSupabaseAppointmentToAppointment),
+      );
+      setRewards(supaRewards.map(mapSupabaseRewardToReward));
+      setRules(supaRules.map(mapSupabaseRuleToRule));
+      setServices(supaServices.map(mapSupabaseServiceToService));
 
       // Profissionais do Supabase
       const supaStaff = await getStaffUsers();
-      if (supaStaff.length > 0) {
-        const mappedStaff: Professional[] = supaStaff
-          .filter((u) => u.role === "profissional" || u.role === "medico")
-          .map((u) => ({
-            id: u.id,
-            name: u.name,
-            role: u.role as "profissional" | "medico",
-            specialty: u.specialty,
-            email: u.email,
-            servicesIds: [], // Informação não disponível no staff_users por padrão
-            rating: 5.0,
-            totalAppointments: 0,
-            isActive: u.is_active,
-            createdAt: u.created_at,
-          }));
-        setProfessionals(mappedStaff);
-      }
+      const mappedStaff: Professional[] = supaStaff
+        .filter((u) => u.role === "profissional" || u.role === "medico")
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          role: u.role as "profissional" | "medico",
+          specialty: u.specialty,
+          email: u.email,
+          servicesIds: [],
+          rating: 5.0,
+          totalAppointments: 0,
+          isActive: u.is_active,
+          createdAt: u.created_at,
+        }));
+      setProfessionals(mappedStaff);
 
       // Reviews do Supabase
-      if (supaReviews.length > 0) {
-        const mappedReviews = supaReviews.map((sr) => ({
-          id: sr.id,
-          clientId: sr.client_id,
-          appointmentId: sr.appointment_id,
-          rating: sr.rating,
-          comment: sr.comment || "",
-          createdAt: sr.created_at,
-        }));
-        setReviews(mappedReviews);
-      }
+      const mappedReviews = supaReviews.map((sr) => ({
+        id: sr.id,
+        clientId: sr.client_id,
+        appointmentId: sr.appointment_id,
+        rating: sr.rating,
+        comment: sr.comment || "",
+        createdAt: sr.created_at,
+      }));
+      setReviews(mappedReviews);
 
       console.log("[AppContext] Dados recarregados com sucesso!");
     } catch (error) {

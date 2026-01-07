@@ -79,18 +79,26 @@ function getRandomComment(rating: number): string {
 }
 
 export async function GET() {
+  // ⚠️ ATENÇÃO: Esta rota está DESATIVADA em produção
+  // Para adicionar dados de teste, use a interface de Admin ou cadastre manualmente
+  return NextResponse.json({ 
+    error: "Rota de seed desativada em produção. Use a interface administrativa para gerenciar dados.",
+    message: "Para adicionar dados de teste: 1) Acesse o Admin Dashboard, 2) Use a tela de Recepção para cadastrar clientes, 3) Registre atendimentos normalmente"
+  }, { status: 403 });
+
+  /* CÓDIGO DESATIVADO - mantido apenas para referência
   try {
     console.log("🚀 Iniciando seed de dados de teste...");
 
-    // 1. Limpar dados antigos
-    console.log("🗑️  Limpando dados antigos...");
-    await supabase.from("fidelity_reviews").delete().gte("created_at", "1900-01-01");
-    await supabase.from("fidelity_appointment_services").delete().gte("created_at", "1900-01-01");
-    await supabase.from("fidelity_appointments").delete().gte("created_at", "1900-01-01");
-    await supabase.from("fidelity_rewards").delete().gte("created_at", "1900-01-01");
-    await supabase.from("fidelity_clients").delete().gte("created_at", "1900-01-01");
+    // REMOVIDO: Código que deletava todos os dados automaticamente
+    // Isso causava perda de dados de clientes e atendimentos em produção
+    // await supabase.from("fidelity_reviews").delete().gte("created_at", "1900-01-01");
+    // await supabase.from("fidelity_appointment_services").delete().gte("created_at", "1900-01-01");
+    // await supabase.from("fidelity_appointments").delete().gte("created_at", "1900-01-01");
+    // await supabase.from("fidelity_rewards").delete().gte("created_at", "1900-01-01");
+    // await supabase.from("fidelity_clients").delete().gte("created_at", "1900-01-01");
 
-    // 2. Criar clientes
+    // 2. Criar clientes (código desativado - rota retorna 403 antes de chegar aqui)
     console.log("👥 Criando clientes de teste...");
     const clientsToInsert = testClients.map((c) => ({
       name: c.name,
@@ -107,7 +115,7 @@ export async function GET() {
       .insert(clientsToInsert)
       .select();
 
-    if (clientError || !clients) {
+    if (clientError || !clients || clients.length === 0) {
       return NextResponse.json({ error: "Erro ao criar clientes", details: clientError }, { status: 500 });
     }
 
@@ -168,7 +176,7 @@ export async function GET() {
           });
         }
 
-        if (hasReview && rating) {
+        if (hasReview && rating !== null) {
           reviews.push({
             client_id: client.id,
             appointment_id: appointmentId,
@@ -239,4 +247,5 @@ export async function GET() {
     console.error("Erro no seed:", error);
     return NextResponse.json({ error: "Erro interno", details: error }, { status: 500 });
   }
+  */
 }
