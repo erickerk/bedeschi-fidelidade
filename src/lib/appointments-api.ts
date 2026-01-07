@@ -181,7 +181,7 @@ export async function getAppointmentById(
 export async function createAppointment(
   input: CreateAppointmentInput,
 ): Promise<FidelityAppointment | null> {
-  const { services, ...appointmentData } = input;
+  const { services, client_name, professional_name, ...appointmentData } = input;
 
   // Criar agendamento
   const { data: appointment, error: aptError } = await supabase
