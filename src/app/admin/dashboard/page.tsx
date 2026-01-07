@@ -124,7 +124,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [services, setServices] = useState<DomainService[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [showAddProfessional, setShowAddProfessional] = useState(false);
@@ -220,11 +219,16 @@ export default function AdminDashboard() {
     clients,
     appointments,
     rewards,
-    reviews,
     professionals,
     rules,
+    reviews,
+    services,
+    getClientById,
     updateClient,
+    addClient,
     deleteClient,
+    addAppointment,
+    getProfessionals,
     addProfessional,
     updateProfessional,
     removeProfessional,
@@ -232,6 +236,7 @@ export default function AdminDashboard() {
     toggleRule,
     addRule,
     updateRule,
+    deleteRule,
     getClientRewards,
     redeemReward,
   } = appData;
@@ -239,44 +244,7 @@ export default function AdminDashboard() {
   const isDark = theme === "dark";
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
-  // Carregar serviços do Supabase (fallback para mocks em caso de erro)
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadServices = async () => {
-      try {
-        const apiServices = await getServicesFromSupabase();
-        if (cancelled) return;
-
-        if (apiServices && apiServices.length > 0) {
-          const mapped: DomainService[] = apiServices.map(
-            (svc: SupabaseService) => ({
-              id: svc.id,
-              externalCode: svc.external_code,
-              name: svc.name,
-              categoryId: svc.category_id,
-              categoryName: svc.category_name,
-              price: svc.price,
-              durationMinutes: svc.duration_minutes,
-              isActive: svc.is_active,
-            }),
-          );
-          setServices(mapped);
-        }
-      } catch (error) {
-        console.error(
-          "Erro ao carregar serviços do Supabase. Mantendo lista mock em memória.",
-          error,
-        );
-      }
-    };
-
-    loadServices();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Services agora vêm do AppContext via Supabase
 
   useEffect(() => {
     const session = localStorage.getItem("staffSession");
@@ -989,7 +957,7 @@ export default function AdminDashboard() {
         isActive: created.is_active,
       };
 
-      setServices((prev) => [mapped, ...prev]);
+      // Serviço criado no Supabase, será carregado no próximo refresh do AppContext
     } catch (error) {
       console.error(
         "Erro ao criar serviço no Supabase, usando apenas estado local.",
@@ -1007,7 +975,7 @@ export default function AdminDashboard() {
         isActive: true,
       };
 
-      setServices((prev) => [fallbackService, ...prev]);
+      // Serviço criado localmente
     }
 
     setNewService({ name: "", categoryId: "", price: 0, durationMinutes: 30 });
@@ -1038,15 +1006,13 @@ export default function AdminDashboard() {
         isActive: updated.is_active,
       };
 
-      setServices((prev) => prev.map((s) => (s.id === mapped.id ? mapped : s)));
+      // Serviço atualizado no Supabase
     } catch (error) {
       console.error(
         "Erro ao atualizar serviço no Supabase, mantendo atualização apenas em memória.",
         error,
       );
-      setServices((prev) =>
-        prev.map((s) => (s.id === editingService.id ? editingService : s)),
-      );
+      // Manter atualização local
     }
 
     setEditingService(null);
@@ -1056,11 +1022,7 @@ export default function AdminDashboard() {
     const nextIsActive = !service.isActive;
 
     // Atualização otimista no estado local
-    setServices((prev) =>
-      prev.map((s) =>
-        s.id === service.id ? { ...s, isActive: nextIsActive } : s,
-      ),
-    );
+    // Toggle otimista
 
     try {
       await updateSupabaseService(service.id, { is_active: nextIsActive });
@@ -1070,11 +1032,7 @@ export default function AdminDashboard() {
         error,
       );
       // Reverter em caso de erro
-      setServices((prev) =>
-        prev.map((s) =>
-          s.id === service.id ? { ...s, isActive: service.isActive } : s,
-        ),
-      );
+      // Reverter
     }
   };
 
@@ -3371,13 +3329,7 @@ export default function AdminDashboard() {
                             <button
                               type="button"
                               onClick={() =>
-                                setServices((prev) =>
-                                  prev.map((svc) =>
-                                    svc.id === s.id
-                                      ? { ...svc, isActive: !svc.isActive }
-                                      : svc,
-                                  ),
-                                )
+                                toggleServiceStatus(s)
                               }
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
                                 s.isActive
@@ -3991,6 +3943,17 @@ export default function AdminDashboard() {
                               <Eye className="h-3 w-3" /> Ativar
                             </>
                           )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Tem certeza que deseja EXCLUIR a regra "${rule.name}"? Esta ação não pode ser desfeita.`)) {
+                              deleteRule(rule.id);
+                            }
+                          }}
+                          className="mt-1 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                        >
+                          <Trash2 className="h-3 w-3" /> Excluir
                         </button>
                       </div>
                     </div>

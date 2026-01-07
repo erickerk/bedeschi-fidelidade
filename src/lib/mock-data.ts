@@ -443,7 +443,8 @@ export interface Review {
   id: string;
   clientId: string;
   appointmentId: string;
-  professionalId?: string; // ID do profissional avaliado
+  professionalId?: string;
+  professionalName?: string;
   rating: number;
   comment?: string;
   createdAt: string;

@@ -4,24 +4,24 @@ export interface FidelityReview {
   id: string;
   client_id: string;
   appointment_id: string;
-  staff_id: string | null; // ID do profissional avaliado
   rating: number;
   comment: string | null;
   created_at: string;
+  professional_id?: string;
+  professional_name?: string;
 }
 
 export async function getReviews(): Promise<FidelityReview[]> {
   try {
-    const { data, error } = await supabase
-      .from("fidelity_reviews")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[ReviewsAPI] Erro ao buscar avaliações:", error);
+    // Usar endpoint API com service role para bypass RLS
+    const response = await fetch("/api/reviews");
+    
+    if (!response.ok) {
+      console.error("[ReviewsAPI] Erro ao buscar avaliações via API:", response.statusText);
       return [];
     }
 
+    const data = await response.json();
     return data || [];
   } catch (err) {
     console.error("[ReviewsAPI] Erro ao buscar avaliações:", err);

@@ -289,6 +289,7 @@ interface AppContextType {
   addRule: (rule: FidelityRule) => void;
   updateRule: (rule: FidelityRule) => void;
   toggleRule: (id: string) => void;
+  deleteRule: (id: string) => void;
 
   // Refresh
   refreshData: () => void;
@@ -443,10 +444,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
           rating: sr.rating,
           comment: sr.comment || "",
           createdAt: sr.created_at,
+          professionalId: sr.professional_id,
+          professionalName: sr.professional_name || "N/A",
         }));
         setReviews(mappedReviews);
         console.log(
           `[AppContext] ${supaReviews.length} avaliações carregadas do Supabase`,
+        );
+
+        // Carregar profissionais (staff)
+        const supaStaff = await getStaffUsers();
+        const mappedProfessionals: Professional[] = supaStaff.map((staff) => ({
+          id: staff.id,
+          name: staff.name,
+          role: staff.role === "admin" || staff.role === "recepcao" ? "profissional" : staff.role as "profissional" | "recepcionista" | "medico",
+          specialty: staff.specialty || "",
+          isActive: staff.is_active,
+          servicesIds: [],
+          rating: 5.0,
+          totalAppointments: 0,
+          createdAt: staff.created_at,
+        }));
+        setProfessionals(mappedProfessionals);
+        console.log(
+          `[AppContext] ${mappedProfessionals.length} profissionais carregados do Supabase`,
+        );
+
+        // Carregar serviços
+        const supaServices = await ServicesAPI.getServices();
+        const mappedServices: Service[] = supaServices.map((s) => ({
+          id: s.id,
+          externalCode: s.external_code,
+          name: s.name,
+          categoryId: s.category_id || "",
+          categoryName: s.category_name || "",
+          price: s.price,
+          durationMinutes: s.duration_minutes || 60,
+          isActive: s.is_active,
+        }));
+        setServices(mappedServices);
+        console.log(
+          `[AppContext] ${mappedServices.length} serviços carregados do Supabase`,
         );
 
         setSupabaseLoaded(true);
@@ -875,7 +913,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch((err) =>
-        console.error("[AppContext] Erro ao alternar regra no Supabase:", err),
+        console.error(`[AppContext] Erro ao alternar regra no Supabase:`, err),
+      );
+  }, []);
+
+  const deleteRule = useCallback((id: string) => {
+    // Remover do estado local
+    setRules((prev) => prev.filter((r) => r.id !== id));
+
+    // Deletar no Supabase
+    RulesAPI.deleteRule(id)
+      .then((success) => {
+        if (success) {
+          console.log(`[AppContext] Regra ${id} excluída do Supabase`);
+        }
+      })
+      .catch((err) =>
+        console.error(`[AppContext] Erro ao excluir regra do Supabase:`, err),
       );
   }, []);
 
@@ -974,6 +1028,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addRule,
     updateRule,
     toggleRule,
+    deleteRule,
     refreshData,
   };
 
