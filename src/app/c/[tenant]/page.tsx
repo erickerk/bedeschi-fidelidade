@@ -161,8 +161,9 @@ export default function ClientAccessPage() {
             <div className="mb-8">
               <h1
                 className={`text-2xl font-light mb-2 ${isDark ? "text-white" : "text-slate-800"}`}
+                suppressHydrationWarning
               >
-                Instituto{" "}
+                <span>Instituto</span>{" "}
                 <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
                   Bedeschi
                 </span>

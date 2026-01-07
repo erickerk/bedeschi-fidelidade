@@ -26,6 +26,12 @@ import {
   Star,
   ChevronDown,
   Edit2,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  History,
+  CalendarDays,
+  Filter,
 } from "lucide-react";
 
 interface StaffSession {
@@ -57,6 +63,14 @@ export default function RecepcaoDashboard() {
   const [bonusClientSearchTerm, setBonusClientSearchTerm] =
     useState<string>("");
   const [showBonusClientDetails, setShowBonusClientDetails] = useState(false);
+
+  // Filtro de data para atendimentos
+  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [showAllDates, setShowAllDates] = useState(false);
+
+  // Modal de histórico do cliente
+  const [showClientHistory, setShowClientHistory] = useState(false);
+  const [historyClientId, setHistoryClientId] = useState<string | null>(null);
 
   // Estados para modais
   const [showNewClient, setShowNewClient] = useState(false);
@@ -372,6 +386,55 @@ export default function RecepcaoDashboard() {
     return getClientRewards(clientId).filter((r) => r.status === "available");
   };
 
+  // Obter atendimentos do cliente
+  const getClientAppointmentsHistory = (clientId: string) => {
+    return appointments
+      .filter((apt) => apt.clientId === clientId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  // Filtrar atendimentos por data
+  const filteredAppointments = showAllDates
+    ? [...appointments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    : appointments
+        .filter((apt) => apt.date === dateFilter)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Navegar entre datas
+  const navigateDate = (direction: "prev" | "next") => {
+    const current = new Date(dateFilter);
+    if (direction === "prev") {
+      current.setDate(current.getDate() - 1);
+    } else {
+      current.setDate(current.getDate() + 1);
+    }
+    setDateFilter(current.toISOString().split("T")[0]);
+  };
+
+  // Formatar data para exibição amigável
+  const formatDateDisplay = (dateStr: string) => {
+    const date = new Date(dateStr + "T12:00:00");
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) return "Hoje";
+    if (date.toDateString() === yesterday.toDateString()) return "Ontem";
+    
+    return date.toLocaleDateString("pt-BR", { 
+      weekday: "short", 
+      day: "2-digit", 
+      month: "short" 
+    });
+  };
+
+  // Abrir histórico do cliente
+  const handleOpenClientHistory = (clientId: string) => {
+    setHistoryClientId(clientId);
+    setShowClientHistory(true);
+  };
+
   if (loading) {
     return (
       <div
@@ -475,69 +538,236 @@ export default function RecepcaoDashboard() {
         {/* Aba Atendimentos */}
         {tab === "atendimentos" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2
-                className={`text-xl font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
-              >
-                Registrar Atendimento
-              </h2>
+            {/* Header com botão de novo atendimento */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2
+                  className={`text-xl font-semibold ${isDark ? "text-white" : "text-slate-800"}`}
+                >
+                  📋 Atendimentos
+                </h2>
+                <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  Registre e acompanhe todos os atendimentos
+                </p>
+              </div>
               <button
                 onClick={() => setShowNewAppointment(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 font-medium"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-semibold shadow-lg shadow-amber-500/30 transition-all hover:scale-105"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
                 Novo Atendimento
               </button>
             </div>
 
-            {/* Últimos atendimentos */}
+            {/* Filtro de Data - Simples e Intuitivo */}
             <div
-              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              className={`rounded-xl p-4 ${isDark ? "bg-slate-800" : "bg-white shadow-md border border-slate-100"}`}
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                {/* Navegação por Data */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => navigateDate("prev")}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isDark 
+                        ? "bg-slate-700 hover:bg-slate-600 text-slate-300" 
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                    }`}
+                    title="Dia anterior"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                    isDark ? "bg-slate-700" : "bg-amber-50"
+                  }`}>
+                    <CalendarDays className={`h-5 w-5 ${isDark ? "text-amber-400" : "text-amber-600"}`} />
+                    <input
+                      type="date"
+                      value={dateFilter}
+                      onChange={(e) => {
+                        setDateFilter(e.target.value);
+                        setShowAllDates(false);
+                      }}
+                      title="Selecionar data"
+                      aria-label="Selecionar data para filtrar atendimentos"
+                      className={`bg-transparent border-none outline-none font-medium ${
+                        isDark ? "text-white" : "text-slate-800"
+                      }`}
+                    />
+                    <span className={`text-sm font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                      ({formatDateDisplay(dateFilter)})
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={() => navigateDate("next")}
+                    disabled={dateFilter >= new Date().toISOString().split("T")[0]}
+                    className={`p-2 rounded-lg transition-colors ${
+                      dateFilter >= new Date().toISOString().split("T")[0]
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    } ${
+                      isDark 
+                        ? "bg-slate-700 hover:bg-slate-600 text-slate-300" 
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                    }`}
+                    title="Próximo dia"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Botões de Atalho */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setDateFilter(new Date().toISOString().split("T")[0]);
+                      setShowAllDates(false);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      dateFilter === new Date().toISOString().split("T")[0] && !showAllDates
+                        ? isDark
+                          ? "bg-amber-500 text-slate-900"
+                          : "bg-amber-500 text-white"
+                        : isDark
+                          ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    📅 Hoje
+                  </button>
+                  <button
+                    onClick={() => setShowAllDates(!showAllDates)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      showAllDates
+                        ? isDark
+                          ? "bg-amber-500 text-slate-900"
+                          : "bg-amber-500 text-white"
+                        : isDark
+                          ? "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    📊 Ver Todos
+                  </button>
+                </div>
+              </div>
+
+              {/* Resumo do dia */}
+              <div className={`mt-4 pt-4 border-t ${isDark ? "border-slate-700" : "border-slate-100"}`}>
+                <div className="flex items-center justify-between">
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    {showAllDates 
+                      ? `📈 Total: ${filteredAppointments.length} atendimento(s)` 
+                      : `📈 ${formatDateDisplay(dateFilter)}: ${filteredAppointments.length} atendimento(s)`}
+                  </p>
+                  <p className={`text-sm font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                    💰 {formatCurrency(filteredAppointments.reduce((sum, apt) => sum + apt.total, 0))}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de Atendimentos */}
+            <div
+              className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white shadow-md border border-slate-100"}`}
             >
               <h3
-                className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-800"}`}
+                className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? "text-white" : "text-slate-800"}`}
               >
-                Atendimentos Recentes
+                <History className="h-5 w-5" />
+                {showAllDates ? "Todos os Atendimentos" : `Atendimentos - ${formatDateDisplay(dateFilter)}`}
               </h3>
               <div className="space-y-3">
-                {appointments.slice(0, 10).map((apt) => (
-                  <div
-                    key={apt.id}
-                    className={`flex items-center justify-between p-4 rounded-lg ${isDark ? "bg-slate-700/50" : "bg-slate-50"}`}
-                  >
-                    <div>
-                      <p
-                        className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}
-                      >
-                        {apt.clientName ||
-                          clients.find((c) => c.id === apt.clientId)?.name}
-                      </p>
-                      <p
-                        className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                      >
-                        {apt.services.map((s) => s.name).join(", ")}
-                      </p>
+                {filteredAppointments.map((apt) => {
+                  const client = clients.find((c) => c.id === apt.clientId);
+                  return (
+                    <div
+                      key={apt.id}
+                      className={`p-4 rounded-xl transition-all hover:scale-[1.01] ${
+                        isDark 
+                          ? "bg-slate-700/50 hover:bg-slate-700" 
+                          : "bg-gradient-to-r from-slate-50 to-amber-50/30 hover:from-slate-100 hover:to-amber-50/50 border border-slate-100"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p
+                              className={`font-semibold text-lg ${isDark ? "text-white" : "text-slate-800"}`}
+                            >
+                              {apt.clientName || client?.name || "Cliente"}
+                            </p>
+                            {client && (
+                              <button
+                                onClick={() => handleOpenClientHistory(client.id)}
+                                className={`p-1 rounded transition-colors ${
+                                  isDark 
+                                    ? "hover:bg-slate-600 text-slate-400 hover:text-amber-400" 
+                                    : "hover:bg-amber-100 text-slate-400 hover:text-amber-600"
+                                }`}
+                                title="Ver histórico completo"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                          <p
+                            className={`text-sm mb-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                          >
+                            🩺 {apt.services.map((s) => s.name).join(" • ")}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className={isDark ? "text-slate-500" : "text-slate-400"}>
+                              👨‍⚕️ {apt.professionalName || "Profissional"}
+                            </span>
+                            <span className={isDark ? "text-slate-500" : "text-slate-400"}>
+                              🕐 {apt.time || "—"}
+                            </span>
+                            {showAllDates && (
+                              <span className={`px-2 py-0.5 rounded ${isDark ? "bg-slate-600 text-slate-300" : "bg-slate-200 text-slate-600"}`}>
+                                📅 {formatDate(apt.date)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p
+                            className={`font-bold text-lg ${isDark ? "text-amber-400" : "text-amber-600"}`}
+                          >
+                            {formatCurrency(apt.total)}
+                          </p>
+                          <p
+                            className={`text-xs px-2 py-1 rounded-full inline-block ${
+                              isDark 
+                                ? "bg-emerald-500/20 text-emerald-400" 
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            +{apt.pointsEarned} pts
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p
-                        className={`font-medium ${isDark ? "text-amber-400" : "text-amber-600"}`}
-                      >
-                        {formatCurrency(apt.total)}
-                      </p>
-                      <p
-                        className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}
-                      >
-                        {formatDate(apt.date)} • +{apt.pointsEarned} pts
-                      </p>
-                    </div>
+                  );
+                })}
+                {filteredAppointments.length === 0 && (
+                  <div className={`text-center py-12 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-1">Nenhum atendimento</p>
+                    <p className="text-sm">
+                      {showAllDates 
+                        ? "Ainda não há atendimentos registrados" 
+                        : `Nenhum atendimento em ${formatDateDisplay(dateFilter)}`}
+                    </p>
+                    <button
+                      onClick={() => setShowNewAppointment(true)}
+                      className="mt-4 px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors"
+                    >
+                      + Registrar Atendimento
+                    </button>
                   </div>
-                ))}
-                {appointments.length === 0 && (
-                  <p
-                    className={`text-center py-8 ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                  >
-                    Nenhum atendimento registrado
-                  </p>
                 )}
               </div>
             </div>
@@ -648,7 +878,19 @@ export default function RecepcaoDashboard() {
                           {client.totalAppointments}
                         </td>
                         <td className="p-4">
-                          <div className="flex gap-2 justify-end">
+                          <div className="flex gap-2 justify-end flex-wrap">
+                            <button
+                              onClick={() => handleOpenClientHistory(client.id)}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
+                                isDark
+                                  ? "bg-purple-500/10 text-purple-300"
+                                  : "bg-purple-50 text-purple-700"
+                              }`}
+                              title="Ver histórico completo de atendimentos"
+                            >
+                              <History className="h-3 w-3 inline mr-1" />
+                              Histórico ({getClientAppointmentsHistory(client.id).length})
+                            </button>
                             <button
                               onClick={() => handleEditClient(client)}
                               className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
@@ -1820,6 +2062,179 @@ export default function RecepcaoDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal Histórico do Cliente */}
+      {showClientHistory && historyClientId && (() => {
+        const client = clients.find((c) => c.id === historyClientId);
+        const clientHistory = getClientAppointmentsHistory(historyClientId);
+        const totalGasto = clientHistory.reduce((sum, apt) => sum + apt.total, 0);
+        const totalPontos = clientHistory.reduce((sum, apt) => sum + apt.pointsEarned, 0);
+        
+        // Agrupar por mês
+        const groupedByMonth: { [key: string]: typeof clientHistory } = {};
+        clientHistory.forEach((apt) => {
+          const date = new Date(apt.date + "T12:00:00");
+          const monthKey = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+          if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
+          groupedByMonth[monthKey].push(apt);
+        });
+
+        if (!client) return null;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+            <div
+              className={`w-full max-w-2xl rounded-2xl p-6 my-8 ${isDark ? "bg-slate-800" : "bg-white"}`}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3
+                    className={`text-xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}
+                  >
+                    📋 Histórico de Atendimentos
+                  </h3>
+                  <p className={`text-lg font-medium mt-1 ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                    {client.name}
+                  </p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    {formatPhone(client.phone)} • PIN: {client.pin}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowClientHistory(false);
+                    setHistoryClientId(null);
+                  }}
+                  className={`p-2 rounded-lg ${isDark ? "hover:bg-slate-700 text-slate-400" : "hover:bg-slate-100 text-slate-500"}`}
+                  aria-label="Fechar"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Resumo Geral */}
+              <div className={`grid grid-cols-3 gap-4 mb-6 p-4 rounded-xl ${isDark ? "bg-slate-700/50" : "bg-amber-50"}`}>
+                <div className="text-center">
+                  <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-800"}`}>
+                    {clientHistory.length}
+                  </p>
+                  <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Atendimentos
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className={`text-2xl font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                    {formatCurrency(totalGasto)}
+                  </p>
+                  <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Total Gasto
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className={`text-2xl font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                    {totalPontos}
+                  </p>
+                  <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Pontos Ganhos
+                  </p>
+                </div>
+              </div>
+
+              {/* Lista de Atendimentos Agrupados */}
+              <div className={`max-h-96 overflow-y-auto rounded-xl ${isDark ? "bg-slate-900/50" : "bg-slate-50"} p-4`}>
+                {clientHistory.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className={`h-12 w-12 mx-auto mb-3 opacity-50 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+                    <p className={`text-lg font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                      Nenhum atendimento registrado
+                    </p>
+                    <p className={`text-sm ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                      Este cliente ainda não possui atendimentos
+                    </p>
+                  </div>
+                ) : (
+                  Object.entries(groupedByMonth).map(([month, apts]) => (
+                    <div key={month} className="mb-6 last:mb-0">
+                      <h4 className={`text-sm font-semibold uppercase tracking-wider mb-3 sticky top-0 py-2 ${
+                        isDark ? "text-amber-400 bg-slate-900/90" : "text-amber-600 bg-slate-50/90"
+                      }`}>
+                        📅 {month} ({apts.length} atendimento{apts.length > 1 ? "s" : ""})
+                      </h4>
+                      <div className="space-y-2">
+                        {apts.map((apt, idx) => (
+                          <div
+                            key={apt.id}
+                            className={`p-3 rounded-lg ${
+                              isDark 
+                                ? "bg-slate-800 border border-slate-700" 
+                                : "bg-white border border-slate-200 shadow-sm"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                    isDark ? "bg-slate-700 text-slate-300" : "bg-slate-100 text-slate-600"
+                                  }`}>
+                                    {formatDate(apt.date)}
+                                  </span>
+                                  {apt.time && (
+                                    <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                                      {apt.time}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-700"}`}>
+                                  {apt.services.map((s) => s.name).join(" • ")}
+                                </p>
+                                <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                                  👨‍⚕️ {apt.professionalName || "Profissional não informado"}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className={`font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                                  {formatCurrency(apt.total)}
+                                </p>
+                                <p className={`text-xs ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                                  +{apt.pointsEarned} pts
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer com Info de Verificação */}
+              {clientHistory.length > 0 && (
+                <div className={`mt-4 p-3 rounded-lg ${isDark ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
+                  <p className={`text-sm ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
+                    ✅ <strong>Verificação:</strong> {clientHistory.length} atendimento(s) registrado(s) para {client.name}. 
+                    Último atendimento: {formatDate(clientHistory[0]?.date || "")}
+                  </p>
+                </div>
+              )}
+
+              {/* Botão Fechar */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowClientHistory(false);
+                    setHistoryClientId(null);
+                  }}
+                  className="px-6 py-2 rounded-lg font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
