@@ -138,19 +138,6 @@ export default function AdminDashboard() {
   const [showRulesHelp, setShowRulesHelp] = useState(false);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
 
-  // Categorias dinâmicas extraídas dos serviços
-  const categories = useMemo(() => {
-    const uniqueCats = new Map<string, { id: string; name: string }>();
-    services.forEach((s) => {
-      if (s.categoryId && s.categoryName) {
-        uniqueCats.set(s.categoryId, { id: s.categoryId, name: s.categoryName });
-      }
-    });
-    return Array.from(uniqueCats.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-  }, [services]);
-
   // Filtros
   const [clientFilter, setClientFilter] = useState<
     "all" | "withRewards" | "vip" | "inactive"
@@ -243,6 +230,19 @@ export default function AdminDashboard() {
 
   const isDark = theme === "dark";
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+
+  // Categorias dinâmicas extraídas dos serviços
+  const categories = useMemo(() => {
+    const uniqueCats = new Map<string, { id: string; name: string }>();
+    services.forEach((s) => {
+      if (s.categoryId && s.categoryName) {
+        uniqueCats.set(s.categoryId, { id: s.categoryId, name: s.categoryName });
+      }
+    });
+    return Array.from(uniqueCats.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [services]);
 
   // Services agora vêm do AppContext via Supabase
 
@@ -3326,29 +3326,7 @@ export default function AdminDashboard() {
                               <Edit2 className="h-3 w-3" />
                               Editar
                             </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleServiceStatus(s)
-                              }
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
-                                s.isActive
-                                  ? "bg-red-500/20 text-red-500 hover:bg-red-500/30"
-                                  : "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
-                              }`}
-                            >
-                              {s.isActive ? (
-                                <>
-                                  <EyeOff className="h-3 w-3" />
-                                  Desativar
-                                </>
-                              ) : (
-                                <>
-                                  <Eye className="h-3 w-3" />
-                                  Ativar
-                                </>
-                              )}
-                            </button>
+                            {/* TODO: Implementar toggle de serviço quando API estiver disponível */}
                           </div>
                         </td>
                       </tr>
