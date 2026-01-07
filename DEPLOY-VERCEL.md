@@ -22,6 +22,7 @@
 - ✅ `CORRECOES-AVALIACOES.md` (documentação das correções)
 
 **Status Git**:
+
 ```bash
 
 ✅ Branch: main
@@ -56,7 +57,8 @@ O Vercel está conectado ao repositório GitHub e faz deploy automático quando:
 Se o deploy automático não disparou, você pode forçar manualmente:
 
 ### Opção 1: Via Vercel Dashboard
-1. Acesse https://vercel.com/dashboard
+
+1. Acesse <https://vercel.com/dashboard>
 2. Selecione o projeto
 3. Clique em **Deployments**
 4. Clique no botão **Redeploy** no último deploy
@@ -95,7 +97,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-**Atenção**: 
+**Atenção**:
 - `SUPABASE_SERVICE_ROLE_KEY` é necessária para o endpoint `/api/reviews`
 - Se não estiver configurada, o carregamento de avaliações falhará em produção
 
@@ -211,7 +213,7 @@ Após cada deploy, validar:
 4. ✅ Profissionais e serviços carregando nos formulários
 5. ✅ Endpoint API `/api/reviews` para bypass RLS
 
-**Status**: 
+**Status**:
 - ✅ Código no GitHub: Atualizado
 - ⏳ Vercel: Aguardando redeploy automático ou manual
 
