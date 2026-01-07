@@ -13,6 +13,13 @@ const nextConfig = {
     return `build-${Date.now()}`;
   },
 
+  // Garantir que rotas API sejam tratadas corretamente
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["localhost:3000", "*.vercel.app"],
+    },
+  },
+
   // Configuração de imagens
   images: {
     remotePatterns: [
