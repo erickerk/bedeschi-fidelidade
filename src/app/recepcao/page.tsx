@@ -329,7 +329,7 @@ export default function RecepcaoDashboard() {
     console.log("✅ Atendimento criado:", appointment);
 
     try {
-      addAppointment(appointment);
+      await addAppointment(appointment);
 
       alert(
         `✅ Atendimento registrado com sucesso!\n\nCliente: ${client.name}\nProfissional: ${professional.name}\nTotal: R$ ${total.toFixed(2)}\nPontos ganhos: ${Math.floor(total)}`,

@@ -264,7 +264,7 @@ interface AppContextType {
 
   // Ações de Atendimentos
   getClientAppointments: (clientId: string) => Appointment[];
-  addAppointment: (appointment: Appointment) => void;
+  addAppointment: (appointment: Appointment) => Promise<void>;
   updateAppointment: (appointment: Appointment) => void;
   getClientPendingReview: (clientId: string) => Appointment | undefined;
 
@@ -621,26 +621,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const addAppointment = useCallback(
-    (appointment: Appointment) => {
-      setAppointments((prev) => [appointment, ...prev]);
-
+    async (appointment: Appointment) => {
       const client = clients.find((c) => c.id === appointment.clientId);
       if (!client) {
+        console.error(`[AppContext] ❌ Cliente ${appointment.clientId} não encontrado`);
         return;
       }
 
-      const clientBefore = client;
-      const clientAfter: Client = {
-        ...clientBefore,
-        pointsBalance: clientBefore.pointsBalance + appointment.pointsEarned,
-        totalSpent: clientBefore.totalSpent + appointment.total,
-        totalAppointments: clientBefore.totalAppointments + 1,
-        lastVisit: appointment.date,
-      };
+      console.log(`[AppContext] 📝 Criando atendimento para cliente ${client.name} (ID: ${client.id})`);
 
-      // Persistir agendamento no Supabase
-      AppointmentsAPI.createAppointment({
-        client_id: appointment.clientId,
+      // Persistir agendamento no Supabase PRIMEIRO
+      const createdAppointment = await AppointmentsAPI.createAppointment({
+        client_id: client.id,
         client_name: appointment.clientName,
         professional_id: appointment.professionalId,
         professional_name: appointment.professionalName,
@@ -653,15 +645,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
           service_name: s.name,
           price: s.price,
         })),
-      }).catch((err) =>
-        console.error(
-          "[AppContext] Erro ao criar agendamento no Supabase:",
-          err,
-        ),
-      );
+      }).catch((err) => {
+        console.error("[AppContext] ❌ Erro ao criar agendamento no Supabase:", err);
+        return null;
+      });
+
+      if (!createdAppointment) {
+        alert("❌ Erro ao salvar atendimento. Verifique se o cliente está cadastrado no sistema.");
+        return;
+      }
+
+      // Usar o ID real do Supabase
+      const appointmentWithRealId = {
+        ...appointment,
+        id: createdAppointment.id,
+      };
+
+      setAppointments((prev) => [appointmentWithRealId, ...prev]);
+      console.log(`[AppContext] ✅ Atendimento ${createdAppointment.id} criado no Supabase`);
+
+      const clientBefore = client;
+      const clientAfter: Client = {
+        ...clientBefore,
+        pointsBalance: clientBefore.pointsBalance + appointment.pointsEarned,
+        totalSpent: clientBefore.totalSpent + appointment.total,
+        totalAppointments: clientBefore.totalAppointments + 1,
+        lastVisit: appointment.date,
+      };
+
+      // Atualizar estatísticas do cliente no Supabase
+      await ClientsAPI.updateClientStats(
+        client.id,
+        appointment.pointsEarned,
+        appointment.total,
+        appointment.date
+      ).then((updated) => {
+        if (updated) {
+          console.log(`[AppContext] ✅ Estatísticas do cliente ${client.name} atualizadas`);
+          setClients((prev) => prev.map((c) => c.id === client.id ? clientAfter : c));
+        } else {
+          console.error(`[AppContext] ❌ Erro ao atualizar estatísticas do cliente`);
+        }
+      }).catch((err) => {
+        console.error("[AppContext] ❌ Erro ao atualizar cliente:", err);
+      });
 
       evaluateFidelityRulesForAppointment({
-        appointment,
+        appointment: appointmentWithRealId,
         clientBefore,
         clientAfter,
         allAppointmentsBefore: appointments,
@@ -677,18 +707,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
             value: reward.value,
             service_name: reward.serviceName,
             expires_at: reward.expiresAt,
+          }).then(() => {
+            console.log(`[AppContext] ✅ Recompensa criada para ${client.name}`);
           }).catch((err) =>
             console.error(
-              "[AppContext] Erro ao criar recompensa no Supabase:",
+              "[AppContext] ❌ Erro ao criar recompensa no Supabase:",
               err,
             ),
           );
         },
       });
-
-      updateClient(clientAfter);
     },
-    [clients, appointments, rules, updateClient],
+    [clients, appointments, rules],
   );
 
   const updateAppointment = useCallback((appointment: Appointment) => {
