@@ -3,6 +3,7 @@
 import "./charts.css";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useApp } from "@/lib/app-context";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -23,6 +24,7 @@ import {
   createStaffUser,
   getStaffUsers,
   deactivateStaffUser,
+  deleteStaffUser,
   type StaffUser,
 } from "@/lib/staff-users-api";
 import {
@@ -1013,14 +1015,17 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="shrink-0">
-              <img
+              <Image
                 src="/Logo.png"
                 alt="Instituto Bedeschi"
+                width={120}
+                height={36}
                 className={`h-9 w-auto object-contain ${
                   isDark
                     ? "drop-shadow-[0_0_22px_rgba(251,191,36,0.45)]"
                     : "drop-shadow-[0_0_18px_rgba(148,163,184,0.55)]"
                 }`}
+                priority
               />
             </div>
             <div>
@@ -2542,9 +2547,14 @@ export default function AdminDashboard() {
                             Cadastrado em
                           </th>
                           <th
-                            className={`text-right py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                            className={`text-left py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}
                           >
                             Status
+                          </th>
+                          <th
+                            className={`text-right py-3 px-4 text-sm font-semibold ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                          >
+                            Ações
                           </th>
                         </tr>
                       </thead>
@@ -2616,10 +2626,34 @@ export default function AdminDashboard() {
                                 },
                               )}
                             </td>
-                            <td className="py-4 px-4 text-right">
+                            <td className="py-4 px-4">
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
                                 Ativo
                               </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`Tem certeza que deseja excluir o usuário "${user.name}"? Esta ação não pode ser desfeita.`)) {
+                                    try {
+                                      await deleteStaffUser(user.id);
+                                      setStaffUsers(prev => prev.filter(u => u.id !== user.id));
+                                      alert("Usuário excluído com sucesso!");
+                                    } catch (error) {
+                                      alert("Erro ao excluir usuário. Tente novamente.");
+                                      console.error("Erro ao excluir:", error);
+                                    }
+                                  }
+                                }}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  isDark
+                                    ? "hover:bg-red-500/20 text-red-400 hover:text-red-300"
+                                    : "hover:bg-red-50 text-red-500 hover:text-red-600"
+                                }`}
+                                title="Excluir usuário"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </td>
                           </tr>
                         ))}

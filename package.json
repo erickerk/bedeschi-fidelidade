@@ -20,6 +20,7 @@
     "db:migrate": "supabase db push",
     "db:seed": "supabase db seed",
     "db:reset": "supabase db reset",
+    "seed:test": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/seed-test-data.ts",
     "db:studio": "supabase studio",
     "db:types": "supabase gen types typescript --local > src/types/database.ts",
     "prepare": "husky"

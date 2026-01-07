@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, lazy, Suspense } from "react";
+import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { useApp } from "@/lib/app-context";
 
@@ -146,14 +147,17 @@ export default function ClientAccessPage() {
               <div
                 className={`absolute inset-0 blur-3xl opacity-20 ${isDark ? "bg-amber-500" : "bg-amber-400"}`}
               />
-              <img
+              <Image
                 src="/Logo.png"
                 alt="Instituto Bedeschi"
+                width={200}
+                height={128}
                 className={`h-32 w-auto mx-auto object-contain relative z-10 ${
                   isDark
                     ? "drop-shadow-[0_0_40px_rgba(251,191,36,0.6)]"
                     : "drop-shadow-[0_0_35px_rgba(217,119,6,0.4)]"
                 }`}
+                priority
               />
             </div>
 
