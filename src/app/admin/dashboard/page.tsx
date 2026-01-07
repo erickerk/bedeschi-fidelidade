@@ -200,6 +200,7 @@ export default function AdminDashboard() {
     professionals,
     rules,
     updateClient,
+    deleteClient,
     addProfessional,
     updateProfessional,
     removeProfessional,
@@ -342,6 +343,27 @@ export default function AdminDashboard() {
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${phoneWithCountry}?text=${encodedMessage}`;
     window.open(url, "_blank");
+  };
+
+  // Excluir cliente (apenas admin)
+  const handleDeleteClient = async (client: Client) => {
+    const confirmed = window.confirm(
+      `⚠️ ATENÇÃO: Tem certeza que deseja excluir o cliente "${client.name}"?\n\n` +
+      `Esta ação irá remover permanentemente:\n` +
+      `- Todos os atendimentos do cliente\n` +
+      `- Todas as recompensas do cliente\n` +
+      `- Todos os dados do cliente\n\n` +
+      `Esta ação NÃO pode ser desfeita!`
+    );
+
+    if (!confirmed) return;
+
+    const success = await deleteClient(client.id);
+    if (success) {
+      alert(`✅ Cliente "${client.name}" excluído com sucesso!`);
+    } else {
+      alert(`❌ Erro ao excluir cliente "${client.name}". Tente novamente.`);
+    }
   };
 
   // Estado para modal de usar bônus
@@ -2394,6 +2416,19 @@ export default function AdminDashboard() {
                         >
                           <Send className="h-3 w-3" />
                           WhatsApp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteClient(client)}
+                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            isDark
+                              ? "bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                              : "bg-red-50 text-red-700 hover:bg-red-100"
+                          }`}
+                          aria-label={`Excluir cliente ${client.name}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Excluir
                         </button>
                       </td>
                     </tr>

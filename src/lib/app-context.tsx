@@ -254,7 +254,8 @@ interface AppContextType {
   getClientById: (id: string) => Client | undefined;
   getClientByPhone: (phone: string) => Client | undefined;
   updateClient: (client: Client) => void;
-  addClient: (client: Client) => void;
+  addClient: (client: Client) => Promise<Client | null>;
+  deleteClient: (clientId: string) => Promise<boolean>;
 
   // Ações de Recompensas
   getClientRewards: (clientId: string) => Reward[];
@@ -506,31 +507,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const addClient = useCallback((client: Client) => {
-    setClients((prev) => [...prev, client]);
+  const addClient = useCallback(async (client: Client): Promise<Client | null> => {
+    // Primeiro, criar no Supabase para garantir persistência
+    try {
+      const created = await ClientsAPI.createClient({
+        name: client.name,
+        phone: client.phone,
+        pin: client.pin,
+        email: client.email,
+        birth_date: client.birthDate,
+      });
 
-    // Persistir no Supabase
-    ClientsAPI.createClient({
-      name: client.name,
-      phone: client.phone,
-      pin: client.pin,
-      email: client.email,
-      birth_date: client.birthDate,
-    })
-      .then((created) => {
-        if (created) {
-          // Atualizar o ID local com o ID real do Supabase
-          setClients((prev) =>
-            prev.map((c) =>
-              c.id === client.id ? { ...c, id: created.id } : c,
-            ),
-          );
-          console.log(`[AppContext] Cliente ${client.name} criado no Supabase`);
-        }
-      })
-      .catch((err) =>
-        console.error("[AppContext] Erro ao criar cliente no Supabase:", err),
-      );
+      if (created) {
+        // Usar o ID real do Supabase
+        const clientWithRealId: Client = {
+          ...client,
+          id: created.id,
+        };
+        setClients((prev) => [...prev, clientWithRealId]);
+        console.log(`[AppContext] ✅ Cliente ${client.name} criado no Supabase com ID: ${created.id}`);
+        return clientWithRealId;
+      } else {
+        console.error("[AppContext] ❌ Falha ao criar cliente no Supabase");
+        // Adicionar localmente mesmo assim para não perder dados
+        setClients((prev) => [...prev, client]);
+        return client;
+      }
+    } catch (err) {
+      console.error("[AppContext] ❌ Erro ao criar cliente no Supabase:", err);
+      // Adicionar localmente mesmo assim para não perder dados
+      setClients((prev) => [...prev, client]);
+      return client;
+    }
+  }, []);
+
+  // Excluir cliente (apenas admin)
+  const deleteClient = useCallback(async (clientId: string): Promise<boolean> => {
+    try {
+      const success = await ClientsAPI.deleteClient(clientId);
+      if (success) {
+        setClients((prev) => prev.filter((c) => c.id !== clientId));
+        console.log(`[AppContext] ✅ Cliente ${clientId} excluído do Supabase`);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("[AppContext] ❌ Erro ao excluir cliente:", err);
+      return false;
+    }
   }, []);
 
   // Recompensas
@@ -920,6 +944,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getClientByPhone,
     updateClient,
     addClient,
+    deleteClient,
     getClientRewards,
     redeemReward,
     addReward,

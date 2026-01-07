@@ -197,7 +197,7 @@ export async function updateClientStats(
   });
 }
 
-// Desativar cliente
+// Desativar cliente (soft delete)
 export async function deactivateClient(id: string): Promise<boolean> {
   const { error } = await supabase
     .from("fidelity_clients")
@@ -209,6 +209,43 @@ export async function deactivateClient(id: string): Promise<boolean> {
     return false;
   }
 
+  return true;
+}
+
+// Excluir cliente permanentemente (apenas admin)
+export async function deleteClient(id: string): Promise<boolean> {
+  // Primeiro excluir os agendamentos relacionados
+  const { error: aptError } = await supabase
+    .from("fidelity_appointments")
+    .delete()
+    .eq("client_id", id);
+
+  if (aptError) {
+    console.error("Erro ao excluir agendamentos do cliente:", aptError);
+  }
+
+  // Excluir recompensas relacionadas
+  const { error: rewardError } = await supabase
+    .from("fidelity_rewards")
+    .delete()
+    .eq("client_id", id);
+
+  if (rewardError) {
+    console.error("Erro ao excluir recompensas do cliente:", rewardError);
+  }
+
+  // Excluir o cliente
+  const { error } = await supabase
+    .from("fidelity_clients")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Erro ao excluir cliente:", error);
+    return false;
+  }
+
+  console.log(`Cliente ${id} excluído permanentemente`);
   return true;
 }
 
