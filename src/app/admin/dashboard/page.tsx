@@ -4758,7 +4758,7 @@ export default function AdminDashboard() {
                         return;
                       }
 
-                      const csvData = reportData.map((r) => ({
+                      const csvData = reportData.map((r: any) => ({
                         Cliente: r.clientName,
                         Telefone: r.clientPhone,
                         Nota: r.rating,
