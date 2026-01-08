@@ -99,6 +99,7 @@ Opções disponíveis:
 7. Juliana Lima
 8. Dra. Amanda Costa
 ```
+
 **Total: 7 profissionais + opção "Todos"** ✅
 
 #### ✅ Dropdown de Categorias de Procedimentos
@@ -116,6 +117,7 @@ Opções disponíveis:
 9. Massagens
 10. Sobrancelhas
 ```
+
 **Total: 9 categorias + opção "Todos"** ✅
 
 #### ✅ Top 10 Procedimentos Mais Realizados
@@ -132,6 +134,7 @@ Opções disponíveis:
 9. Hidratação Facial - R$ 340,00 (2x)
 10. Microagulhamento - R$ 900,00 (2x)
 ```
+
 **Total: 11 serviços diferentes identificados** ✅
 
 ---
