@@ -129,6 +129,7 @@
 Todos os 10 procedimentos exibindo corretamente com receita e quantidade.
 
 #### Performance da Equipe ✅
+
 Todos os 7 profissionais com receita, atendimentos e avaliações corretas.
 
 ---
