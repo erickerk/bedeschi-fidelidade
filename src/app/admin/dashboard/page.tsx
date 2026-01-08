@@ -4550,7 +4550,7 @@ export default function AdminDashboard() {
                   onClick={() =>
                     exportToCSV(
                       filteredAppointmentsByDate.map((a) => ({
-                        Cliente: a.clientName,
+                        Cliente: clients.find((c) => c.id === a.clientId)?.name || a.clientName || "",
                         Data: a.date,
                         Hora: a.time,
                         Servicos: a.services.map((s) => s.name).join("; "),
