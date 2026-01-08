@@ -62,27 +62,16 @@ export async function createReview(review: {
 
 export async function getReviewsForReport() {
   try {
-    const { data, error } = await supabase
-      .from("fidelity_reviews")
-      .select(`
-        *,
-        fidelity_clients (
-          name,
-          phone
-        )
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[ReviewsAPI] Erro ao buscar avaliações para relatório:", error);
+    // Usar endpoint API server-side para bypass RLS e obter dados completos
+    const response = await fetch("/api/reviews/report");
+    
+    if (!response.ok) {
+      console.error("[ReviewsAPI] Erro ao buscar avaliações para relatório via API:", response.statusText);
       return [];
     }
 
-    return data.map(item => ({
-      ...item,
-      clientName: item.fidelity_clients?.name || "Cliente não encontrado",
-      clientPhone: item.fidelity_clients?.phone || ""
-    }));
+    const data = await response.json();
+    return data || [];
   } catch (err) {
     console.error("[ReviewsAPI] Erro ao buscar avaliações para relatório:", err);
     return [];

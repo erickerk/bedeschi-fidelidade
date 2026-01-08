@@ -40,6 +40,7 @@ function addDays(baseDateIso: string, days: number): string {
 }
 
 // Helper para avaliar regras de fidelidade
+// Garante que cada cliente entre em cada regra apenas UMA VEZ por transação
 function evaluateFidelityRulesForAppointment(params: {
   appointment: Appointment;
   clientBefore: Client;
@@ -80,18 +81,25 @@ function evaluateFidelityRulesForAppointment(params: {
     (a) => a.clientId === clientId && a.status === "completed",
   );
 
+  // Rastrear quais regras já geraram recompensas nesta transação
+  const rulesTriggeredInThisTransaction = new Set<string>();
+
   for (const rule of rules) {
     if (!rule.isActive) continue;
+    
+    // Evitar múltiplas entradas na mesma regra durante uma transação
+    if (rulesTriggeredInThisTransaction.has(rule.id)) continue;
 
     if (rule.type === "COMBO_VALUE" && rule.thresholdValue) {
       const beforeTotal = clientBefore.totalSpent;
       const afterTotal = clientAfter.totalSpent;
       
-      // Lógica cíclica: verifica se completou um novo ciclo do valor (ex: a cada 1000)
-      const cyclesBefore = Math.floor(beforeTotal / rule.thresholdValue);
-      const cyclesAfter = Math.floor(afterTotal / rule.thresholdValue);
+      // Verifica se cruzou o limiar apenas uma vez nesta transação
+      const beforeCycles = Math.floor(beforeTotal / rule.thresholdValue);
+      const afterCycles = Math.floor(afterTotal / rule.thresholdValue);
 
-      if (cyclesAfter > cyclesBefore) {
+      // Só gera recompensa se cruzou o limiar exatamente uma vez
+      if (afterCycles > beforeCycles && afterCycles - beforeCycles === 1) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -114,6 +122,7 @@ function evaluateFidelityRulesForAppointment(params: {
           createdAt: baseDateIso,
         };
         onReward(reward);
+        rulesTriggeredInThisTransaction.add(rule.id);
       }
       continue;
     }
@@ -126,11 +135,11 @@ function evaluateFidelityRulesForAppointment(params: {
       const beforePoints = clientBefore.pointsBalance;
       const afterPoints = clientAfter.pointsBalance;
       
-      // Lógica cíclica para pontos
-      const cyclesBefore = Math.floor(beforePoints / rule.thresholdValue);
-      const cyclesAfter = Math.floor(afterPoints / rule.thresholdValue);
+      // Verifica se cruzou o limiar apenas uma vez nesta transação
+      const beforeCycles = Math.floor(beforePoints / rule.thresholdValue);
+      const afterCycles = Math.floor(afterPoints / rule.thresholdValue);
 
-      if (cyclesAfter > cyclesBefore) {
+      if (afterCycles > beforeCycles && afterCycles - beforeCycles === 1) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -145,6 +154,7 @@ function evaluateFidelityRulesForAppointment(params: {
           createdAt: baseDateIso,
         };
         onReward(reward);
+        rulesTriggeredInThisTransaction.add(rule.id);
       }
       continue;
     }
@@ -171,10 +181,10 @@ function evaluateFidelityRulesForAppointment(params: {
       }
 
       const totalMatchesAfter = matchesBefore + matchesInNew;
-      const cyclesBefore = Math.floor(matchesBefore / rule.thresholdQuantity);
-      const cyclesAfter = Math.floor(totalMatchesAfter / rule.thresholdQuantity);
+      const beforeCycles = Math.floor(matchesBefore / rule.thresholdQuantity);
+      const afterCycles = Math.floor(totalMatchesAfter / rule.thresholdQuantity);
 
-      if (cyclesAfter > cyclesBefore) {
+      if (afterCycles > beforeCycles && afterCycles - beforeCycles === 1) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -189,6 +199,7 @@ function evaluateFidelityRulesForAppointment(params: {
           createdAt: baseDateIso,
         };
         onReward(reward);
+        rulesTriggeredInThisTransaction.add(rule.id);
       }
       continue;
     }
@@ -223,10 +234,10 @@ function evaluateFidelityRulesForAppointment(params: {
       }
 
       const totalMatchesAfter = matchesBefore + matchesInNew;
-      const cyclesBefore = Math.floor(matchesBefore / rule.thresholdQuantity);
-      const cyclesAfter = Math.floor(totalMatchesAfter / rule.thresholdQuantity);
+      const beforeCycles = Math.floor(matchesBefore / rule.thresholdQuantity);
+      const afterCycles = Math.floor(totalMatchesAfter / rule.thresholdQuantity);
 
-      if (cyclesAfter > cyclesBefore) {
+      if (afterCycles > beforeCycles && afterCycles - beforeCycles === 1) {
         const expiresAt = addDays(baseDateIso, rule.validityDays);
         const reward: Reward = {
           id: `rwd-${rule.id}-${clientId}-${Date.now()}`,
@@ -241,6 +252,7 @@ function evaluateFidelityRulesForAppointment(params: {
           createdAt: baseDateIso,
         };
         onReward(reward);
+        rulesTriggeredInThisTransaction.add(rule.id);
       }
       continue;
     }

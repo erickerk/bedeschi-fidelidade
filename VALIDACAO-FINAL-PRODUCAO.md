@@ -40,6 +40,7 @@ Todos os dados estão sincronizados entre desenvolvimento local, GitHub e Vercel
 ### 1. Endpoints API
 
 **✅ `/api/health`**
+
 ```json
 {
   "status": "ok",
@@ -63,11 +64,13 @@ Todos os dados estão sincronizados entre desenvolvimento local, GitHub e Vercel
 ### 3. Dados Carregados
 
 #### Clientes ✅
+
 - **15 clientes** cadastrados e visíveis
 - Todos os dados corretos: telefone, PIN, email, pontos, gastos
 - Exemplos: Ana Paula Santos, Maria Silva, Erick, Camila Rodrigues
 
 #### Equipe ✅
+
 - **7 profissionais** cadastrados
 - Funções corretas:
   - 1 Médico: Dra. Amanda Costa
@@ -75,6 +78,7 @@ Todos os dados estão sincronizados entre desenvolvimento local, GitHub e Vercel
   - 3 Recepção/Admin: Teste, Julia Atendente, Administrador
 
 #### Analytics ✅
+
 - Receita Total: R$ 13.735,00
 - Atendimentos: 34
 - Ticket Médio: R$ 403,97
@@ -83,6 +87,7 @@ Todos os dados estão sincronizados entre desenvolvimento local, GitHub e Vercel
 ### 4. Profissionais e Serviços nos Dropdowns
 
 #### ✅ Dropdown de Profissionais (Analytics)
+
 ```
 Opções disponíveis:
 1. Todos os profissionais
@@ -97,6 +102,7 @@ Opções disponíveis:
 **Total: 7 profissionais + opção "Todos"** ✅
 
 #### ✅ Dropdown de Categorias de Procedimentos
+
 ```
 Opções disponíveis:
 1. Todos os tipos
@@ -113,6 +119,7 @@ Opções disponíveis:
 **Total: 9 categorias + opção "Todos"** ✅
 
 #### ✅ Top 10 Procedimentos Mais Realizados
+
 ```
 1. Drenagem Linfática - R$ 900,00 (5x)
 2. Toxina Botulínica (Botox) - R$ 4.800,00 (4x)
