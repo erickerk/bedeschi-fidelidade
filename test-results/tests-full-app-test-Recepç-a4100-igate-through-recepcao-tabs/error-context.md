@@ -1,0 +1,65 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - img "Instituto Bedeschi" [ref=e7]
+          - generic [ref=e8]:
+            - heading "Recepção" [level=1] [ref=e9]
+            - paragraph [ref=e10]: Recepção Bedeschi
+        - generic [ref=e11]:
+          - button "Alternar tema" [ref=e12] [cursor=pointer]:
+            - img [ref=e13]
+          - button "Sair" [ref=e19] [cursor=pointer]:
+            - img [ref=e20]
+    - navigation [ref=e23]:
+      - generic [ref=e24]:
+        - button "Atendimentos" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+          - text: Atendimentos
+        - button "Clientes" [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+          - text: Clientes
+        - button "Bônus" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+          - text: Bônus
+    - main [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - heading "📋 Atendimentos" [level=2] [ref=e43]
+            - paragraph [ref=e44]: Registre e acompanhe todos os atendimentos
+          - button "Novo Atendimento" [ref=e45] [cursor=pointer]:
+            - img [ref=e46]
+            - text: Novo Atendimento
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]:
+              - button "Dia anterior" [ref=e50] [cursor=pointer]:
+                - img [ref=e51]
+              - generic [ref=e53]:
+                - img [ref=e54]
+                - textbox "Selecionar data para filtrar atendimentos" [ref=e56]: 2026-01-17
+                - generic [ref=e57]: (Hoje)
+              - button "Próximo dia" [disabled] [ref=e58]:
+                - img [ref=e59]
+            - generic [ref=e61]:
+              - button "📅 Hoje" [ref=e62] [cursor=pointer]
+              - button "📊 Ver Todos" [ref=e63] [cursor=pointer]
+          - generic [ref=e65]:
+            - paragraph [ref=e66]: "📈 Hoje: 0 atendimento(s)"
+            - paragraph [ref=e67]: 💰 R$ 0,00
+        - generic [ref=e68]:
+          - heading "Atendimentos - Hoje" [level=3] [ref=e69]:
+            - img [ref=e70]
+            - text: Atendimentos - Hoje
+          - generic [ref=e75]:
+            - img [ref=e76]
+            - paragraph [ref=e78]: Nenhum atendimento
+            - paragraph [ref=e79]: Nenhum atendimento em Hoje
+            - button "+ Novo Atendimento" [ref=e80] [cursor=pointer]
+```

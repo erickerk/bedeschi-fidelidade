@@ -142,11 +142,20 @@ export default function AdminDashboard() {
   const [clientFilter, setClientFilter] = useState<
     "all" | "withRewards" | "vip" | "inactive"
   >("all");
+  const [clientSortOrder, setClientSortOrder] = useState<
+    "name-asc" | "name-desc" | "date-asc" | "date-desc" | "spent-asc" | "spent-desc"
+  >("name-asc");
   const [professionalRoleFilter, setProfessionalRoleFilter] = useState<
     "all" | "medico" | "profissional" | "recepcionista"
   >("all");
   const [serviceCategoryFilter, setServiceCategoryFilter] =
     useState<string>("all");
+  const [serviceSortOrder, setServiceSortOrder] = useState<
+    "name-asc" | "name-desc" | "price-asc" | "price-desc"
+  >("name-asc");
+  const [ruleSortOrder, setRuleSortOrder] = useState<
+    "name-asc" | "name-desc" | "type" | "status"
+  >("name-asc");
   const [analyticsCategoryFilter, setAnalyticsCategoryFilter] =
     useState<string>("all");
   const [analyticsProfessionalFilter, setAnalyticsProfessionalFilter] =
@@ -794,42 +803,95 @@ export default function AdminDashboard() {
     link.click();
   };
 
-  const filteredClients = clients.filter((c) => {
-    const matchesSearch =
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phone.includes(searchTerm);
-    if (!matchesSearch) return false;
+  const filteredClients = useMemo(() => {
+    const filtered = clients.filter((c) => {
+      const matchesSearch =
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.phone.includes(searchTerm);
+      if (!matchesSearch) return false;
 
-    if (clientFilter === "withRewards") {
-      return rewards.some(
-        (r) => r.clientId === c.id && r.status === "available",
+      if (clientFilter === "withRewards") {
+        return rewards.some(
+          (r) => r.clientId === c.id && r.status === "available",
+        );
+      }
+      if (clientFilter === "vip") {
+        return c.totalSpent >= 3000 || c.pointsBalance >= 2000;
+      }
+      if (clientFilter === "inactive") {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        return !c.lastVisit || new Date(c.lastVisit) < thirtyDaysAgo;
+      }
+      return true;
+    });
+
+    // Ordenação
+    return filtered.sort((a, b) => {
+      switch (clientSortOrder) {
+        case "name-asc":
+          return a.name.localeCompare(b.name, "pt-BR");
+        case "name-desc":
+          return b.name.localeCompare(a.name, "pt-BR");
+        case "date-asc":
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        case "date-desc":
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case "spent-asc":
+          return (a.totalSpent || 0) - (b.totalSpent || 0);
+        case "spent-desc":
+          return (b.totalSpent || 0) - (a.totalSpent || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [clients, searchTerm, clientFilter, clientSortOrder, rewards]);
+
+  const filteredServices = useMemo(() => {
+    const filtered = services
+      .filter((s) =>
+        serviceCategoryFilter === "all"
+          ? true
+          : s.categoryId === serviceCategoryFilter,
+      )
+      .filter((s) =>
+        serviceSearch.trim()
+          ? s.name.toLowerCase().includes(serviceSearch.toLowerCase())
+          : true,
       );
-    }
-    if (clientFilter === "vip") {
-      return c.totalSpent >= 3000 || c.pointsBalance >= 2000;
-    }
-    if (clientFilter === "inactive") {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      return !c.lastVisit || new Date(c.lastVisit) < thirtyDaysAgo;
-    }
-    return true;
-  });
 
-  const filteredServices = useMemo(
-    () =>
-      services
-        .filter((s) =>
-          serviceCategoryFilter === "all"
-            ? true
-            : s.categoryId === serviceCategoryFilter,
-        )
-        .filter((s) =>
-          serviceSearch.trim()
-            ? s.name.toLowerCase().includes(serviceSearch.toLowerCase())
-            : true,
-        ),
-    [services, serviceCategoryFilter, serviceSearch],
-  );
+    return filtered.sort((a, b) => {
+      switch (serviceSortOrder) {
+        case "name-asc":
+          return a.name.localeCompare(b.name, "pt-BR");
+        case "name-desc":
+          return b.name.localeCompare(a.name, "pt-BR");
+        case "price-asc":
+          return (a.price || 0) - (b.price || 0);
+        case "price-desc":
+          return (b.price || 0) - (a.price || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [services, serviceCategoryFilter, serviceSearch, serviceSortOrder]);
+
+  const filteredRules = useMemo(() => {
+    const sorted = [...rules].sort((a, b) => {
+      switch (ruleSortOrder) {
+        case "name-asc":
+          return a.name.localeCompare(b.name, "pt-BR");
+        case "name-desc":
+          return b.name.localeCompare(a.name, "pt-BR");
+        case "type":
+          return a.type.localeCompare(b.type);
+        case "status":
+          return (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [rules, ruleSortOrder]);
 
   // Handlers para CRUD de Profissionais
   const handleAddProfessional = async () => {
@@ -2425,6 +2487,25 @@ export default function AdminDashboard() {
                   <option value="vip">VIP (alto gasto/pontos)</option>
                   <option value="inactive">Inativos (30+ dias)</option>
                 </select>
+                <select
+                  value={clientSortOrder}
+                  onChange={(e) =>
+                    setClientSortOrder(e.target.value as typeof clientSortOrder)
+                  }
+                  aria-label="Ordenar lista de clientes"
+                  className={`rounded-lg border px-2 py-2 text-xs ${
+                    isDark
+                      ? "bg-slate-800 border-slate-600 text-slate-200"
+                      : "bg-white border-slate-200 text-slate-700"
+                  }`}
+                >
+                  <option value="name-asc">📝 Nome A-Z</option>
+                  <option value="name-desc">📝 Nome Z-A</option>
+                  <option value="date-desc">📅 Mais recentes</option>
+                  <option value="date-asc">📅 Mais antigos</option>
+                  <option value="spent-desc">💰 Maior gasto</option>
+                  <option value="spent-asc">💰 Menor gasto</option>
+                </select>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -3248,6 +3329,21 @@ export default function AdminDashboard() {
                       </option>
                     ))}
                   </select>
+                  <select
+                    value={serviceSortOrder}
+                    onChange={(e) => setServiceSortOrder(e.target.value as typeof serviceSortOrder)}
+                    aria-label="Ordenar serviços"
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <option value="name-asc">📝 Nome A-Z</option>
+                    <option value="name-desc">📝 Nome Z-A</option>
+                    <option value="price-desc">💰 Maior preço</option>
+                    <option value="price-asc">💰 Menor preço</option>
+                  </select>
                   <button
                     type="button"
                     onClick={() => {
@@ -3702,26 +3798,43 @@ export default function AdminDashboard() {
                     Como funcionam as regras?
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewRule({
-                      name: "",
-                      description: "",
-                      type: "VALUE_ACCUMULATION",
-                      thresholdValue: 0,
-                      rewardType: "DISCOUNT_PERCENT",
-                      rewardValue: 0,
-                      validityDays: 30,
-                      categoryId: "",
-                    });
-                    setShowAddRule(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 text-sm font-medium"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nova Regra
-                </button>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={ruleSortOrder}
+                    onChange={(e) => setRuleSortOrder(e.target.value as typeof ruleSortOrder)}
+                    aria-label="Ordenar regras"
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      isDark
+                        ? "bg-slate-700 border-slate-600 text-slate-200"
+                        : "bg-white border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <option value="name-asc">📝 Nome A-Z</option>
+                    <option value="name-desc">📝 Nome Z-A</option>
+                    <option value="type">📋 Por tipo</option>
+                    <option value="status">✅ Ativas primeiro</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewRule({
+                        name: "",
+                        description: "",
+                        type: "VALUE_ACCUMULATION",
+                        thresholdValue: 0,
+                        rewardType: "DISCOUNT_PERCENT",
+                        rewardValue: 0,
+                        validityDays: 30,
+                        categoryId: "",
+                      });
+                      setShowAddRule(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 text-sm font-medium"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nova Regra
+                  </button>
+                </div>
               </div>
               {showRulesHelp && (
                 <div
@@ -3806,7 +3919,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-3">
-                {rules.map((rule) => (
+                {filteredRules.map((rule) => (
                   <div
                     key={rule.id}
                     className={`p-4 rounded-xl border ${

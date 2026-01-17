@@ -1,0 +1,311 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - img "Instituto Bedeschi" [ref=e8]
+          - generic [ref=e9]:
+            - heading "Painel Administrativo" [level=1] [ref=e10]
+            - paragraph [ref=e11]: Instituto Bedeschi
+        - generic [ref=e12]:
+          - button "Alternar tema" [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+          - generic [ref=e20]: Raul Bedeschi
+          - button "Sair" [ref=e21] [cursor=pointer]:
+            - img [ref=e22]
+    - navigation [ref=e25]:
+      - generic [ref=e26]:
+        - button "Dashboard" [ref=e27] [cursor=pointer]:
+          - img [ref=e28]
+          - text: Dashboard
+        - button "Analytics" [ref=e31] [cursor=pointer]:
+          - img [ref=e32]
+          - text: Analytics
+        - button "Clientes" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+          - text: Clientes
+        - button "Equipe" [ref=e40] [cursor=pointer]:
+          - img [ref=e41]
+          - text: Equipe
+        - button "Serviços" [ref=e44] [cursor=pointer]:
+          - img [ref=e45]
+          - text: Serviços
+        - button "Regras" [ref=e49] [cursor=pointer]:
+          - img [ref=e50]
+          - text: Regras
+        - button "Relatórios" [ref=e53] [cursor=pointer]:
+          - img [ref=e54]
+          - text: Relatórios
+    - main [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - img [ref=e62]
+            - generic [ref=e64]: "Período:"
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - generic [ref=e67]: Data Inicial
+              - textbox "Data Inicial" [ref=e68]:
+                - /placeholder: Data inicial
+            - generic [ref=e69]: até
+            - generic [ref=e70]:
+              - generic [ref=e71]: Data Final
+              - textbox "Data Final" [ref=e72]:
+                - /placeholder: Data final
+          - generic [ref=e74]:
+            - button "7 dias" [ref=e75] [cursor=pointer]
+            - button "30 dias" [ref=e76] [cursor=pointer]
+            - button "90 dias" [ref=e77] [cursor=pointer]
+            - button "Todo período" [ref=e78] [cursor=pointer]
+          - generic [ref=e79]:
+            - img [ref=e80]
+            - generic [ref=e82]: Tipo de procedimento
+            - combobox "Tipo de procedimento" [ref=e83]:
+              - option "Todos" [selected]
+              - option "Cabelos"
+              - option "Cílios"
+              - option "Corporal"
+              - option "Depilação"
+              - option "Estética Avançada"
+              - option "Facial"
+              - option "Manicure/Pedicure"
+              - option "Massagens"
+              - option "Sobrancelhas"
+        - generic [ref=e84]:
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - paragraph [ref=e88]: Total de Clientes
+              - paragraph [ref=e89]: "16"
+              - paragraph [ref=e90]: +16 este mês
+            - img [ref=e92]
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - paragraph [ref=e100]: Receita Total
+              - paragraph [ref=e101]: R$ 14.330,00
+              - paragraph [ref=e102]: +17.7%
+            - img [ref=e104]
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - paragraph [ref=e109]: Ticket Médio
+              - paragraph [ref=e110]: R$ 530,74
+              - paragraph [ref=e111]: 27 atendimentos
+            - img [ref=e113]
+          - generic [ref=e118]:
+            - generic [ref=e119]:
+              - paragraph [ref=e120]: Avaliação Média
+              - paragraph [ref=e121]: 3.9 ⭐
+              - paragraph [ref=e122]: 32 avaliações
+            - img [ref=e124]
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - generic [ref=e129]:
+                - heading "📈 Receita no Período" [level=3] [ref=e130]
+                - paragraph [ref=e131]: 30 dias
+              - generic [ref=e132]:
+                - paragraph [ref=e133]: R$ 14.330,00
+                - paragraph [ref=e134]: 27 atendimentos
+            - img [ref=e138]:
+              - generic [ref=e142]:
+                - generic [ref=e144]: 18/12
+                - generic [ref=e146]: 22/12
+                - generic [ref=e148]: 26/12
+                - generic [ref=e150]: 30/12
+                - generic [ref=e152]: 03/01
+                - generic [ref=e154]: 07/01
+                - generic [ref=e156]: 11/01
+                - generic [ref=e158]: 16/01
+              - generic [ref=e160]:
+                - generic [ref=e162]: R$ 0
+                - generic [ref=e164]: R$ 1,5 mil
+                - generic [ref=e166]: R$ 3 mil
+                - generic [ref=e168]: R$ 4,5 mil
+                - generic [ref=e170]: R$ 6 mil
+          - generic [ref=e177]:
+            - heading "🏆 Top 5 Procedimentos" [level=3] [ref=e178]
+            - generic [ref=e179]:
+              - generic [ref=e181]:
+                - generic [ref=e182]: 1. Drenagem Linfática
+                - generic [ref=e183]:
+                  - text: R$ 900,00
+                  - generic [ref=e184]: (5x)
+              - generic [ref=e187]:
+                - generic [ref=e188]: 2. Peeling Químico
+                - generic [ref=e189]:
+                  - text: R$ 960,00
+                  - generic [ref=e190]: (3x)
+              - generic [ref=e193]:
+                - generic [ref=e194]: 3. Massagem Modeladora
+                - generic [ref=e195]:
+                  - text: R$ 540,00
+                  - generic [ref=e196]: (3x)
+              - generic [ref=e199]:
+                - generic [ref=e200]: 4. Limpeza de Pele Profunda
+                - generic [ref=e201]:
+                  - text: R$ 540,00
+                  - generic [ref=e202]: (3x)
+              - generic [ref=e205]:
+                - generic [ref=e206]: 5. Bioestimulador Facial
+                - generic [ref=e207]:
+                  - text: R$ 3.000,00
+                  - generic [ref=e208]: (2x)
+        - generic [ref=e210]:
+          - generic [ref=e211]:
+            - heading "⭐ Mais Bem Avaliados" [level=3] [ref=e212]
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - generic [ref=e215]:
+                  - generic [ref=e216]: "1"
+                  - generic [ref=e217]:
+                    - paragraph [ref=e218]: Carla Santos
+                    - paragraph [ref=e219]: 8 avaliações
+                - generic [ref=e220]:
+                  - img [ref=e221]
+                  - generic [ref=e223]: "4.6"
+              - generic [ref=e224]:
+                - generic [ref=e225]:
+                  - generic [ref=e226]: "2"
+                  - generic [ref=e227]:
+                    - paragraph [ref=e228]: Juliana Lima
+                    - paragraph [ref=e229]: 4 avaliações
+                - generic [ref=e230]:
+                  - img [ref=e231]
+                  - generic [ref=e233]: "4.3"
+              - generic [ref=e234]:
+                - generic [ref=e235]:
+                  - generic [ref=e236]: "3"
+                  - generic [ref=e237]:
+                    - paragraph [ref=e238]: Ana
+                    - paragraph [ref=e239]: 11 avaliações
+                - generic [ref=e240]:
+                  - img [ref=e241]
+                  - generic [ref=e243]: "4.0"
+              - generic [ref=e244]:
+                - generic [ref=e245]:
+                  - generic [ref=e246]: "4"
+                  - generic [ref=e247]:
+                    - paragraph [ref=e248]: Dra. Amanda Costa
+                    - paragraph [ref=e249]: 6 avaliações
+                - generic [ref=e250]:
+                  - img [ref=e251]
+                  - generic [ref=e253]: "3.8"
+          - generic [ref=e254]:
+            - heading "⚠️ Piores Avaliações" [level=3] [ref=e255]
+            - generic [ref=e256]:
+              - generic [ref=e257]:
+                - generic [ref=e258]:
+                  - generic [ref=e259]: "1"
+                  - generic [ref=e260]:
+                    - paragraph [ref=e261]: Dra. Amanda Costa
+                    - paragraph [ref=e262]: 6 avaliações
+                - generic [ref=e263]:
+                  - img [ref=e264]
+                  - generic [ref=e266]: "3.8"
+              - generic [ref=e267]:
+                - generic [ref=e268]:
+                  - generic [ref=e269]: "2"
+                  - generic [ref=e270]:
+                    - paragraph [ref=e271]: Ana
+                    - paragraph [ref=e272]: 11 avaliações
+                - generic [ref=e273]:
+                  - img [ref=e274]
+                  - generic [ref=e276]: "4.0"
+              - generic [ref=e277]:
+                - generic [ref=e278]:
+                  - generic [ref=e279]: "3"
+                  - generic [ref=e280]:
+                    - paragraph [ref=e281]: Juliana Lima
+                    - paragraph [ref=e282]: 4 avaliações
+                - generic [ref=e283]:
+                  - img [ref=e284]
+                  - generic [ref=e286]: "4.3"
+              - generic [ref=e287]:
+                - generic [ref=e288]:
+                  - generic [ref=e289]: "4"
+                  - generic [ref=e290]:
+                    - paragraph [ref=e291]: Carla Santos
+                    - paragraph [ref=e292]: 8 avaliações
+                - generic [ref=e293]:
+                  - img [ref=e294]
+                  - generic [ref=e296]: "4.6"
+        - generic [ref=e297]:
+          - generic [ref=e298]:
+            - heading "🔥 Mais Atendimentos" [level=3] [ref=e299]
+            - generic [ref=e300]:
+              - generic [ref=e301]:
+                - generic [ref=e302]:
+                  - generic [ref=e303]: 🥇
+                  - generic [ref=e304]: Ana
+                - generic [ref=e305]: 8 atend.
+              - generic [ref=e306]:
+                - generic [ref=e307]:
+                  - generic [ref=e308]: 🥈
+                  - generic [ref=e309]: Carla Santos
+                - generic [ref=e310]: 8 atend.
+              - generic [ref=e311]:
+                - generic [ref=e312]:
+                  - generic [ref=e313]: 🥉
+                  - generic [ref=e314]: Dra. Amanda Costa
+                - generic [ref=e315]: 4 atend.
+              - generic [ref=e316]:
+                - generic [ref=e317]:
+                  - generic [ref=e318]: "4."
+                  - generic [ref=e319]: Juliana Lima
+                - generic [ref=e320]: 2 atend.
+              - generic [ref=e321]:
+                - generic [ref=e322]:
+                  - generic [ref=e323]: "5."
+                  - generic [ref=e324]: Teste
+                - generic [ref=e325]: 0 atend.
+          - generic [ref=e326]:
+            - heading "📋 Resumo Rápido" [level=3] [ref=e327]
+            - generic [ref=e328]:
+              - generic [ref=e329]:
+                - generic [ref=e330]: Recompensas Ativas
+                - generic [ref=e331]: "6"
+              - generic [ref=e332]:
+                - generic [ref=e333]: Recompensas Resgatadas
+                - generic [ref=e334]: "0"
+              - generic [ref=e335]:
+                - generic [ref=e336]: Pontos Distribuídos
+                - generic [ref=e337]: 10,941
+              - generic [ref=e338]:
+                - generic [ref=e339]: Regras Ativas
+                - generic [ref=e340]: "2"
+              - generic [ref=e341]:
+                - generic [ref=e342]: Profissionais Ativos
+                - generic [ref=e343]: "7"
+          - generic [ref=e344]:
+            - heading "💰 Maior Receita" [level=3] [ref=e345]
+            - generic [ref=e346]:
+              - generic [ref=e347]:
+                - generic [ref=e348]:
+                  - generic [ref=e349]: 🥇
+                  - generic [ref=e350]: Ana
+                - generic [ref=e352]: R$ 6.420,00
+              - generic [ref=e353]:
+                - generic [ref=e354]:
+                  - generic [ref=e355]: 🥈
+                  - generic [ref=e356]: Carla Santos
+                - generic [ref=e358]: R$ 4.710,00
+              - generic [ref=e359]:
+                - generic [ref=e360]:
+                  - generic [ref=e361]: 🥉
+                  - generic [ref=e362]: Dra. Amanda Costa
+                - generic [ref=e364]: R$ 1.840,00
+              - generic [ref=e365]:
+                - generic [ref=e366]:
+                  - generic [ref=e367]: "4."
+                  - generic [ref=e368]: Juliana Lima
+                - generic [ref=e370]: R$ 330,00
+              - generic [ref=e371]:
+                - generic [ref=e372]:
+                  - generic [ref=e373]: "5."
+                  - generic [ref=e374]: Teste
+                - generic [ref=e376]: R$ 0,00
+  - generic [ref=e377]: R$ 0
+```

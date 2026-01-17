@@ -90,7 +90,8 @@ function evaluateFidelityRulesForAppointment(params: {
     // Evitar múltiplas entradas na mesma regra durante uma transação
     if (rulesTriggeredInThisTransaction.has(rule.id)) continue;
 
-    if (rule.type === "COMBO_VALUE" && rule.thresholdValue) {
+    // VALUE_ACCUMULATION e COMBO_VALUE funcionam de forma similar - baseado no valor total gasto
+    if ((rule.type === "COMBO_VALUE" || rule.type === "VALUE_ACCUMULATION") && rule.thresholdValue) {
       const beforeTotal = clientBefore.totalSpent;
       const afterTotal = clientAfter.totalSpent;
       
