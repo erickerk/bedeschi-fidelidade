@@ -1,7 +1,7 @@
 # Page snapshot
 
 ```yaml
-- generic [active] [ref=e1]:
+- generic [ref=e1]:
   - alert [ref=e2]
   - generic [ref=e3]:
     - banner [ref=e4]:
@@ -24,42 +24,27 @@
         - button "Clientes" [ref=e28] [cursor=pointer]:
           - img [ref=e29]
           - text: Clientes
-        - button "Bônus" [ref=e34] [cursor=pointer]:
+        - button "Bônus" [active] [ref=e34] [cursor=pointer]:
           - img [ref=e35]
           - text: Bônus
     - main [ref=e39]:
       - generic [ref=e40]:
-        - generic [ref=e41]:
-          - generic [ref=e42]:
-            - heading "📋 Atendimentos" [level=2] [ref=e43]
-            - paragraph [ref=e44]: Registre e acompanhe todos os atendimentos
-          - button "Novo Atendimento" [ref=e45] [cursor=pointer]:
-            - img [ref=e46]
-            - text: Novo Atendimento
-        - generic [ref=e47]:
-          - generic [ref=e48]:
-            - generic [ref=e49]:
-              - button "Dia anterior" [ref=e50] [cursor=pointer]:
-                - img [ref=e51]
-              - generic [ref=e53]:
-                - img [ref=e54]
-                - textbox "Selecionar data para filtrar atendimentos" [ref=e56]: 2026-01-17
-                - generic [ref=e57]: (Hoje)
-              - button "Próximo dia" [disabled] [ref=e58]:
-                - img [ref=e59]
-            - generic [ref=e61]:
-              - button "📅 Hoje" [ref=e62] [cursor=pointer]
-              - button "📊 Ver Todos" [ref=e63] [cursor=pointer]
-          - generic [ref=e65]:
-            - paragraph [ref=e66]: "📈 Hoje: 0 atendimento(s)"
-            - paragraph [ref=e67]: 💰 R$ 0,00
-        - generic [ref=e68]:
-          - heading "Atendimentos - Hoje" [level=3] [ref=e69]:
-            - img [ref=e70]
-            - text: Atendimentos - Hoje
-          - generic [ref=e75]:
-            - img [ref=e76]
-            - paragraph [ref=e78]: Nenhum atendimento
-            - paragraph [ref=e79]: Nenhum atendimento em Hoje
-            - button "+ Novo Atendimento" [ref=e80] [cursor=pointer]
+        - heading "Gestão de Bônus" [level=2] [ref=e42]
+        - generic [ref=e43]:
+          - generic [ref=e44]: 🔍 Buscar Cliente Específico
+          - generic [ref=e46]:
+            - img [ref=e47]
+            - textbox "Digite nome ou telefone do cliente..." [ref=e50]
+        - generic [ref=e51]:
+          - heading "Clientes com Bônus Disponível" [level=3] [ref=e52]
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - paragraph [ref=e56]: Erick
+              - paragraph [ref=e57]: (11) 9 6022-9776 • 6 bônus disponível(is)
+            - generic [ref=e58]:
+              - button "Usar Bônus" [ref=e59] [cursor=pointer]
+              - button "Avisar" [ref=e60] [cursor=pointer]
+        - generic [ref=e61]:
+          - heading "Bônus Resgatados" [level=3] [ref=e62]
+          - paragraph [ref=e64]: Nenhum bônus resgatado ainda
 ```
