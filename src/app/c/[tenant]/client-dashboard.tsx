@@ -405,11 +405,11 @@ export default function ClientDashboard({
                 <p className="text-slate-400 text-sm mt-1">pontos disponíveis</p>
               </div>
               <div className="text-right bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50">
-                <p className="text-slate-400 text-xs uppercase tracking-wider">Total investido</p>
-                <p className="text-2xl font-semibold text-white mt-1">
-                  {formatCurrency(client.totalSpent)}
+                <p className="text-slate-400 text-xs uppercase tracking-wider">Total em benefícios</p>
+                <p className="text-2xl font-semibold text-emerald-400 mt-1">
+                  {rewards.length} bônus
                 </p>
-                <p className="text-emerald-400 text-xs mt-1">🎯 +{Math.round(client.totalSpent * 0.1)} em benefícios</p>
+                <p className="text-amber-400 text-xs mt-1">🎯 {appointments.length} atendimentos</p>
               </div>
             </div>
 
@@ -660,11 +660,11 @@ export default function ClientDashboard({
                       </p>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="text-white font-medium">
-                        {formatCurrency(apt.total)}
+                      <p className="text-amber-400 font-bold text-lg">
+                        +{apt.pointsEarned}
                       </p>
-                      <p className="text-xs text-amber-400">
-                        +{apt.pointsEarned} pts
+                      <p className="text-xs text-slate-500">
+                        pontos ganhos
                       </p>
                     </div>
                   </div>

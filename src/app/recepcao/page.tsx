@@ -271,6 +271,36 @@ export default function RecepcaoDashboard() {
       return;
     }
 
+    // VERIFICAÇÃO DE DUPLICIDADE: Verificar se já existe atendimento igual
+    const selectedServicesNames = services
+      .filter((s) => newAppointment.selectedServices.includes(s.id))
+      .map((s) => s.name)
+      .sort()
+      .join(",");
+
+    const duplicateAppointment = appointments.find((apt) => {
+      if (apt.clientId !== newAppointment.clientId) return false;
+      if (apt.date !== newAppointment.date) return false;
+      
+      // Verificar se os serviços são iguais
+      const aptServicesNames = apt.services.map((s) => s.name).sort().join(",");
+      return aptServicesNames === selectedServicesNames;
+    });
+
+    if (duplicateAppointment) {
+      const confirmDuplicate = window.confirm(
+        `⚠️ ATENÇÃO: Já existe um atendimento registrado para:\n\n` +
+        `Cliente: ${client.name}\n` +
+        `Data: ${formatDate(newAppointment.date)}\n` +
+        `Procedimentos: ${selectedServicesNames.replace(/,/g, ", ")}\n\n` +
+        `Deseja registrar mesmo assim?`
+      );
+      
+      if (!confirmDuplicate) {
+        return;
+      }
+    }
+
     const selectedServicesData = services.filter((s) =>
       newAppointment.selectedServices.includes(s.id),
     );
@@ -783,13 +813,7 @@ export default function RecepcaoDashboard() {
               >
                 Clientes
               </h2>
-              <button
-                onClick={() => setShowNewClient(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-900 hover:bg-amber-400 font-medium"
-              >
-                <Plus className="h-4 w-4" />
-                Novo Cliente
-              </button>
+              {/* Botão de Novo Cliente removido - Recepção só pode editar clientes existentes */}
             </div>
 
             {/* Busca */}

@@ -136,6 +136,7 @@ export async function getRuleById(id: string): Promise<FidelityRuleDB | null> {
 }
 
 // Criar regra
+// IMPORTANTE: Validade padrão alterada para 365 dias (1 ano) conforme regra de negócio
 export async function createRule(
   input: CreateRuleInput,
 ): Promise<FidelityRuleDB | null> {
@@ -143,7 +144,7 @@ export async function createRule(
     .from("fidelity_rules")
     .insert({
       ...input,
-      validity_days: input.validity_days || 30,
+      validity_days: input.validity_days || 365, // Padrão: 1 ano de validade
       is_active: true,
     })
     .select()

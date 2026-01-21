@@ -3422,7 +3422,31 @@ export default function AdminDashboard() {
                               <Edit2 className="h-3 w-3" />
                               Editar
                             </button>
-                            {/* TODO: Implementar toggle de serviço quando API estiver disponível */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleServiceActive(s)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${
+                                s.isActive
+                                  ? isDark
+                                    ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                    : "bg-red-50 text-red-600 hover:bg-red-100"
+                                  : isDark
+                                    ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                                    : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                              }`}
+                            >
+                              {s.isActive ? (
+                                <>
+                                  <EyeOff className="h-3 w-3" />
+                                  Inativar
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="h-3 w-3" />
+                                  Ativar
+                                </>
+                              )}
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -4999,6 +5023,258 @@ export default function AdminDashboard() {
                     KPIs e métricas principais
                   </p>
                 </button>
+
+                {/* Relatório de Gestão de Pontos */}
+                <button
+                  onClick={() => {
+                    // Clientes com pontos a vencer (próximos 30 dias)
+                    const today = new Date();
+                    const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    
+                    // Simular validade de 1 ano a partir do último atendimento
+                    const clientsWithExpiringPoints = clients
+                      .filter(c => c.pointsBalance > 0 && c.lastVisit)
+                      .map(c => {
+                        const lastVisit = new Date(c.lastVisit!);
+                        const expiresAt = new Date(lastVisit.getTime() + 365 * 24 * 60 * 60 * 1000);
+                        const daysToExpire = Math.ceil((expiresAt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        return { ...c, expiresAt, daysToExpire };
+                      })
+                      .filter(c => c.daysToExpire <= 30 && c.daysToExpire > 0)
+                      .sort((a, b) => a.daysToExpire - b.daysToExpire);
+
+                    // Clientes próximos de ganhar bônus (baseado nas regras ativas)
+                    const activeRulesWithThreshold = rules.filter(r => r.isActive && r.thresholdValue);
+                    const clientsNearBonus = clients
+                      .filter(c => c.totalSpent > 0)
+                      .map(c => {
+                        // Calcular progresso para cada regra
+                        const progress = activeRulesWithThreshold.map(rule => {
+                          const threshold = rule.thresholdValue || 0;
+                          const current = c.totalSpent % threshold;
+                          const remaining = threshold - current;
+                          const percentage = (current / threshold) * 100;
+                          return { rule: rule.name, remaining, percentage };
+                        });
+                        const nearestBonus = progress.sort((a, b) => a.remaining - b.remaining)[0];
+                        return { ...c, nearestBonus };
+                      })
+                      .filter(c => c.nearestBonus && c.nearestBonus.percentage >= 70)
+                      .sort((a, b) => (b.nearestBonus?.percentage || 0) - (a.nearestBonus?.percentage || 0));
+
+                    const reportData = [
+                      // Pontos a vencer
+                      ...clientsWithExpiringPoints.map(c => ({
+                        Tipo: "PONTOS A VENCER",
+                        Cliente: c.name,
+                        Telefone: c.phone,
+                        Pontos: c.pointsBalance,
+                        DiasParaExpirar: c.daysToExpire,
+                        DataExpiracao: c.expiresAt.toLocaleDateString("pt-BR"),
+                        UltimaVisita: c.lastVisit || "",
+                      })),
+                      // Próximos de ganhar bônus
+                      ...clientsNearBonus.map(c => ({
+                        Tipo: "PRÓXIMO DE BÔNUS",
+                        Cliente: c.name,
+                        Telefone: c.phone,
+                        Pontos: c.pointsBalance,
+                        RegraProxima: c.nearestBonus?.rule || "",
+                        Progresso: `${c.nearestBonus?.percentage.toFixed(0)}%`,
+                        FaltaParaBonus: formatCurrency(c.nearestBonus?.remaining || 0),
+                      })),
+                    ];
+
+                    if (reportData.length === 0) {
+                      alert("Nenhum cliente com pontos a vencer ou próximo de bônus no momento.");
+                      return;
+                    }
+
+                    exportToCSV(reportData, "gestao_pontos");
+                  }}
+                  className={`p-4 rounded-xl text-left ${
+                    isDark
+                      ? "bg-gradient-to-br from-amber-600/20 to-amber-500/10 border border-amber-500/30 hover:from-amber-600/30 hover:to-amber-500/20"
+                      : "bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 hover:from-amber-100 hover:to-amber-200"
+                  }`}
+                >
+                  <Target
+                    className={`h-8 w-8 mb-3 ${
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <p
+                    className={`font-semibold ${
+                      isDark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    Gestão de Pontos
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    Pontos a vencer e próximos de bônus
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-red-500/20 text-red-400" : "bg-red-100 text-red-700"}`}
+                    >
+                      ⚠️ A vencer
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-emerald-500/20 text-emerald-400" : "bg-emerald-100 text-emerald-700"}`}
+                    >
+                      🎯 Próximos
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Seção Visual de Gestão de Pontos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Clientes com Pontos a Vencer */}
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
+                    isDark ? "text-white" : "text-slate-800"
+                  }`}
+                >
+                  <Clock className="h-5 w-5 text-red-500" />
+                  Pontos a Vencer (próx. 30 dias)
+                </h3>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {(() => {
+                    const today = new Date();
+                    const clientsWithExpiringPoints = clients
+                      .filter(c => c.pointsBalance > 0 && c.lastVisit)
+                      .map(c => {
+                        const lastVisit = new Date(c.lastVisit!);
+                        const expiresAt = new Date(lastVisit.getTime() + 365 * 24 * 60 * 60 * 1000);
+                        const daysToExpire = Math.ceil((expiresAt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        return { ...c, expiresAt, daysToExpire };
+                      })
+                      .filter(c => c.daysToExpire <= 30 && c.daysToExpire > 0)
+                      .sort((a, b) => a.daysToExpire - b.daysToExpire)
+                      .slice(0, 5);
+
+                    if (clientsWithExpiringPoints.length === 0) {
+                      return (
+                        <p className={`text-center py-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          ✅ Nenhum cliente com pontos próximos de expirar
+                        </p>
+                      );
+                    }
+
+                    return clientsWithExpiringPoints.map(c => (
+                      <div
+                        key={c.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          isDark ? "bg-red-500/10 border border-red-500/20" : "bg-red-50 border border-red-200"
+                        }`}
+                      >
+                        <div>
+                          <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
+                            {c.name}
+                          </p>
+                          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                            {c.phone}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-bold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                            {c.pointsBalance} pts
+                          </p>
+                          <p className={`text-xs font-medium ${isDark ? "text-red-400" : "text-red-600"}`}>
+                            Expira em {c.daysToExpire} dias
+                          </p>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* Clientes Próximos de Ganhar Bônus */}
+              <div
+                className={`rounded-xl p-6 ${isDark ? "bg-slate-800" : "bg-white"}`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
+                    isDark ? "text-white" : "text-slate-800"
+                  }`}
+                >
+                  <Target className="h-5 w-5 text-emerald-500" />
+                  Próximos de Ganhar Bônus
+                </h3>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {(() => {
+                    const activeRulesWithThreshold = rules.filter(r => r.isActive && r.thresholdValue);
+                    
+                    if (activeRulesWithThreshold.length === 0) {
+                      return (
+                        <p className={`text-center py-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          Nenhuma regra com meta de valor configurada
+                        </p>
+                      );
+                    }
+
+                    const clientsNearBonus = clients
+                      .filter(c => c.totalSpent > 0)
+                      .map(c => {
+                        const progress = activeRulesWithThreshold.map(rule => {
+                          const threshold = rule.thresholdValue || 0;
+                          const current = c.totalSpent % threshold;
+                          const remaining = threshold - current;
+                          const percentage = (current / threshold) * 100;
+                          return { rule: rule.name, remaining, percentage };
+                        });
+                        const nearestBonus = progress.sort((a, b) => a.remaining - b.remaining)[0];
+                        return { ...c, nearestBonus };
+                      })
+                      .filter(c => c.nearestBonus && c.nearestBonus.percentage >= 70)
+                      .sort((a, b) => (b.nearestBonus?.percentage || 0) - (a.nearestBonus?.percentage || 0))
+                      .slice(0, 5);
+
+                    if (clientsNearBonus.length === 0) {
+                      return (
+                        <p className={`text-center py-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          Nenhum cliente acima de 70% do progresso
+                        </p>
+                      );
+                    }
+
+                    return clientsNearBonus.map(c => (
+                      <div
+                        key={c.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          isDark ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"
+                        }`}
+                      >
+                        <div>
+                          <p className={`font-medium ${isDark ? "text-white" : "text-slate-800"}`}>
+                            {c.name}
+                          </p>
+                          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                            {c.nearestBonus?.rule}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-bold ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
+                            {c.nearestBonus?.percentage.toFixed(0)}%
+                          </p>
+                          <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                            Faltam {formatCurrency(c.nearestBonus?.remaining || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
               </div>
             </div>
           </div>
